@@ -22,6 +22,25 @@ struct Tutorial : RTG::Application {
 	//Pipelines:
 
 	//TODO
+	//Edit Start =========================================================================================================
+	struct BackgroundPipeline {
+		//no descriptor set layouts //manages the resources needed by shader
+
+		//push constants //uniform data that could be passed efficiently
+		struct Push {
+			float time;
+		};
+
+		VkPipelineLayout layout = VK_NULL_HANDLE; //arrangements of resources
+
+		//no vertex bindings //how to read vertex data from buffers
+
+		VkPipeline handle = VK_NULL_HANDLE; //the actual pipeline object used during drawing
+
+		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
+		void destroy(RTG &);
+	} background_pipeline;
+	//Edit End ===========================================================================================================
 
 	//pools from which per-workspace things are allocated:
 	VkCommandPool command_pool = VK_NULL_HANDLE;
@@ -54,6 +73,10 @@ struct Tutorial : RTG::Application {
 
 	virtual void update(float dt) override;
 	virtual void on_input(InputEvent const &) override;
+
+	//Edit Start =========================================================================================================
+	float time = 0.0f;
+	//Edit End ===========================================================================================================
 
 	//--------------------------------------------------------------------
 	//Rendering function, uses all the resources above to queue work to draw a frame:
