@@ -73,7 +73,9 @@ void main() {
         float hue = angle_by_time / pi2;                                                //convert angle range to [0,1] and use it as hue
         vec3 color = hsv2rgb(vec3(hue, 1.0, 1.0));
         
-        outColor = vec4(color, 1.0);
+        float speed = 2;
+        float alpha = ( cos(pushData.time * speed) / 2 + 0.5 ) / 2 + 0.5;   //alpha range [-1,1] => [0,1] => [0.5,1.0]
+        outColor = vec4(color, alpha);
     };
 }
 //Edit End ==========================================================================================================================================

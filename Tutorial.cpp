@@ -95,19 +95,19 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params) {
 	//TODO: GPU commands here
 	{ //render pass：describes layout, "input from", "output to" of attachments
 		[[maybe_unused]] std::array< VkClearValue, 2 > clear_values{
-			VkClearValue{ .color{ .float32{1.0f, 0.0f, 1.0f, 1.0f} } },
+			VkClearValue{ .color{ .float32{0.0f, 0.0f, 0.0f, 1.0f} } },
 			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },	
 		};
 
-		std::array< VkClearValue, 2 > clear_values1{
-			VkClearValue{ .color{ .float32{1.0f, 1.0f, 1.0f, 1.0f} } },
-			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },	
-		};
+		// [[maybe_unused]] std::array< VkClearValue, 2 > clear_values1{
+		// 	VkClearValue{ .color{ .float32{1.0f, 1.0f, 1.0f, 1.0f} } },
+		// 	VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },	
+		// };
 
-		std::array< VkClearValue, 2 > clear_values2{
-			VkClearValue{ .color{ .float32{0.0f, 0.0f, 0.0f, 0.0f} } },
-			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },	
-		};
+		// [[maybe_unused]] std::array< VkClearValue, 2 > clear_values2{
+		// 	VkClearValue{ .color{ .float32{0.0f, 0.0f, 0.0f, 0.0f} } },
+		// 	VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },	
+		// };
 
 		VkRenderPassBeginInfo begin_info{
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -120,21 +120,21 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params) {
 			},
 
 			//ver.1 simple color
-			// .clearValueCount = uint32_t(clear_values.size()),
-			// .pClearValues = clear_values.data(),
+			.clearValueCount = uint32_t(clear_values.size()),
+			.pClearValues = clear_values.data(),
 
 			//ver.2. flashing black and white
-			.clearValueCount = uint32_t(g_frame % 100 < 50 ? clear_values1.size() : clear_values2.size()),
-			.pClearValues = g_frame % 100 < 50 ? clear_values1.data() : clear_values2.data(),
+			// .clearValueCount = uint32_t(g_frame % 100 < 50 ? clear_values1.size() : clear_values2.size()),
+			// .pClearValues = g_frame % 100 < 50 ? clear_values1.data() : clear_values2.data(),
 		};
 
 		vkCmdBeginRenderPass(workspace.command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 		//TODO: run pipelines here
 
-		{//frame increased for ClearValue ver.2
-			++ g_frame;
-		};
+		// {//frame increased for ClearValue ver.2
+		// 	++ g_frame;
+		// };
 
 		{ //configure scissor rectangle
 			VkRect2D scissor{
