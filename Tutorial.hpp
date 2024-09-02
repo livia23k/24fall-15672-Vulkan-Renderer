@@ -68,6 +68,12 @@ struct Tutorial : RTG::Application {
 	struct Workspace {
 		VkCommandBuffer command_buffer = VK_NULL_HANDLE; //from the command pool above; reset at the start of every render.
 
+		//Edit Start =========================================================================================================
+		//locations for lines data (streams to GPU per-frame):
+		Helpers::AllocatedBuffer lines_vertices_src; //host coherent; mapped to cpu memory
+		Helpers::AllocatedBuffer lines_vertices; //device-local
+		//Edit End ===========================================================================================================
+
 	};
 	std::vector< Workspace > workspaces;
 
@@ -93,6 +99,8 @@ struct Tutorial : RTG::Application {
 
 	//Edit Start =========================================================================================================
 	float time = 0.0f;
+
+	std::vector< LinesPipeline::Vertex > lines_vertices;
 	//Edit End ===========================================================================================================
 
 	//--------------------------------------------------------------------
