@@ -28,6 +28,9 @@ custom_flags_and_rules();
 // it returns the path to the output object file
 const main_objs = [
 	maek.CPP('Tutorial.cpp'),
+	//Edit Start ====================================================================================================
+	maek.CPP('datastructures/PosColVertex.cpp'),
+	//Edit End ======================================================================================================
 	maek.CPP('RTG.cpp'),
 	maek.CPP('Helpers.cpp'),
 	maek.CPP('main.cpp'),
@@ -36,21 +39,21 @@ const main_objs = [
 //maek.GLSLC(...) builds a glsl source file:
 // it returns the path to the output .inl file
 
-//uncomment to build background shaders and pipeline:
 //Edit Start ====================================================================================================
+//uncomment to build background shaders and pipeline:
 const background_shaders = [
-	maek.GLSLC('background.vert'),
-	maek.GLSLC('background.frag'),
+	maek.GLSLC('shaders/background.vert'),
+	maek.GLSLC('shaders/background.frag'),
 ];
-//Edit End ======================================================================================================
-main_objs.push( maek.CPP('Tutorial-BackgroundPipeline.cpp', undefined, { depends:[...background_shaders] } ) );
+main_objs.push( maek.CPP('pipelines/Tutorial-BackgroundPipeline.cpp', undefined, { depends:[...background_shaders] } ) );
 
 //uncomment to build lines shaders and pipeline:
-//const lines_shaders = [
-//	maek.GLSLC('lines.vert'),
-//	maek.GLSLC('lines.frag'),
-//];
-//main_objs.push( maek.CPP('Tutorial-LinesPipeline.cpp', undefined, { depends:[...lines_shaders] } ) );
+const lines_shaders = [
+	maek.GLSLC('shaders/lines.vert'),
+	maek.GLSLC('shaders/lines.frag'),
+];
+main_objs.push( maek.CPP('pipelines/Tutorial-LinesPipeline.cpp', undefined, { depends:[...lines_shaders] } ) );
+//Edit End ======================================================================================================
 
 //uncomment to build objects shaders and pipeline:
 //const objects_shaders = [
@@ -147,6 +150,9 @@ function custom_flags_and_rules() {
 		maek.options.CPPFlags = [
 			'-O2',
 			`-I${VULKAN_SDK}/include`,
+			//Edit Start ====================================================================================================
+			`-I.`, //include the root directory in the search path
+			//Edit End ======================================================================================================
 			`-I/opt/homebrew/include`, //for brew-installed GLFW
 			`-I../glfw-3.4.bin.MACOS/include`, //for release from github
 		];

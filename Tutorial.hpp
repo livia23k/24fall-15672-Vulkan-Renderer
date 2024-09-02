@@ -1,5 +1,7 @@
 #pragma once
 
+#include "datastructures/PosColVertex.hpp"
+
 #include "RTG.hpp"
 
 struct Tutorial : RTG::Application {
@@ -40,6 +42,21 @@ struct Tutorial : RTG::Application {
 		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
 		void destroy(RTG &);
 	} background_pipeline;
+
+	struct LinesPipeline {
+		//no descriptor set layouts
+
+		//push constants
+
+		VkPipelineLayout layout = VK_NULL_HANDLE;
+
+		using Vertex = PosColVertex;
+
+		VkPipeline handle = VK_NULL_HANDLE;
+
+		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
+		void destroy(RTG &);
+	} lines_pipeline;
 	//Edit End ===========================================================================================================
 
 	//pools from which per-workspace things are allocated:

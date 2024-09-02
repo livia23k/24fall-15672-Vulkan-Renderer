@@ -7,46 +7,31 @@
 #include "vulkan/vulkan_core.h"
 
 static uint32_t vert_code[] = 
-#include "spv/background.vert.inl"
+#include "spv/lines.vert.inl"
 ;
 
 static uint32_t frag_code[] =
-#include "spv/background.frag.inl"
+#include "spv/lines.frag.inl"
 ;
 
-void Tutorial::BackgroundPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass) {
-    //ver.1 before implementing shader
-    // VkShaderModule vert_module = VK_NULL_HANDLE;
-    // VkShaderModule frag_module = VK_NULL_HANDLE;
+void Tutorial::LinesPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass) {
 
-    //ver.2 after implementing shader
     VkShaderModule vert_module = rtg.helpers.create_shader_module(vert_code);
     VkShaderModule frag_module = rtg.helpers.create_shader_module(frag_code);
 
-    //ver.1 before create pipeline layout
-    // refsol::BackgroundPipeline_create(rtg, render_pass, subpass, vert_module, frag_module, &layout, &handle);
-
-    //ver.2 after create pipeline layout
     { //create pipeline layout:
-        VkPushConstantRange range{
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, //tells which shader will use this push constant
-            .offset = 0,                                //offset in bytes from start of push constant block
-            .size = sizeof(Push)                        //size in bytes of push constant block
-        };
-
         VkPipelineLayoutCreateInfo create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount = 0,
             .pSetLayouts = nullptr,
-            .pushConstantRangeCount = 1,
-            .pPushConstantRanges = &range
+            .pushConstantRangeCount = 0,
+            .pPushConstantRanges = nullptr
         };
 
         VK( vkCreatePipelineLayout(rtg.device, &create_info, nullptr, &layout) );
     };
 
     { //create pipeline:
-
         //set shader stage (vertex, fragment code):
         std::array< VkPipelineShaderStageCreateInfo, 2 > stages {
             VkPipelineShaderStageCreateInfo{
@@ -74,22 +59,12 @@ void Tutorial::BackgroundPipeline::create(RTG &rtg, VkRenderPass render_pass, ui
             .dynamicStateCount = uint32_t(dynamic_states.size()),
             .pDynamicStates = dynamic_states.data()
         };
-        
-        //set vertex input state: 
-        //this pipeline will take 0 per-vertex input
-        VkPipelineVertexInputStateCreateInfo vertex_input_state{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 0,
-            .pVertexBindingDescriptions = nullptr,
-            .vertexAttributeDescriptionCount = 0,
-            .pVertexAttributeDescriptions = nullptr
-        };
 
         //set input assembly state:
         //this pipeline will take vertex data as a list of triangles
         VkPipelineInputAssemblyStateCreateInfo input_assembly_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+            .topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
             .primitiveRestartEnable = VK_FALSE
         };
 
@@ -126,7 +101,9 @@ void Tutorial::BackgroundPipeline::create(RTG &rtg, VkRenderPass render_pass, ui
         //disable depth / stencil test
         VkPipelineDepthStencilStateCreateInfo depth_stencil_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-            .depthTestEnable = VK_FALSE,
+            .depthTestEnable = VK_TRUE,
+            .depthWriteEnable = VK_TRUE,
+            .depthCompareOp = VK_COMPARE_OP_LESS,
             .depthBoundsTestEnable = VK_FALSE,
             .stencilTestEnable = VK_FALSE
         };
@@ -160,7 +137,9 @@ void Tutorial::BackgroundPipeline::create(RTG &rtg, VkRenderPass render_pass, ui
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
             .stageCount = uint32_t(stages.size()),
             .pStages = stages.data(),
-            .pVertexInputState = &vertex_input_state,
+            //Edit Start =====================================================
+            .pVertexInputState = &Vertex::array_input_state,
+            //Edit End =======================================================
             .pInputAssemblyState = &input_assembly_state,
             .pViewportState = &viewport_state,
             .pRasterizationState = &rasterzation_state,
@@ -185,7 +164,16 @@ void Tutorial::BackgroundPipeline::create(RTG &rtg, VkRenderPass render_pass, ui
     vkDestroyShaderModule(rtg.device, vert_module, nullptr);
 }
 
-void Tutorial::BackgroundPipeline::destroy(RTG &rtg) {
-    refsol::BackgroundPipeline_destroy(rtg, &layout, &handle);
+void Tutorial::LinesPipeline::destroy(RTG &rtg) {
+
+    if (layout != VK_NULL_HANDLE) {
+        vkDestroyPipelineLayout(rtg.device, layout, nullptr);
+        layout = VK_NULL_HANDLE;
+    }
+
+    if (handle != VK_NULL_HANDLE) {
+        vkDestroyPipeline(rtg.device, handle, nullptr);
+        handle = VK_NULL_HANDLE;
+    }
 }
 //Edit End ===========================================================================================================
