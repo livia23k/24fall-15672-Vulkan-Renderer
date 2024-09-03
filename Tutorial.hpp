@@ -1,6 +1,7 @@
 #pragma once
 
 #include "datastructures/PosColVertex.hpp"
+#include "pesonallibs/mat4.hpp"
 
 #include "RTG.hpp"
 
@@ -99,6 +100,8 @@ struct Tutorial : RTG::Application {
 
 	//Edit Start =========================================================================================================
 	float time = 0.0f;
+
+	mat4 CLIP_FROM_WORLD;
 
 	std::vector< LinesPipeline::Vertex > lines_vertices;
 	//Edit End ===========================================================================================================
