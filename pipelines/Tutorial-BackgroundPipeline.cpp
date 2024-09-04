@@ -7,11 +7,11 @@
 #include "vulkan/vulkan_core.h"
 
 static uint32_t vert_code[] = 
-#include "spv/background.vert.inl"
+#include "spv/shaders/background.vert.inl"
 ;
 
 static uint32_t frag_code[] =
-#include "spv/background.frag.inl"
+#include "spv/shaders/background.frag.inl"
 ;
 
 void Tutorial::BackgroundPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass) {
