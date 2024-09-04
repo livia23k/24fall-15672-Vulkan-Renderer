@@ -5,6 +5,7 @@
 
 #include "Tutorial.hpp"
 #include "refsol.hpp"
+#include "scripts/FileMgr.hpp"
 
 #include "VK.hpp"
 #include "refsol.hpp"
@@ -420,9 +421,40 @@ void Tutorial::update(float dt)
 	time = std::fmod(time + dt, 60.0f); // avoid precision issues by keeping time in a reasonable range
 
 	{ //set camera matrix (orbiting the origin):
-		float rotate_radius = 10.0f;
-		float ang = (float(M_PI) * 2.0f * rotate_radius) * (time / 60.0f);
+		float rotate_speed = 5.0f;
+		float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
 		float fov = 60.0f;
+
+		//camera (heart)
+		// float lookat_distance = 150.0f;
+		
+		// CLIP_FROM_WORLD = perspective(
+		// 	fov / float(M_PI) * 180.0f, 											//fov in radians
+		// 	float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
+		// 	0.1f,	//near
+		// 	1000.0f //far
+		// ) * look_at(
+		// 	lookat_distance * std::cos(ang), 0.0f, lookat_distance * std::sin(ang),	//eye
+		// 	0.0f, 0.0f, 0.0f, 														//target
+		// 	0.0f, 1.0f, 0.0f 														//up
+		// );
+
+		//camera (guitar)
+		// float lookat_distance = 1.5f;
+		
+		// CLIP_FROM_WORLD = perspective(
+		// 	fov / float(M_PI) * 180.0f, 											//fov in radians
+		// 	float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
+		// 	0.1f,	//near
+		// 	1000.0f //far
+		// ) * look_at(
+		// 	lookat_distance * std::cos(ang), 0.5f, lookat_distance * std::sin(ang),	//eye
+		// 	0.0f, 0.5f, 0.0f, 														//target
+		// 	0.0f, 1.0f, 0.0f 														//up
+		// );
+
+		//camera (cat)
+		float lookat_distance = 50.0f;
 		
 		CLIP_FROM_WORLD = perspective(
 			fov / float(M_PI) * 180.0f, 											//fov in radians
@@ -430,9 +462,9 @@ void Tutorial::update(float dt)
 			0.1f,	//near
 			1000.0f //far
 		) * look_at(
-			3.0f * std::cos(ang), 3.0f * std::sin(ang), 1.0f, 	//eye
-			0.0f, 0.0f, 0.5f, 									//target
-			0.0f, 0.0f, 1.0f 									//up
+			lookat_distance * std::cos(ang), 20.0f, lookat_distance * std::sin(ang),//eye
+			-200.0f, 20.0f, 0.0f, 													//target
+			0.0f, 1.0f, 0.0f 														//up
 		);
 	}
 
@@ -463,38 +495,50 @@ void Tutorial::update(float dt)
 	// 	assert(lines_vertices.size() == 4);
 	// };
 
-	{ //set input vertices (crossing lines at different depth):
+	// { //set input vertices (crossing lines at different depth):
+	// 	lines_vertices.clear();
+	// 	constexpr size_t count = 2 * 30 + 2 * 30;
+	// 	lines_vertices.reserve(count);
+
+	// 	//horizontal lines at z = 0.5f
+	// 	for (uint32_t i = 0; i < 30; ++ i) {
+	// 		float y = (i + 0.5f) / 30.0f * 2.0f - 1.0f; // [0.0,30.0] -> [0.0,1.0] -> [-1.0,1.0]
+	// 		lines_vertices.emplace_back(LinesPipeline::Vertex{
+	// 			.Position{ .x = -1.0f, .y = y, .z = 0.5f },
+	// 			.Color{ .r = 0x00, .g = 0x00, .b = 0x00, .a = 0xff }
+	// 		});
+	// 		lines_vertices.emplace_back(LinesPipeline::Vertex{
+	// 			.Position{ .x = 1.0f, .y = y, .z = 0.5f },
+	// 			.Color{ .r = 0x00, .g = 0x00, .b = 0x00, .a = 0xff }
+	// 		});
+	// 	}
+
+	// 	//vertical lines at z = 0.0f (near) through 1.0f (far)
+	// 	for (uint32_t i= 0; i < 30; ++ i) {
+	// 		float x = (i + 0.5f) / 30.0f * 2.0f - 1.0f;
+	// 		lines_vertices.emplace_back(LinesPipeline::Vertex{
+	// 			.Position{ .x = x, .y = -1.0f, .z = 0.0f },
+	// 			.Color{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 0xff }
+	// 		});
+	// 		lines_vertices.emplace_back(LinesPipeline::Vertex{
+	// 			.Position{ .x = x, .y = 1.0f, .z = 1.0f },
+	// 			.Color{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 0xff }
+	// 		});
+	// 	}
+	// 	assert(lines_vertices.size() == count);
+	// };
+
+	{ //set input vertices from obj:
 		lines_vertices.clear();
-		constexpr size_t count = 2 * 30 + 2 * 30;
-		lines_vertices.reserve(count);
+		std::vector<LinesPipeline::Vertex> mesh_vertices;
+		// FileMgr::loadOBJ("models/obj/heart.obj", mesh_vertices); // heart model from https://www.cgtrader.com/free-3d-models/exterior/other/low-poly-heart-ef3d722e-8004-4f42-a53b-44c67874166d
+		// FileMgr::loadOBJ("models/obj/acoustic_guitar.obj", mesh_vertices); // guitar model from https://www.thebasemesh.com/asset/acoustic-guitar
+		FileMgr::loadOBJ("models/obj/cat.obj", mesh_vertices); // cat model from https://www.cgtrader.com/free-3d-print-models/art/sculptures/cat-lowpoly-f1e47945-af1a-4cda-8fc0-091190b72724
 
-		//horizontal lines at z = 0.5f
-		for (uint32_t i = 0; i < 30; ++ i) {
-			float y = (i + 0.5f) / 30.0f * 2.0f - 1.0f; // [0.0,30.0] -> [0.0,1.0] -> [-1.0,1.0]
-			lines_vertices.emplace_back(LinesPipeline::Vertex{
-				.Position{ .x = -1.0f, .y = y, .z = 0.5f },
-				.Color{ .r = 0x00, .g = 0x00, .b = 0x00, .a = 0xff }
-			});
-			lines_vertices.emplace_back(LinesPipeline::Vertex{
-				.Position{ .x = 1.0f, .y = y, .z = 0.5f },
-				.Color{ .r = 0x00, .g = 0x00, .b = 0x00, .a = 0xff }
-			});
+		for (auto &v : mesh_vertices) {
+			lines_vertices.push_back(v);
 		}
-
-		//vertical lines at z = 0.0f (near) through 1.0f (far)
-		for (uint32_t i= 0; i < 30; ++ i) {
-			float x = (i + 0.5f) / 30.0f * 2.0f - 1.0f;
-			lines_vertices.emplace_back(LinesPipeline::Vertex{
-				.Position{ .x = x, .y = -1.0f, .z = 0.0f },
-				.Color{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 0xff }
-			});
-			lines_vertices.emplace_back(LinesPipeline::Vertex{
-				.Position{ .x = x, .y = 1.0f, .z = 1.0f },
-				.Color{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 0xff }
-			});
-		}
-		assert(lines_vertices.size() == count);
-	}
+	};
 
 	//HACK: transform vertices to clip space on CPU:
 	// for (PosColVertex &v : lines_vertices) {
@@ -503,8 +547,6 @@ void Tutorial::update(float dt)
 	// 	v.Position.y = res[1] / res[3];
 	// 	v.Position.z = res[2] / res[3];
 	// }
-
-
 
 	//Edit End ===========================================================================================================
 }
