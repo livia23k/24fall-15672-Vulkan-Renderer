@@ -1,6 +1,7 @@
 #pragma once
 
 #include "datastructures/PosColVertex.hpp"
+#include "libs/mat4.hpp"
 
 #include "RTG.hpp"
 
@@ -44,7 +45,14 @@ struct Tutorial : RTG::Application {
 	} background_pipeline;
 
 	struct LinesPipeline {
-		//no descriptor set layouts
+		//descriptor set layouts:
+		VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
+
+		//types for descriptors:
+		struct Camera {
+			mat4 CLIP_FROM_WORLD;
+		};
+		static_assert(sizeof(Camera) == 16 * 4, "camera buffer structure is packed.");
 
 		//push constants
 
@@ -61,19 +69,23 @@ struct Tutorial : RTG::Application {
 
 	//pools from which per-workspace things are allocated:
 	VkCommandPool command_pool = VK_NULL_HANDLE;
-	
 	//STEPX: Add descriptor pool here.
+	VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 
 	//workspaces hold per-render resources:
 	struct Workspace {
 		VkCommandBuffer command_buffer = VK_NULL_HANDLE; //from the command pool above; reset at the start of every render.
 
 		//Edit Start =========================================================================================================
-		//locations for lines data (streams to GPU per-frame):
+		//locations for lines data (streamed to GPU per-frame):
 		Helpers::AllocatedBuffer lines_vertices_src; //host coherent; mapped to cpu memory
 		Helpers::AllocatedBuffer lines_vertices; //device-local
-		//Edit End ===========================================================================================================
 
+		//locations for LinesPipeline::Camera data (streamed to GPU per-frame):
+		Helpers::AllocatedBuffer Camera_src; //host coherent; mapped to cpu memory
+		Helpers::AllocatedBuffer Camera; //device-local
+		VkDescriptorSet Camera_descriptors; //references Camera
+		//Edit End ===========================================================================================================
 	};
 	std::vector< Workspace > workspaces;
 
@@ -99,6 +111,8 @@ struct Tutorial : RTG::Application {
 
 	//Edit Start =========================================================================================================
 	float time = 0.0f;
+
+	mat4 CLIP_FROM_WORLD;
 
 	std::vector< LinesPipeline::Vertex > lines_vertices;
 	//Edit End ===========================================================================================================
