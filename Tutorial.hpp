@@ -1,6 +1,7 @@
 #pragma once
 
 #include "datastructures/PosColVertex.hpp"
+#include "datastructures/PosNorTexVertex.hpp"
 #include "libs/mat4.hpp"
 
 #include "RTG.hpp"
@@ -77,7 +78,7 @@ struct Tutorial : RTG::Application {
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 
-		using Vertex = PosColVertex;
+		using Vertex = PosNorTexVertex;
 
 		VkPipeline handle  = VK_NULL_HANDLE;
 

@@ -117,21 +117,24 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 
 	//Edit Start =============================================================================================================
 	{ //create object vertices
-		std::vector< PosColVertex > vertices;
+		std::vector< ObjectsPipeline::Vertex > vertices;
 
 		//TODO: replace with more geometry
 		//currently a single triangle:
-		vertices.emplace_back(PosColVertex{
+		vertices.emplace_back(ObjectsPipeline::Vertex{
 			.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
-			.Color{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 0xff }
+			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+			.TexCoord{ .s = 0.0f, .t = 0.0f }
 		});
-		vertices.emplace_back(PosColVertex{
+		vertices.emplace_back(ObjectsPipeline::Vertex{
 			.Position{ .x = -50.0f, .y = 50.0f, .z = 100.0f },
-			.Color{ .r = 0xff, .g = 0x00, .b = 0x00, .a = 0xff }
+			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+			.TexCoord{ .s = 1.0f, .t = 0.0f }
 		});
-		vertices.emplace_back(PosColVertex{
+		vertices.emplace_back(ObjectsPipeline::Vertex{
 			.Position{ .x = -50.0f, .y = -60.0f, .z = 0.0f },
-			.Color{ .r = 0x00, .g = 0xff, .b = 0x00, .a = 0xff }
+			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+			.TexCoord{ .s = 0.0f, .t = 1.0f }
 		});
 		
 		size_t bytes = vertices.size() * sizeof(vertices[0]);

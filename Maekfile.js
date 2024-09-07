@@ -30,6 +30,7 @@ const main_objs = [
 	maek.CPP('Tutorial.cpp'),
 	//Edit Start ====================================================================================================
 	maek.CPP('datastructures/PosColVertex.cpp'),
+	maek.CPP('datastructures/PosNorTexVertex.cpp'),
 	maek.CPP('scripts/FileMgr.cpp'),
 	//Edit End ======================================================================================================
 	maek.CPP('RTG.cpp'),

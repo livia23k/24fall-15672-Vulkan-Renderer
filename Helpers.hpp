@@ -61,6 +61,11 @@ struct Helpers {
 	void transfer_to_buffer(void *data, size_t size, AllocatedBuffer &target);
 	void transfer_to_image(void *data, size_t size, AllocatedImage &image); //NOTE: image layout after call is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 
+	//Edit Start ====================================================================
+	VkCommandPool transfer_command_pool = VK_NULL_HANDLE;
+	VkCommandBuffer transfer_command_buffer = VK_NULL_HANDLE;
+	//Edit End ======================================================================
+
 	//-----------------------
 	//Misc utilities:
 
