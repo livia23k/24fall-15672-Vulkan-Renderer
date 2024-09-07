@@ -54,7 +54,7 @@ struct Tutorial : RTG::Application {
 		};
 		static_assert(sizeof(Camera) == 16 * 4, "camera buffer structure is packed.");
 
-		//push constants
+		//push constants (none)
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 
@@ -65,6 +65,25 @@ struct Tutorial : RTG::Application {
 		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
 		void destroy(RTG &);
 	} lines_pipeline;
+
+	struct ObjectsPipeline {
+		//descriptot set layouts:
+		VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
+
+		//types for descriptors:
+		using Camera = LinesPipeline::Camera;
+
+		// push constants (none)
+
+		VkPipelineLayout layout = VK_NULL_HANDLE;
+
+		using Vertex = PosColVertex;
+
+		VkPipeline handle  = VK_NULL_HANDLE;
+
+		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
+		void destroy(RTG &);
+	} objects_pipeline;
 	//Edit End ===========================================================================================================
 
 	//pools from which per-workspace things are allocated:
@@ -91,6 +110,8 @@ struct Tutorial : RTG::Application {
 
 	//-------------------------------------------------------------------
 	//static scene resources:
+
+	Helpers::AllocatedBuffer object_vertices;
 
 	//--------------------------------------------------------------------
 	//Resources that change when the swapchain is resized:

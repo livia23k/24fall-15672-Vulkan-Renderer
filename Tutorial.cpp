@@ -27,6 +27,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	//Edit Start =========================================================================================================
 	background_pipeline.create(rtg, render_pass, 0);
 	lines_pipeline.create(rtg, render_pass, 0);
+	objects_pipeline.create(rtg, render_pass, 0);
 
 	{ //create descriptor pool:
 		uint32_t per_workspace = uint32_t(rtg.workspaces.size()); //for easier-to-read counting
@@ -113,6 +114,39 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		};
 		//Edit End ===========================================================================================================
 	}
+
+	//Edit Start =============================================================================================================
+	{ //create object vertices
+		std::vector< PosColVertex > vertices;
+
+		//TODO: replace with more geometry
+		//currently a single triangle:
+		vertices.emplace_back(PosColVertex{
+			.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
+			.Color{ .r = 0xff, .g = 0xff, .b = 0xff, .a = 0xff }
+		});
+		vertices.emplace_back(PosColVertex{
+			.Position{ .x = -50.0f, .y = 50.0f, .z = 100.0f },
+			.Color{ .r = 0xff, .g = 0x00, .b = 0x00, .a = 0xff }
+		});
+		vertices.emplace_back(PosColVertex{
+			.Position{ .x = -50.0f, .y = -60.0f, .z = 0.0f },
+			.Color{ .r = 0x00, .g = 0xff, .b = 0x00, .a = 0xff }
+		});
+		
+		size_t bytes = vertices.size() * sizeof(vertices[0]);
+
+		object_vertices = rtg.helpers.create_buffer(
+			bytes,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, //use as a vertex buffer, and a target of a memory copy
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			Helpers::Unmapped
+		);
+
+		//copy data to buffer
+		rtg.helpers.transfer_to_buffer(vertices.data(), bytes, object_vertices);
+	}
+	//Edit End ===============================================================================================================
 }
 
 Tutorial::~Tutorial()
@@ -123,6 +157,8 @@ Tutorial::~Tutorial()
 	{
 		std::cerr << "Failed to vkDeviceWaitIdle in Tutorial::~Tutorial [" << string_VkResult(result) << "]; continuing anyway." << std::endl;
 	}
+
+	rtg.helpers.destroy_buffer(std::move(object_vertices));
 
 	if (swapchain_depth_image.handle != VK_NULL_HANDLE)
 	{
@@ -160,8 +196,9 @@ Tutorial::~Tutorial()
 		// (this also frees the descriptor sets allocated from the pool)
 	}
 
-	lines_pipeline.destroy(rtg);
 	background_pipeline.destroy(rtg);
+	lines_pipeline.destroy(rtg);
+	objects_pipeline.destroy(rtg);
 	//Edit End ===========================================================================================================
 
 	refsol::Tutorial_destructor(rtg, &render_pass, &command_pool);
@@ -401,6 +438,21 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 			vkCmdDraw(workspace.command_buffer, uint32_t(lines_vertices.size()), 1, 0, 0);
 		};
 
+		{ // draw with the objects pipeline
+			vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, objects_pipeline.handle);
+
+			{ //use object_vertices (offset 0) as vertex buffer binding 0:
+				std::array< VkBuffer, 1 > vertex_buffers{ object_vertices.handle };
+				std::array< VkDeviceSize, 1 > offsets{ 0 };
+				vkCmdBindVertexBuffers(workspace.command_buffer, 0, uint32_t(vertex_buffers.size()), vertex_buffers.data(), offsets.data());
+			}
+
+			//Camera descriptor set is already bound from the lines pipeline
+
+			//draw all vertices:
+			vkCmdDraw(workspace.command_buffer, uint32_t(object_vertices.size / sizeof(ObjectsPipeline::Vertex)), 1, 0, 0);
+		}
+
 		vkCmdEndRenderPass(workspace.command_buffer);
 	};
 
@@ -426,18 +478,18 @@ void Tutorial::update(float dt)
 		float fov = 60.0f;
 
 		//camera (heart)
-		// float lookat_distance = 150.0f;
+		float lookat_distance = 150.0f;
 		
-		// CLIP_FROM_WORLD = perspective(
-		// 	fov / float(M_PI) * 180.0f, 											//fov in radians
-		// 	float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
-		// 	0.1f,	//near
-		// 	1000.0f //far
-		// ) * look_at(
-		// 	lookat_distance * std::cos(ang), 0.0f, lookat_distance * std::sin(ang),	//eye
-		// 	0.0f, 0.0f, 0.0f, 														//target
-		// 	0.0f, 1.0f, 0.0f 														//up
-		// );
+		CLIP_FROM_WORLD = perspective(
+			fov / float(M_PI) * 180.0f, 											//fov in radians
+			float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
+			0.1f,	//near
+			1000.0f //far
+		) * look_at(
+			lookat_distance * std::cos(ang), 0.0f, lookat_distance * std::sin(ang),	//eye
+			0.0f, 0.0f, 0.0f, 														//target
+			0.0f, 1.0f, 0.0f 														//up
+		);
 
 		//camera (guitar)
 		// float lookat_distance = 1.5f;
@@ -454,18 +506,18 @@ void Tutorial::update(float dt)
 		// );
 
 		//camera (cat)
-		float lookat_distance = 50.0f;
+		// float lookat_distance = 50.0f;
 		
-		CLIP_FROM_WORLD = perspective(
-			fov / float(M_PI) * 180.0f, 											//fov in radians
-			float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
-			0.1f,	//near
-			1000.0f //far
-		) * look_at(
-			lookat_distance * std::cos(ang), 20.0f, lookat_distance * std::sin(ang),//eye
-			-200.0f, 20.0f, 0.0f, 													//target
-			0.0f, 1.0f, 0.0f 														//up
-		);
+		// CLIP_FROM_WORLD = perspective(
+		// 	fov / float(M_PI) * 180.0f, 											//fov in radians
+		// 	float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
+		// 	0.1f,	//near
+		// 	1000.0f //far
+		// ) * look_at(
+		// 	lookat_distance * std::cos(ang), 20.0f, lookat_distance * std::sin(ang),//eye
+		// 	-200.0f, 20.0f, 0.0f, 													//target
+		// 	0.0f, 1.0f, 0.0f 														//up
+		// );
 	}
 
 	// { //set input vertices (an 'x'):
@@ -531,9 +583,9 @@ void Tutorial::update(float dt)
 	{ //set input vertices from obj:
 		lines_vertices.clear();
 		std::vector<LinesPipeline::Vertex> mesh_vertices;
-		// FileMgr::loadOBJ("models/obj/heart.obj", mesh_vertices); // heart model from https://www.cgtrader.com/free-3d-models/exterior/other/low-poly-heart-ef3d722e-8004-4f42-a53b-44c67874166d
+		FileMgr::loadOBJ("models/obj/heart.obj", mesh_vertices); // heart model from https://www.cgtrader.com/free-3d-models/exterior/other/low-poly-heart-ef3d722e-8004-4f42-a53b-44c67874166d
 		// FileMgr::loadOBJ("models/obj/acoustic_guitar.obj", mesh_vertices); // guitar model from https://www.thebasemesh.com/asset/acoustic-guitar
-		FileMgr::loadOBJ("models/obj/cat.obj", mesh_vertices); // cat model from https://www.cgtrader.com/free-3d-print-models/art/sculptures/cat-lowpoly-f1e47945-af1a-4cda-8fc0-091190b72724
+		// FileMgr::loadOBJ("models/obj/cat.obj", mesh_vertices); // cat model from https://www.cgtrader.com/free-3d-print-models/art/sculptures/cat-lowpoly-f1e47945-af1a-4cda-8fc0-091190b72724
 
 		for (auto &v : mesh_vertices) {
 			lines_vertices.push_back(v);

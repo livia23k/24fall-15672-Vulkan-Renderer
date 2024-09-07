@@ -7,14 +7,14 @@
 #include "vulkan/vulkan_core.h"
 
 static uint32_t vert_code[] = 
-#include "spv/shaders/lines.vert.inl"
+#include "spv/shaders/objects.vert.inl"
 ;
 
 static uint32_t frag_code[] =
-#include "spv/shaders/lines.frag.inl"
+#include "spv/shaders/objects.frag.inl"
 ;
 
-void Tutorial::LinesPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass) {
+void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass) {
 
     VkShaderModule vert_module = rtg.helpers.create_shader_module(vert_code);
     VkShaderModule frag_module = rtg.helpers.create_shader_module(frag_code);
@@ -85,10 +85,10 @@ void Tutorial::LinesPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_
         };
 
         //set input assembly state:
-        //this pipeline will take vertex data as a list of lines
+        //this pipeline will take vertex data as a list of triangles
         VkPipelineInputAssemblyStateCreateInfo input_assembly_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            .topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
             .primitiveRestartEnable = VK_FALSE
         };
 
@@ -188,7 +188,7 @@ void Tutorial::LinesPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_
     vkDestroyShaderModule(rtg.device, vert_module, nullptr);
 }
 
-void Tutorial::LinesPipeline::destroy(RTG &rtg) {
+void Tutorial::ObjectsPipeline::destroy(RTG &rtg) {
 
     if (set0_Camera != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(rtg.device, set0_Camera, nullptr);
