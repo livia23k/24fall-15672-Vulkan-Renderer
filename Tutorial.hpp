@@ -114,6 +114,13 @@ struct Tutorial : RTG::Application {
 
 	Helpers::AllocatedBuffer object_vertices;
 
+	struct ObjectVertices {
+		uint32_t first = 0; //index of first vertex in object_vertices
+		uint32_t count = 0; //number of vertices in object_vertices
+	};
+	ObjectVertices plane_vertices;
+	ObjectVertices torus_vertices;
+
 	//--------------------------------------------------------------------
 	//Resources that change when the swapchain is resized:
 

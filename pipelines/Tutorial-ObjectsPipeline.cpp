@@ -107,7 +107,7 @@ void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
             .depthClampEnable = VK_FALSE,           //enabling depth clamp will disable clipping primitives outside of frustum
             .rasterizerDiscardEnable = VK_FALSE,    //enabling will leave no fragments for framebuffer to render
             .polygonMode = VK_POLYGON_MODE_FILL,    //fill or line or point
-            .cullMode = VK_CULL_MODE_NONE,        //cull nothing
+            .cullMode = VK_CULL_MODE_BACK_BIT,        //cull back
             .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, //specifies the vertex order for faces to be considered front-facing
             .depthBiasEnable = VK_FALSE,            //enabling will add depth bias to fragments
             .lineWidth = 1.0f

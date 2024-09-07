@@ -121,21 +121,123 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 
 		//TODO: replace with more geometry
 		//currently a single triangle:
-		vertices.emplace_back(ObjectsPipeline::Vertex{
-			.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
-			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-			.TexCoord{ .s = 0.0f, .t = 0.0f }
-		});
-		vertices.emplace_back(ObjectsPipeline::Vertex{
-			.Position{ .x = -50.0f, .y = 50.0f, .z = 100.0f },
-			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-			.TexCoord{ .s = 1.0f, .t = 0.0f }
-		});
-		vertices.emplace_back(ObjectsPipeline::Vertex{
-			.Position{ .x = -50.0f, .y = -60.0f, .z = 0.0f },
-			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-			.TexCoord{ .s = 0.0f, .t = 1.0f }
-		});
+		
+		{ //object 1: a quadrilateral ranged from [-1,1]x[-1,1]x{0}
+
+			/*
+				(y, z)
+
+				(-50,-100)		(-50,100)
+					C-----------B
+					|		 /	|
+					|	   /	|
+					|    /		|
+					|  /		|
+					A-----------D
+				(50,-100)		(50,100)
+			*/
+			plane_vertices.first = uint32_t(vertices.size());
+
+			// triangle ABC
+			vertices.emplace_back(ObjectsPipeline::Vertex{
+				.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+				.TexCoord{ .s = 0.0f, .t = 1.0f }
+			});
+			vertices.emplace_back(ObjectsPipeline::Vertex{
+				.Position{ .x = -50.0f, .y = -50.0f, .z = 100.0f },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+				.TexCoord{ .s = 1.0f, .t = 0.0f }
+			});
+			vertices.emplace_back(ObjectsPipeline::Vertex{
+				.Position{ .x = -50.0f, .y = -50.0f, .z = -100.0f },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+				.TexCoord{ .s = 0.0f, .t = 0.0f }
+			});
+
+			// triangle ADB
+			vertices.emplace_back(ObjectsPipeline::Vertex{
+				.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+				.TexCoord{ .s = 1.0f, .t = 0.0f }
+			});
+			vertices.emplace_back(ObjectsPipeline::Vertex{
+				.Position{ .x = -50.0f, .y = 50.0f, .z = 100.0f },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+				.TexCoord{ .s = 0.0f, .t = 1.0f }
+			});
+			vertices.emplace_back(ObjectsPipeline::Vertex{
+				.Position{ .x = -50.0f, .y = -50.0f, .z = 100.0f },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+				.TexCoord{ .s = 0.0f, .t = 0.0f }
+			});
+
+			plane_vertices.count = uint32_t(vertices.size()) - plane_vertices.first;
+		}
+
+		{ //object 2: a torus
+			torus_vertices.first = uint32_t(vertices.size());
+
+			// TODO: torus geometry
+			//will parameterize the torus with (u,v) where:
+			//	- u is angle around main axis (+z)
+			//	- v is angle around tube axis (+y)
+
+			constexpr float R1 = 20.f; //main radius
+			constexpr float R2 = 10.f; //tube radius
+
+			constexpr uint32_t U_STEPS = 60;
+			constexpr uint32_t V_STEPS = 30;
+
+			//texture repeats around the torus:
+			constexpr float V_REPEATS = 2.0f;
+			const float U_REPEATS = std::ceil(V_REPEATS / R2 * R1); // (U_REPEATS, V_REPEATS) proportional to the (R1, R2)
+
+			auto emplace_vertex = [&](uint32_t ui, uint32_t vi) {
+				//convert steps to angles;
+				// (doing the mod since trig on 2 M_PI may not exactly match 0)
+				float ua = (ui % U_STEPS) / float(U_STEPS) * 2.0f * float(M_PI);
+				float va = (vi % V_STEPS) / float(V_STEPS) * 2.0f * float(M_PI);
+
+    			// calculate the origin torus position
+				float torus_x = (R1 + R2 * std::cos(va)) * std::cos(ua);
+				float torus_y = (R1 + R2 * std::cos(va)) * std::sin(ua);
+				float torus_z = R2 * std::sin(va);
+
+				vertices.emplace_back( PosNorTexVertex{
+					
+					//rotate 90deg around x to make it aligned with my plane
+					.Position{
+						.x = torus_x,
+						.y = -torus_z - 40.f,	// y = -z - <shift down-wards>
+						.z = torus_y
+					},
+					.Normal{
+						.x = std::cos(va) * std::cos(ua),
+						.y = std::cos(va) * std::sin(ua),
+						.z = std::sin(va)
+					},
+					.TexCoord{
+						.s = (ui) / float(U_STEPS) * U_REPEATS,
+						.t = (vi) / float(V_STEPS) * V_REPEATS
+					}
+				});
+			};
+
+			for (uint32_t ui = 0; ui < U_STEPS; ++ ui) {
+				for (uint32_t vi = 0; vi < V_STEPS; ++ vi) {
+					emplace_vertex(ui, vi + 1);
+					emplace_vertex(ui, vi);
+					emplace_vertex(ui + 1, vi);
+
+					emplace_vertex(ui, vi + 1);
+					emplace_vertex(ui + 1, vi);
+					emplace_vertex(ui + 1, vi + 1);
+				}
+			}
+
+			torus_vertices.count = uint32_t(vertices.size()) - torus_vertices.first;
+		}
 		
 		size_t bytes = vertices.size() * sizeof(vertices[0]);
 
