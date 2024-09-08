@@ -32,18 +32,21 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	{ //create descriptor pool:
 		uint32_t per_workspace = uint32_t(rtg.workspaces.size()); //for easier-to-read counting
 
-		std::array< VkDescriptorPoolSize, 1 > pool_sizes{
-			//only need uniform buffer descriptors for now
-			VkDescriptorPoolSize{
+		std::array< VkDescriptorPoolSize, 2 > pool_sizes{
+			VkDescriptorPoolSize{ // for camera
 				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.descriptorCount = 1 * per_workspace //1 descriptor per set, 1 set per workspace
-			}
+			},
+			VkDescriptorPoolSize{ // for transform
+				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.descriptorCount = 1 * per_workspace //1 descriptor per set, 1 set per workspace
+			},
 		};
 
 		VkDescriptorPoolCreateInfo create_info{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			.flags = 0, //because CREATE_FREE_DESCRIPTOR_SET_BIT isn't included, can't free individual descriptors allocated from this pool
-			.maxSets = 1 * per_workspace, //one set per workspace
+			.maxSets = 2 * per_workspace, //one set per workspace
 			.poolSizeCount = uint32_t(pool_sizes.size()),
 			.pPoolSizes = pool_sizes.data()
 		};
@@ -72,46 +75,61 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		);
 
 		//DONE: descriptor set
-		{ //allocate descriptor set for Camera descriptor
+
+		{//set0_Camera
+			{ //allocate descriptor set for Camera descriptor
+				VkDescriptorSetAllocateInfo alloc_info{
+					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+					.descriptorPool = descriptor_pool,
+					.descriptorSetCount = 1,
+					.pSetLayouts = &lines_pipeline.set0_Camera
+				};
+
+				VK( vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Camera_descriptors) );
+			};
+
+			//DONE: descriptor write
+			{ //point descriptor to Camera buffer:
+				VkDescriptorBufferInfo Camera_info{
+					.buffer = workspace.Camera.handle,
+					.offset = 0,
+					.range = workspace.Camera.size
+				};
+
+				std::array< VkWriteDescriptorSet, 1 > writes{
+					VkWriteDescriptorSet{
+						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						.dstSet = workspace.Camera_descriptors,
+						.dstBinding = 0, 
+						.dstArrayElement = 0,
+						.descriptorCount = 1,
+						.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+						.pBufferInfo = &Camera_info
+					}
+				};
+
+				vkUpdateDescriptorSets(
+					rtg.device,
+					uint32_t(writes.size()),	//descriptor write count
+					writes.data(),			    //descriptor writes 
+					0,							//descriptor copy count
+					nullptr						//descriptor copies
+				);
+			};
+		}; //end of set0_Camera
+
+		{ //set1_Transforms
 			VkDescriptorSetAllocateInfo alloc_info{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				.descriptorPool = descriptor_pool,
 				.descriptorSetCount = 1,
-				.pSetLayouts = &lines_pipeline.set0_Camera
+				.pSetLayouts = &objects_pipeline.set1_Transforms
 			};
 
-			VK( vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Camera_descriptors) );
-		};
+			VK( vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Transform_descriptors) );
+		}; //end of set1_Transforms
 
-		//DONE: descriptor write
-		{ //point descriptor to Camera buffer:
-			VkDescriptorBufferInfo Camera_info{
-				.buffer = workspace.Camera.handle,
-				.offset = 0,
-				.range = workspace.Camera.size
-			};
 
-			std::array< VkWriteDescriptorSet, 1 > writes{
-				VkWriteDescriptorSet{
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.dstSet = workspace.Camera_descriptors,
-					.dstBinding = 0, 
-					.dstArrayElement = 0,
-					.descriptorCount = 1,
-					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					.pBufferInfo = &Camera_info
-				}
-			};
-
-			vkUpdateDescriptorSets(
-				rtg.device,
-				uint32_t(writes.size()),	//descriptor write count
-				writes.data(),			    //descriptor writes 
-				0,							//descriptor copy count
-				nullptr						//descriptor copies
-			);
-
-		};
 		//Edit End ===========================================================================================================
 	}
 
@@ -131,7 +149,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		std::vector< ObjectsPipeline::Vertex > vertices;
 
 		{ //object 0: model read from .obj file
-			heart_vertices.first = uint32_t(vertices.size());
+			model_vertices.first = uint32_t(vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
 			FileMgr::load_mesh_from_object("models/obj/boat.obj", mesh_vertices);
@@ -140,7 +158,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 				vertices.push_back(v);
 			}
 
-			heart_vertices.count = uint32_t(vertices.size()) - heart_vertices.first;
+			model_vertices.count = uint32_t(vertices.size()) - model_vertices.first;
 		}
 
 		{ //object 1: a quadrilateral	
@@ -204,7 +222,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			//	- u is angle around main axis (+z)
 			//	- v is angle around tube axis (+y)
 
-			constexpr float R1 = 0.75f; //main radius
+			constexpr float R1 = 0.35f; //main radius
 			constexpr float R2 = 0.15f; //tube radius
 
 			constexpr uint32_t U_STEPS = 20;
@@ -229,11 +247,17 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 					
 					//rotate 90deg around x to make it aligned with my plane
 					.Position{
+						//horizontal
 						.x = torus_x,
 						.y = -torus_z,
 						.z = torus_y
+
+						//vertical
+						// .x = torus_x,
+						// .y = torus_y,
+						// .z = torus_z
 					},
-					.Normal{¡
+					.Normal{
 						.x = std::cos(va) * std::cos(ua),
 						.y = std::cos(va) * std::sin(ua),
 						.z = std::sin(va)
@@ -311,6 +335,15 @@ Tutorial::~Tutorial()
 			rtg.helpers.destroy_buffer(std::move(workspace.Camera));
 		}
 		//Camera_descriptors is freed when pool is destroyed.
+
+		if (workspace.Transforms_src.handle != VK_NULL_HANDLE) {
+			rtg.helpers.destroy_buffer(std::move(workspace.Transforms_src));
+		}
+
+		if (workspace.Transforms.handle != VK_NULL_HANDLE) {
+			rtg.helpers.destroy_buffer(std::move(workspace.Transforms));
+		}
+		//Transform_descriptors is freed when pool is destroyed.
 		//Edit End ===========================================================================================================
 	}
 	workspaces.clear();
@@ -441,6 +474,93 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 		vkCmdCopyBuffer(workspace.command_buffer, workspace.Camera_src.handle, workspace.Camera.handle, 1, &copy_region);
 	};
 
+	//upload object transforms info:
+	if (!object_instances.empty()) {
+
+		// [re-]allocate object transforms buffers if needed:
+		size_t needed_bytes = object_instances.size() * sizeof(ObjectsPipeline::Transform);
+		
+		//check if we need to re-allocate the buffers:
+		if (workspace.Transforms_src.handle == VK_NULL_HANDLE 
+			|| workspace.Transforms_src.size < needed_bytes) 
+		{
+			size_t new_bytes = ((needed_bytes + 4096) / 4096) * 4096; //round up to nearest 4k to avoid re-allocat1ing
+																	  // continuously if vertex count grows slowly
+
+			if (workspace.Transforms_src.handle) {
+				rtg.helpers.destroy_buffer(std::move(workspace.Transforms_src));
+			}
+			if (workspace.Transforms.handle) {
+				rtg.helpers.destroy_buffer(std::move(workspace.Transforms));
+			}
+
+			workspace.Transforms_src = rtg.helpers.create_buffer(
+				new_bytes,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, //have GPU copy data from Transforms_src
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, //host visible memory, coherent (no special sync needed)
+				Helpers::Mapped //put it somewhere in the CPU address space
+			);
+			workspace.Transforms = rtg.helpers.create_buffer(
+				new_bytes,
+				VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, //use as a storage buffer, and a target of a memory copy
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //on GPU, not host visible
+				Helpers::Unmapped
+			);
+
+			//update the descriptor set:
+			VkDescriptorBufferInfo Transforms_info{
+				.buffer = workspace.Transforms.handle,
+				.offset = 0,
+				.range = workspace.Transforms.size
+			};
+
+			std::array< VkWriteDescriptorSet, 1 > writes{
+				VkWriteDescriptorSet{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = workspace.Transform_descriptors, // make descriptors stay up to date with the re-allocated transforms buffer
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pBufferInfo = &Transforms_info
+				}
+			};
+
+			vkUpdateDescriptorSets(
+				rtg.device,
+				uint32_t(writes.size()), writes.data(), //descriptorWrites count, data
+				0, nullptr //descriptorCopies count, data
+			);
+
+			std::cout << "Re-allocating Transforms buffers to " << new_bytes << " bytes." << std::endl;
+		}
+
+		assert(workspace.Transforms_src.size == workspace.Transforms.size);
+		assert(workspace.Transforms_src.size >= needed_bytes);
+
+		{ //copy transforms into Transforms_src:
+			assert(workspace.Transforms_src.allocation.mapped);
+
+			ObjectsPipeline::Transform *out = reinterpret_cast< ObjectsPipeline::Transform* >(
+					workspace.Transforms_src.allocation.data()
+			); // the transforms data is built directly into the mapped transforms sources memory, avoiding any copies
+
+			for (ObjectInstance const &inst : object_instances) {
+				*out = inst.transform;
+				++ out;
+			}
+			
+			//device-side copy from Transforms_src -> Transforms:
+			VkBufferCopy copy_region{
+				.srcOffset = 0,
+				.dstOffset = 0,
+				.size = needed_bytes
+			};
+
+			vkCmdCopyBuffer(workspace.command_buffer, workspace.Transforms_src.handle, workspace.Transforms.handle, 1, &copy_region);
+		}
+	}
+
 	{ // memory barrier to make sure copies complete before render pass:
 		VkMemoryBarrier memory_barrier{ 
 			.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
@@ -565,18 +685,38 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 		};
 
 		{ // draw with the objects pipeline
-			vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, objects_pipeline.handle);
+			if (!object_instances.empty()) {
+				vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, objects_pipeline.handle);
 
-			{ //use object_vertices (offset 0) as vertex buffer binding 0:
-				std::array< VkBuffer, 1 > vertex_buffers{ object_vertices.handle };
-				std::array< VkDeviceSize, 1 > offsets{ 0 };
-				vkCmdBindVertexBuffers(workspace.command_buffer, 0, uint32_t(vertex_buffers.size()), vertex_buffers.data(), offsets.data());
+				{ //use object_vertices (offset 0) as vertex buffer binding 0:
+					std::array< VkBuffer, 1 > vertex_buffers{ object_vertices.handle };
+					std::array< VkDeviceSize, 1 > offsets{ 0 };
+					vkCmdBindVertexBuffers(workspace.command_buffer, 0, uint32_t(vertex_buffers.size()), vertex_buffers.data(), offsets.data());
+				}
+
+				//Camera descriptor set is already bound from the lines pipeline
+
+				{ //bind Transforms descriptor set:
+					std::array< VkDescriptorSet, 1 > descriptor_sets{
+						workspace.Transform_descriptors, // set1: Transforms descriptor set	
+					};
+
+					vkCmdBindDescriptorSets(
+						workspace.command_buffer, // command buffer
+						VK_PIPELINE_BIND_POINT_GRAPHICS, //pipeline bind point
+						objects_pipeline.layout, //pipeline layout
+						1, //first set
+						uint32_t(descriptor_sets.size()), descriptor_sets.data(), //descriptor sets count, ptr
+						0, nullptr //dynamic offsets count, ptr
+					);
+				}
+
+				//draw all vertices:
+				for (ObjectInstance const &inst : object_instances) {
+					uint32_t index = uint32_t(&inst - &object_instances[0]);
+					vkCmdDraw(workspace.command_buffer, inst.vertices.count, 1, inst.vertices.first, index);
+				}
 			}
-
-			//Camera descriptor set is already bound from the lines pipeline
-
-			//draw all vertices:
-			vkCmdDraw(workspace.command_buffer, uint32_t(object_vertices.size / sizeof(ObjectsPipeline::Vertex)), 1, 0, 0);
 		}
 
 		vkCmdEndRenderPass(workspace.command_buffer);
@@ -616,6 +756,70 @@ void Tutorial::update(float dt)
 			0.0f, 1.0f, 0.0f 														//up
 		);
 	}
+
+	{ //set objects transformation:
+		object_instances.clear();
+
+		{ //transform for the plane (+x by one unit)
+			mat4 WORLD_FROM_LOCAL{
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f
+			};
+
+			object_instances.emplace_back(ObjectInstance{
+				.vertices = plane_vertices,
+				.transform{
+					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL 
+					//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
+				}
+			});
+		};
+
+		{ //transform for the torus (-x by one unit and rotated CCW around +y)
+			float ang = time / 60.0f * 2.0f * float(M_PI) * 10.0f;
+			float ca = std::cos(ang);
+			float sa = std::sin(ang);
+			mat4 WORLD_FROM_LOCAL{
+				ca, 	0.0f, 	-sa, 	0.0f,
+				0.0f, 	1.0f, 	0.0f, 	0.0f,
+				-sa, 	0.0f, 	ca, 	0.0f,
+				-1.0f, 	0.0f, 	0.0f, 	1.0f
+			};
+
+			object_instances.emplace_back(ObjectInstance{
+				.vertices = torus_vertices,
+				.transform{
+					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+					//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
+				}
+			});
+		}
+
+		{ //transform for the model
+			mat4 WORLD_FROM_LOCAL{
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f
+			};
+
+			object_instances.emplace_back(ObjectInstance{
+				.vertices = model_vertices,
+				.transform{
+					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL 
+					//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
+				}
+			});
+		};
+	};
 	//Edit End ===========================================================================================================
 }
 

@@ -1,8 +1,14 @@
 //Edit Start =================================================================================================
 #version 450
 
-layout(set=0, binding=0, std140) uniform Camera {
-	mat4 CLIP_FROM_WORLD;
+struct Transform {
+	mat4 CLIP_FROM_LOCAL;
+	mat4 WORLD_FROM_LOCAL;
+	mat4 WORLD_FROM_LOCAL_NORMAL;
+};
+
+layout(set=1, binding=0, std140) readonly buffer Transforms {
+	Transform TRANSFORMS[];
 };
 
 layout(location = 0) in vec3 inPosition;
@@ -14,10 +20,10 @@ layout(location = 1) out vec3 outNormal;
 layout(location = 2) out vec2 outTexCoord;
 
 void main() {
-	gl_Position = CLIP_FROM_WORLD * vec4(inPosition, 1.0);
+	gl_Position = TRANSFORMS[gl_InstanceIndex].CLIP_FROM_LOCAL * vec4(inPosition, 1.0);
 
-    outPosition = inPosition;
-	outNormal = Normal;
+    outPosition = mat4x3(TRANSFORMS[gl_InstanceIndex].WORLD_FROM_LOCAL) * vec4(inPosition, 1.0);
+	outNormal = mat3(TRANSFORMS[gl_InstanceIndex].WORLD_FROM_LOCAL_NORMAL) * Normal;
 	outTexCoord = TexCoord;
 }
 //Edit End ===================================================================================================

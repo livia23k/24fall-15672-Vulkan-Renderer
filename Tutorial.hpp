@@ -69,10 +69,17 @@ struct Tutorial : RTG::Application {
 
 	struct ObjectsPipeline {
 		//descriptot set layouts:
-		VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
+		//VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
+		VkDescriptorSetLayout set1_Transforms = VK_NULL_HANDLE;
 
 		//types for descriptors:
-		using Camera = LinesPipeline::Camera;
+		// using Camera = LinesPipeline::Camera;
+		struct Transform {
+			mat4 CLIP_FROM_LOCAL;
+			mat4 WORLD_FROM_LOCAL;
+			mat4 WORLD_FROM_LOCAL_NORMAL;
+		};
+		static_assert(sizeof(Transform) == 16*4 + 16*4 + 16*4, "Transform is the expected size.");
 
 		// push constants (none)
 
@@ -105,6 +112,11 @@ struct Tutorial : RTG::Application {
 		Helpers::AllocatedBuffer Camera_src; //host coherent; mapped to cpu memory
 		Helpers::AllocatedBuffer Camera; //device-local
 		VkDescriptorSet Camera_descriptors; //references Camera
+
+		//locations for ObjectsPipeline::Transform data (streamed to GPU per-frame):
+		Helpers::AllocatedBuffer Transforms_src; //host coherent; mapped to cpu memory
+		Helpers::AllocatedBuffer Transforms; //device-local
+		VkDescriptorSet Transform_descriptors; //references Transfroms
 		//Edit End ===========================================================================================================
 	};
 	std::vector< Workspace > workspaces;
@@ -120,7 +132,7 @@ struct Tutorial : RTG::Application {
 	};
 	ObjectVertices plane_vertices;
 	ObjectVertices torus_vertices;
-	ObjectVertices heart_vertices;
+	ObjectVertices model_vertices;
 
 	//--------------------------------------------------------------------
 	//Resources that change when the swapchain is resized:
@@ -145,6 +157,12 @@ struct Tutorial : RTG::Application {
 	mat4 CLIP_FROM_WORLD;
 
 	std::vector< LinesPipeline::Vertex > lines_vertices;
+
+	struct ObjectInstance {
+		ObjectVertices vertices;
+		ObjectsPipeline::Transform transform;
+	};
+	std::vector< ObjectInstance > object_instances;
 	//Edit End ===========================================================================================================
 
 	//--------------------------------------------------------------------
