@@ -120,6 +120,7 @@ struct Tutorial : RTG::Application {
 	};
 	ObjectVertices plane_vertices;
 	ObjectVertices torus_vertices;
+	ObjectVertices heart_vertices;
 
 	//--------------------------------------------------------------------
 	//Resources that change when the swapchain is resized:

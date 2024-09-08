@@ -116,60 +116,85 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	}
 
 	//Edit Start =============================================================================================================
-	{ //create object vertices
+
+	{ //create line vertices from .obj file:
+		lines_vertices.clear();
+		std::vector<LinesPipeline::Vertex> mesh_vertices;
+		// FileMgr::load_line_from_object("models/obj/heart.obj", mesh_vertices); // heart model from https://www.cgtrader.com/free-3d-models/exterior/other/low-poly-heart-ef3d722e-8004-4f42-a53b-44c67874166d
+		// FileMgr::load_line_from_object("models/obj/acoustic_guitar.obj", mesh_vertices); // guitar model from https://www.thebasemesh.com/asset/acoustic-guitar
+		FileMgr::load_line_from_object("models/obj/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
+
+		for (auto &v : mesh_vertices) {
+			lines_vertices.push_back(v);
+		}
+	};
+
+	{ //create object vertices from .obj file:
 		std::vector< ObjectsPipeline::Vertex > vertices;
 
-		//TODO: replace with more geometry
-		//currently a single triangle:
-		
-		{ //object 1: a quadrilateral ranged from [-1,1]x[-1,1]x{0}
+		{ //object 0: model read from .obj file
+			heart_vertices.first = uint32_t(vertices.size());
 
-			/*
-				(y, z)
+			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
+			// FileMgr::load_mesh_from_object("models/obj/heart.obj", mesh_vertices);
+			// FileMgr::load_mesh_from_object("models/obj/acoustic_guitar.obj", mesh_vertices);
+			FileMgr::load_mesh_from_object("models/obj/boat.obj", mesh_vertices);
+			
+			for (auto &v : mesh_vertices) {
+				vertices.push_back(v);
+			}
 
-				(-50,-100)		(-50,100)
-					C-----------B
-					|		 /	|
-					|	   /	|
-					|    /		|
-					|  /		|
-					A-----------D
-				(50,-100)		(50,100)
+			heart_vertices.count = uint32_t(vertices.size()) - heart_vertices.first;
+		}
+
+		{ //object 1: a quadrilateral	
+
+			/* (x, z)
+				(-length, -depth)	(-length, -depth)
+					   C  /--------\ D
+						 /		    \
+					 A	/------------\ B
+				(-length, depth)	(length, depth)
 			*/
+
 			plane_vertices.first = uint32_t(vertices.size());
 
+			const float height = -0.0f;
+			const float length = 2.0f;
+			const float depth = 1.0f;
+
 			// triangle ABC
-			vertices.emplace_back(ObjectsPipeline::Vertex{
-				.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
+			vertices.emplace_back(PosNorTexVertex{
+				.Position{ .x = -length, .y = height, .z = -depth },
 				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 0.0f, .t = 1.0f }
+				.TexCoord{ .s = 0.0f, .t = 0.0f },
 			});
-			vertices.emplace_back(ObjectsPipeline::Vertex{
-				.Position{ .x = -50.0f, .y = -50.0f, .z = 100.0f },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 1.0f, .t = 0.0f }
+			vertices.emplace_back(PosNorTexVertex{
+				.Position{ .x = -length, .y = height, .z = depth },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+				.TexCoord{ .s = 1.0f, .t = 0.0f },
 			});
-			vertices.emplace_back(ObjectsPipeline::Vertex{
-				.Position{ .x = -50.0f, .y = -50.0f, .z = -100.0f },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 0.0f, .t = 0.0f }
+			vertices.emplace_back(PosNorTexVertex{
+				.Position{ .x = length, .y = height, .z = -depth },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+				.TexCoord{ .s = 0.0f, .t = 1.0f },
 			});
 
-			// triangle ADB
-			vertices.emplace_back(ObjectsPipeline::Vertex{
-				.Position{ .x = -50.0f, .y = 50.0f, .z = -100.0f },
+			// triangle DCB
+			vertices.emplace_back(PosNorTexVertex{
+				.Position{ .x = length, .y = height, .z = depth },
 				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 1.0f, .t = 0.0f }
+				.TexCoord{ .s = 1.0f, .t = 1.0f },
 			});
-			vertices.emplace_back(ObjectsPipeline::Vertex{
-				.Position{ .x = -50.0f, .y = 50.0f, .z = 100.0f },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 0.0f, .t = 1.0f }
+			vertices.emplace_back(PosNorTexVertex{
+				.Position{ .x = length, .y = height, .z = -depth },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+				.TexCoord{ .s = 0.0f, .t = 1.0f },
 			});
-			vertices.emplace_back(ObjectsPipeline::Vertex{
-				.Position{ .x = -50.0f, .y = -50.0f, .z = 100.0f },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 0.0f, .t = 0.0f }
+			vertices.emplace_back(PosNorTexVertex{
+				.Position{ .x = -length, .y = height, .z = depth },
+				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+				.TexCoord{ .s = 1.0f, .t = 0.0f },
 			});
 
 			plane_vertices.count = uint32_t(vertices.size()) - plane_vertices.first;
@@ -183,11 +208,11 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			//	- u is angle around main axis (+z)
 			//	- v is angle around tube axis (+y)
 
-			constexpr float R1 = 20.f; //main radius
-			constexpr float R2 = 10.f; //tube radius
+			constexpr float R1 = 0.75f; //main radius
+			constexpr float R2 = 0.15f; //tube radius
 
-			constexpr uint32_t U_STEPS = 60;
-			constexpr uint32_t V_STEPS = 30;
+			constexpr uint32_t U_STEPS = 20;
+			constexpr uint32_t V_STEPS = 16;
 
 			//texture repeats around the torus:
 			constexpr float V_REPEATS = 2.0f;
@@ -209,7 +234,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 					//rotate 90deg around x to make it aligned with my plane
 					.Position{
 						.x = torus_x,
-						.y = -torus_z - 40.f,	// y = -z - <shift down-wards>
+						.y = -torus_z,
 						.z = torus_y
 					},
 					.Normal{
@@ -238,7 +263,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 
 			torus_vertices.count = uint32_t(vertices.size()) - torus_vertices.first;
 		}
-		
+
 		size_t bytes = vertices.size() * sizeof(vertices[0]);
 
 		object_vertices = rtg.helpers.create_buffer(
@@ -583,18 +608,18 @@ void Tutorial::update(float dt)
 		float fov = 60.0f;
 
 		//camera (heart)
-		float lookat_distance = 150.0f;
+		// float lookat_distance = 150.0f;
 		
-		CLIP_FROM_WORLD = perspective(
-			fov / float(M_PI) * 180.0f, 											//fov in radians
-			float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
-			0.1f,	//near
-			1000.0f //far
-		) * look_at(
-			lookat_distance * std::cos(ang), 0.0f, lookat_distance * std::sin(ang),	//eye
-			0.0f, 0.0f, 0.0f, 														//target
-			0.0f, 1.0f, 0.0f 														//up
-		);
+		// CLIP_FROM_WORLD = perspective(
+		// 	fov / float(M_PI) * 180.0f, 											//fov in radians
+		// 	float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
+		// 	0.1f,	//near
+		// 	1000.0f //far
+		// ) * look_at(
+		// 	lookat_distance * std::cos(ang), 0.0f, lookat_distance * std::sin(ang),	//eye
+		// 	0.0f, 0.0f, 0.0f, 														//target
+		// 	0.0f, 1.0f, 0.0f 														//up
+		// );
 
 		//camera (guitar)
 		// float lookat_distance = 1.5f;
@@ -610,19 +635,20 @@ void Tutorial::update(float dt)
 		// 	0.0f, 1.0f, 0.0f 														//up
 		// );
 
-		//camera (cat)
-		// float lookat_distance = 50.0f;
+		//camera (boat)
+		float lookat_distance = 0.7f;
 		
-		// CLIP_FROM_WORLD = perspective(
-		// 	fov / float(M_PI) * 180.0f, 											//fov in radians
-		// 	float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
-		// 	0.1f,	//near
-		// 	1000.0f //far
-		// ) * look_at(
-		// 	lookat_distance * std::cos(ang), 20.0f, lookat_distance * std::sin(ang),//eye
-		// 	-200.0f, 20.0f, 0.0f, 													//target
-		// 	0.0f, 1.0f, 0.0f 														//up
-		// );
+		CLIP_FROM_WORLD = perspective(
+			fov / float(M_PI) * 180.0f, 											//fov in radians
+			float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height),	// aspect
+			0.1f,	//near
+			1000.0f //far
+		) * look_at(
+			lookat_distance * std::cos(ang), 0.2f, lookat_distance * std::sin(ang),	//eye
+			0.0f, 0.2f, 0.0f, 														//target
+			0.0f, 1.0f, 0.0f 														//up
+		);
+
 	}
 
 	// { //set input vertices (an 'x'):
@@ -685,17 +711,6 @@ void Tutorial::update(float dt)
 	// 	assert(lines_vertices.size() == count);
 	// };
 
-	{ //set input vertices from obj:
-		lines_vertices.clear();
-		std::vector<LinesPipeline::Vertex> mesh_vertices;
-		FileMgr::loadOBJ("models/obj/heart.obj", mesh_vertices); // heart model from https://www.cgtrader.com/free-3d-models/exterior/other/low-poly-heart-ef3d722e-8004-4f42-a53b-44c67874166d
-		// FileMgr::loadOBJ("models/obj/acoustic_guitar.obj", mesh_vertices); // guitar model from https://www.thebasemesh.com/asset/acoustic-guitar
-		// FileMgr::loadOBJ("models/obj/cat.obj", mesh_vertices); // cat model from https://www.cgtrader.com/free-3d-print-models/art/sculptures/cat-lowpoly-f1e47945-af1a-4cda-8fc0-091190b72724
-
-		for (auto &v : mesh_vertices) {
-			lines_vertices.push_back(v);
-		}
-	};
 
 	//HACK: transform vertices to clip space on CPU:
 	// for (PosColVertex &v : lines_vertices) {
