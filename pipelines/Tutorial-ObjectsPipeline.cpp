@@ -19,8 +19,9 @@ void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
     VkShaderModule vert_module = rtg.helpers.create_shader_module(vert_code);
     VkShaderModule frag_module = rtg.helpers.create_shader_module(frag_code);
 
-    { //create transforms descriptor set layout binding:
-      // the set1_Transforms layout holds a Transform structure in a STORAGE buffer used in the vertex shader
+    //create transforms descriptor set layout binding:
+
+    {//set1_Transforms layout holds a Transform structure in a STORAGE buffer used in the vertex shader  
         std::array< VkDescriptorSetLayoutBinding, 1 > bindings{
             VkDescriptorSetLayoutBinding{
                 .binding = 0,
@@ -39,10 +40,30 @@ void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
         VK( vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set1_Transforms) );
     };
 
+    {//set2_TEXTURE layout holds a single descriptor for a sampler2D used in the fragment shader
+        std::array< VkDescriptorSetLayoutBinding, 1 > bindings{
+            VkDescriptorSetLayoutBinding{
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+            }
+        };
+
+        VkDescriptorSetLayoutCreateInfo create_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = uint32_t(bindings.size()),
+            .pBindings = bindings.data()
+        };
+
+        VK( vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set2_TEXTURE) );
+    };
+
     { //create pipeline layout:
-        std::array< VkDescriptorSetLayout, 2 > layouts{
+        std::array< VkDescriptorSetLayout, 3 > layouts{
             set1_Transforms, // the set0_Camera,
-            set1_Transforms
+            set1_Transforms,
+            set2_TEXTURE,
         };
 
         VkPipelineLayoutCreateInfo create_info{
@@ -199,6 +220,11 @@ void Tutorial::ObjectsPipeline::destroy(RTG &rtg) {
     if (set1_Transforms != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(rtg.device, set1_Transforms, nullptr);
         set1_Transforms = VK_NULL_HANDLE;
+    }
+
+    if (set2_TEXTURE != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(rtg.device, set2_TEXTURE, nullptr);
+        set2_TEXTURE = VK_NULL_HANDLE;
     }
 
     if (layout != VK_NULL_HANDLE) {

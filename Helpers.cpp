@@ -74,10 +74,10 @@ void Helpers::transfer_to_buffer(void *data, size_t size, AllocatedBuffer &targe
 		Mapped
 	);
 
-	//TODO: copy data to transfer buffer
+	//DONE: copy data to transfer buffer
 	std::memcpy(transfer_src.allocation.data(), data, size);
 
-	//TODO: record CPU->GPU transfer to command buffer
+	//DONE: record CPU->GPU transfer to command buffer
 	{
 		VK( vkResetCommandBuffer(transfer_command_buffer, 0) );
 
@@ -99,7 +99,7 @@ void Helpers::transfer_to_buffer(void *data, size_t size, AllocatedBuffer &targe
 		VK( vkEndCommandBuffer(transfer_command_buffer) );
 	}
 
-	//TODO: run command buffer
+	//DONE: run command buffer
 	{
 		VkSubmitInfo submit_info{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -109,7 +109,7 @@ void Helpers::transfer_to_buffer(void *data, size_t size, AllocatedBuffer &targe
 		VK( vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE) );
 	}
 
-	//TODO: wait for command buffer to finish
+	//DONE: wait for command buffer to finish
 	VK( vkQueueWaitIdle(rtg.graphics_queue) );
 
 	//destroy to avoid buffer memory leaking
