@@ -35,7 +35,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		std::array< VkDescriptorPoolSize, 2 > pool_sizes{
 			VkDescriptorPoolSize{ // for camera
 				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 1 * per_workspace //1 descriptor per set, 1 set per workspace
+				.descriptorCount = 2 * per_workspace //1 descriptor per set, 2 set per workspace
 			},
 			VkDescriptorPoolSize{ // for transform
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -46,7 +46,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		VkDescriptorPoolCreateInfo create_info{
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			.flags = 0, //because CREATE_FREE_DESCRIPTOR_SET_BIT isn't included, can't free individual descriptors allocated from this pool
-			.maxSets = 2 * per_workspace, //one set per workspace
+			.maxSets = 3 * per_workspace, //one set per workspace
 			.poolSizeCount = uint32_t(pool_sizes.size()),
 			.pPoolSizes = pool_sizes.data()
 		};
@@ -61,23 +61,24 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		refsol::Tutorial_constructor_workspace(rtg, command_pool, &workspace.command_buffer);
 
 		//Edit Start =========================================================================================================
-		workspace.Camera_src = rtg.helpers.create_buffer(
-			sizeof(LinesPipeline::Camera),
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, //host visible memory, coherent (no special sync needed)
-			Helpers::Mapped //put it somewhere in the CPU address space
-		);
-		workspace.Camera = rtg.helpers.create_buffer(
-			sizeof(LinesPipeline::Camera),
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, //use as a uniform buffer, and a target of a memory copy
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //on GPU, not host visible
-			Helpers::Unmapped
-		);
 
-		//DONE: descriptor set
+		//descriptor sets alloc
+		{	
+			//create buffers for sources and destinations for lines_pipeline.set0_Camera
+			workspace.Camera_src = rtg.helpers.create_buffer(
+				sizeof(LinesPipeline::Camera),
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, //host visible memory, coherent (no special sync needed)
+				Helpers::Mapped //put it somewhere in the CPU address space
+			);
+			workspace.Camera = rtg.helpers.create_buffer(
+				sizeof(LinesPipeline::Camera),
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, //use as a uniform buffer, and a target of a memory copy
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //on GPU, not host visible
+				Helpers::Unmapped
+			);
 
-		{//set0_Camera
-			{ //allocate descriptor set for Camera descriptor
+			{ //allocate descriptor set for lines_pipeline.set0_Camera
 				VkDescriptorSetAllocateInfo alloc_info{
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 					.descriptorPool = descriptor_pool,
@@ -88,35 +89,78 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 				VK( vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Camera_descriptors) );
 			};
 
-			//DONE: descriptor write
-			{ //point descriptor to Camera buffer:
-				VkDescriptorBufferInfo Camera_info{
-					.buffer = workspace.Camera.handle,
-					.offset = 0,
-					.range = workspace.Camera.size
+			//create buffers for sources and destinations for objects_pipeline.set0_World
+			workspace.World_src = rtg.helpers.create_buffer(
+				sizeof(ObjectsPipeline::World),
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, //host visible memory, coherent (no special sync needed)
+				Helpers::Mapped //put it somewhere in the CPU address space
+			);
+
+			workspace.World = rtg.helpers.create_buffer(
+				sizeof(ObjectsPipeline::World),
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, //use as a uniform buffer, and a target of a memory copy
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //on GPU, not host visible
+				Helpers::Unmapped
+			);
+
+			{ //allocate descriptor set for objects_pipeline.set0_World
+				VkDescriptorSetAllocateInfo alloc_info{
+					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+					.descriptorPool = descriptor_pool,
+					.descriptorSetCount = 1,
+					.pSetLayouts = &objects_pipeline.set0_World
 				};
 
-				std::array< VkWriteDescriptorSet, 1 > writes{
-					VkWriteDescriptorSet{
-						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-						.dstSet = workspace.Camera_descriptors,
-						.dstBinding = 0, 
-						.dstArrayElement = 0,
-						.descriptorCount = 1,
-						.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-						.pBufferInfo = &Camera_info
-					}
-				};
-
-				vkUpdateDescriptorSets(
-					rtg.device,
-					uint32_t(writes.size()),	//descriptor write count
-					writes.data(),			    //descriptor writes 
-					0,							//descriptor copy count
-					nullptr						//descriptor copies
-				);
+				VK( vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.World_descriptors) );
 			};
-		}; //end of set0_Camera
+		};
+
+		//descriptor sets write
+		{ 
+			//point descriptor to Camera buffer:
+			VkDescriptorBufferInfo Camera_info{
+				.buffer = workspace.Camera.handle,
+				.offset = 0,
+				.range = workspace.Camera.size
+			};
+			
+			//point descriptor to World buffer:
+			VkDescriptorBufferInfo World_info{
+				.buffer = workspace.World.handle,
+				.offset = 0,
+				.range = workspace.World.size
+			};
+
+			std::array< VkWriteDescriptorSet, 2 > writes{
+				VkWriteDescriptorSet{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = workspace.Camera_descriptors,
+					.dstBinding = 0, 
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.pBufferInfo = &Camera_info
+				},
+				VkWriteDescriptorSet{
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.dstSet = workspace.World_descriptors,
+					.dstBinding = 0,
+					.dstArrayElement = 0,
+					.descriptorCount = 1,
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.pBufferInfo = &World_info
+				}
+			};
+
+			vkUpdateDescriptorSets(
+				rtg.device,
+				uint32_t(writes.size()),	//descriptor write count
+				writes.data(),			    //descriptor writes 
+				0,							//descriptor copy count
+				nullptr						//descriptor copies
+			);
+		};
 
 		{ //set1_Transforms
 			VkDescriptorSetAllocateInfo alloc_info{
@@ -546,6 +590,15 @@ Tutorial::~Tutorial()
 		}
 		//Camera_descriptors is freed when pool is destroyed.
 
+		if (workspace.World_src.handle != VK_NULL_HANDLE) {
+			rtg.helpers.destroy_buffer(std::move(workspace.World_src));
+		}
+
+		if (workspace.World.handle != VK_NULL_HANDLE) {
+			rtg.helpers.destroy_buffer(std::move(workspace.World));
+		}
+		//World_descriptors is freed when pool is destroyed.
+
 		if (workspace.Transforms_src.handle != VK_NULL_HANDLE) {
 			rtg.helpers.destroy_buffer(std::move(workspace.Transforms_src));
 		}
@@ -682,6 +735,22 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 			.size = workspace.Camera_src.size
 		};
 		vkCmdCopyBuffer(workspace.command_buffer, workspace.Camera_src.handle, workspace.Camera.handle, 1, &copy_region);
+	};
+
+	{//upload world info:
+		assert(workspace.Camera_src.size == sizeof(world));
+
+		//host-side copy into World_src:
+		memcpy(workspace.World_src.allocation.data(), &world, sizeof(world));
+
+		//add device-side copy from World_src to World:
+		assert(workspace.World_src.size == workspace.World.size);
+		VkBufferCopy copy_region{
+			.srcOffset = 0,
+			.dstOffset = 0,
+			.size = workspace.World_src.size
+		};
+		vkCmdCopyBuffer(workspace.command_buffer, workspace.World_src.handle, workspace.World.handle, 1, &copy_region);
 	};
 
 	//upload object transforms info:
@@ -907,7 +976,8 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 				//Camera descriptor set is already bound from the lines pipeline
 
 				{ //bind Transforms descriptor set:
-					std::array< VkDescriptorSet, 1 > descriptor_sets{
+					std::array< VkDescriptorSet, 2 > descriptor_sets{
+						workspace.World_descriptors,	// set0: World descriptor set
 						workspace.Transform_descriptors, // set1: Transforms descriptor set	
 					};
 
@@ -915,7 +985,7 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 						workspace.command_buffer, // command buffer
 						VK_PIPELINE_BIND_POINT_GRAPHICS, //pipeline bind point
 						objects_pipeline.layout, //pipeline layout
-						1, //first set
+						0, //first set
 						uint32_t(descriptor_sets.size()), descriptor_sets.data(), //descriptor sets count, ptr
 						0, nullptr //dynamic offsets count, ptr
 					);
@@ -976,7 +1046,25 @@ void Tutorial::update(float dt)
 			0.0f, 0.2f, 0.0f, 														//target
 			0.0f, 1.0f, 0.0f 														//up
 		);
-	}
+	};
+
+	{ //set world data (sun and sky):
+		world.SKY_DIRECTION.x = 0.0f;
+		world.SKY_DIRECTION.y = 0.0f;
+		world.SKY_DIRECTION.z = 1.0f;
+
+		world.SKY_ENERGY.r = 0.1f;
+		world.SKY_ENERGY.g = 0.1f;
+		world.SKY_ENERGY.b = 0.2f;
+
+		world.SUN_DIRECTION.x = 6.0f / 23.0f;
+		world.SUN_DIRECTION.y = 13.0f / 23.0f;
+		world.SUN_DIRECTION.z = 18.0f / 23.0f;
+
+		world.SUN_ENERGY.r = 1.0f;
+		world.SUN_ENERGY.g = 1.0f;
+		world.SUN_ENERGY.b = 0.9f;
+	};
 
 	{ //set objects transformation:
 		object_instances.clear();

@@ -21,6 +21,25 @@ void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
 
     //create transforms descriptor set layout binding:
 
+    {//set0_World layout holds world info in a uniform buffer used in the fragment shader
+        std::array< VkDescriptorSetLayoutBinding, 1 > bindings{
+            VkDescriptorSetLayoutBinding{
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT
+            }
+        };
+
+        VkDescriptorSetLayoutCreateInfo create_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = uint32_t(bindings.size()),
+            .pBindings = bindings.data()
+        };
+
+        VK( vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set0_World) );
+    };
+
     {//set1_Transforms layout holds a Transform structure in a STORAGE buffer used in the vertex shader  
         std::array< VkDescriptorSetLayoutBinding, 1 > bindings{
             VkDescriptorSetLayoutBinding{
@@ -61,7 +80,7 @@ void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
 
     { //create pipeline layout:
         std::array< VkDescriptorSetLayout, 3 > layouts{
-            set1_Transforms, // the set0_Camera,
+            set0_World, // set0_Camera,
             set1_Transforms,
             set2_TEXTURE,
         };
@@ -216,6 +235,11 @@ void Tutorial::ObjectsPipeline::destroy(RTG &rtg) {
     //     vkDestroyDescriptorSetLayout(rtg.device, set0_Camera, nullptr);
     //     set0_Camera = VK_NULL_HANDLE;
     // }
+
+    if (set0_World != VK_NULL_HANDLE) {
+        vkDestroyDescriptorSetLayout(rtg.device, set0_World, nullptr);
+        set0_World = VK_NULL_HANDLE;
+    }
 
     if (set1_Transforms != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(rtg.device, set1_Transforms, nullptr);
