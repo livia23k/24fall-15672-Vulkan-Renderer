@@ -178,12 +178,29 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 
 	//Edit Start =============================================================================================================
 
+	const float boat_amplification = 5.f;
+	const float sea_depression = 4.f;
+	const float sea_downward = 3.0f;
+
 	{ //create line vertices from .obj file:
 		lines_vertices.clear();
 		std::vector<LinesPipeline::Vertex> mesh_vertices;
-		FileMgr::load_line_from_object("models/obj/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
+		FileMgr::load_line_from_object("assets/models/obj/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
 
 		for (auto &v : mesh_vertices) {
+			v.Position.x *= boat_amplification;
+			v.Position.y *= boat_amplification;
+			v.Position.z *= boat_amplification;
+			lines_vertices.push_back(v);
+		}
+
+		FileMgr::load_line_from_object("assets/models/obj/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/product/chinese-ceremonial-door-low-poly
+
+		for (auto &v : mesh_vertices) {
+			v.Position.x /= sea_depression;
+			v.Position.y /= sea_depression;
+			v.Position.z /= sea_depression;
+			v.Position.y -= sea_downward;
 			lines_vertices.push_back(v);
 		}
 	};
@@ -191,141 +208,165 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	{ //create object vertices from .obj file:
 		std::vector< ObjectsPipeline::Vertex > vertices;
 
-		{ //object 0: model read from .obj file
-			model_vertices.first = uint32_t(vertices.size());
+		{ //object 0: boat read from .obj file
+			boat_vertices.first = uint32_t(vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
-			FileMgr::load_mesh_from_object("models/obj/boat.obj", mesh_vertices);
+			FileMgr::load_mesh_from_object("assets/models/obj/boat.obj", mesh_vertices);
 			
 			for (auto &v : mesh_vertices) {
+				v.Position.x *= boat_amplification;
+				v.Position.y *= boat_amplification;
+				v.Position.z *= boat_amplification;
 				vertices.push_back(v);
 			}
 
-			model_vertices.count = uint32_t(vertices.size()) - model_vertices.first;
+			boat_vertices.count = uint32_t(vertices.size()) - boat_vertices.first;
 		}
 
-		{ //object 1: a quadrilateral	
+		{ //object 0: environment read from .obj file
+			sea_vertices.first = uint32_t(vertices.size());
 
-			/* (x, z)
-				(-length, -depth)	(-length, -depth)
-					   C  /--------\ D
-						 /		    \
-					 A	/------------\ B
-				(-length, depth)	(length, depth)
-			*/
-
-			plane_vertices.first = uint32_t(vertices.size());
-
-			const float height = -0.0f;
-			const float length = 2.0f;
-			const float depth = 1.0f;
-
-			// triangle ABC
-			vertices.emplace_back(PosNorTexVertex{
-				.Position{ .x = -length, .y = height, .z = -depth },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 0.0f, .t = 0.0f },
-			});
-			vertices.emplace_back(PosNorTexVertex{
-				.Position{ .x = -length, .y = height, .z = depth },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-				.TexCoord{ .s = 1.0f, .t = 0.0f },
-			});
-			vertices.emplace_back(PosNorTexVertex{
-				.Position{ .x = length, .y = height, .z = -depth },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-				.TexCoord{ .s = 0.0f, .t = 1.0f },
-			});
-
-			// triangle DCB
-			vertices.emplace_back(PosNorTexVertex{
-				.Position{ .x = length, .y = height, .z = depth },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-				.TexCoord{ .s = 1.0f, .t = 1.0f },
-			});
-			vertices.emplace_back(PosNorTexVertex{
-				.Position{ .x = length, .y = height, .z = -depth },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-				.TexCoord{ .s = 0.0f, .t = 1.0f },
-			});
-			vertices.emplace_back(PosNorTexVertex{
-				.Position{ .x = -length, .y = height, .z = depth },
-				.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-				.TexCoord{ .s = 1.0f, .t = 0.0f },
-			});
-
-			plane_vertices.count = uint32_t(vertices.size()) - plane_vertices.first;
-		}
-
-		{ //object 2: a torus
-			torus_vertices.first = uint32_t(vertices.size());
-
-			// DONE: torus geometry
-			//will parameterize the torus with (u,v) where:
-			//	- u is angle around main axis (+z)
-			//	- v is angle around tube axis (+y)
-
-			constexpr float R1 = 0.35f; //main radius
-			constexpr float R2 = 0.15f; //tube radius
-
-			constexpr uint32_t U_STEPS = 20;
-			constexpr uint32_t V_STEPS = 16;
-
-			//texture repeats around the torus:
-			constexpr float V_REPEATS = 2.0f;
-			const float U_REPEATS = std::ceil(V_REPEATS / R2 * R1); // (U_REPEATS, V_REPEATS) proportional to the (R1, R2)
-
-			auto emplace_vertex = [&](uint32_t ui, uint32_t vi) {
-				//convert steps to angles;
-				// (doing the mod since trig on 2 M_PI may not exactly match 0)
-				float ua = (ui % U_STEPS) / float(U_STEPS) * 2.0f * float(M_PI);
-				float va = (vi % V_STEPS) / float(V_STEPS) * 2.0f * float(M_PI);
-
-    			// calculate the origin torus position
-				float torus_x = (R1 + R2 * std::cos(va)) * std::cos(ua);
-				float torus_y = (R1 + R2 * std::cos(va)) * std::sin(ua);
-				float torus_z = R2 * std::sin(va);
-
-				vertices.emplace_back( PosNorTexVertex{
-					
-					//rotate 90deg around x to make it aligned with my plane
-					.Position{
-						//horizontal
-						.x = torus_x,
-						.y = -torus_z,
-						.z = torus_y
-
-						//vertical
-						// .x = torus_x,
-						// .y = torus_y,
-						// .z = torus_z
-					},
-					.Normal{
-						.x = std::cos(va) * std::cos(ua),
-						.y = std::cos(va) * std::sin(ua),
-						.z = std::sin(va)
-					},
-					.TexCoord{
-						.s = (ui) / float(U_STEPS) * U_REPEATS,
-						.t = (vi) / float(V_STEPS) * V_REPEATS
-					}
-				});
-			};
-
-			for (uint32_t ui = 0; ui < U_STEPS; ++ ui) {
-				for (uint32_t vi = 0; vi < V_STEPS; ++ vi) {
-					emplace_vertex(ui, vi + 1);
-					emplace_vertex(ui, vi);
-					emplace_vertex(ui + 1, vi);
-
-					emplace_vertex(ui, vi + 1);
-					emplace_vertex(ui + 1, vi);
-					emplace_vertex(ui + 1, vi + 1);
-				}
+			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
+			FileMgr::load_mesh_from_object("assets/models/obj/pool.obj", mesh_vertices);
+			
+			for (auto &v : mesh_vertices) {
+				v.Position.x /= sea_depression;
+				v.Position.y /= sea_depression;
+				v.Position.z /= sea_depression;
+				v.Position.y -= sea_downward;
+				vertices.push_back(v);
 			}
 
-			torus_vertices.count = uint32_t(vertices.size()) - torus_vertices.first;
+			sea_vertices.count = uint32_t(vertices.size()) - sea_vertices.first;
 		}
+
+		
+		// { //objects from tutorial
+		// 	{ //object 1: a quadrilateral	
+
+		// 		/* (x, z)
+		// 			(-length, -depth)	(-length, -depth)
+		// 				C  /--------\ D
+		// 					/		    \
+		// 				A	/------------\ B
+		// 			(-length, depth)	(length, depth)
+		// 		*/
+
+		// 		plane_vertices.first = uint32_t(vertices.size());
+
+		// 		const float height = -0.0f;
+		// 		const float length = 2.0f;
+		// 		const float depth = 1.0f;
+
+		// 		// triangle ABC
+		// 		vertices.emplace_back(PosNorTexVertex{
+		// 			.Position{ .x = -length, .y = height, .z = -depth },
+		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+		// 			.TexCoord{ .s = 0.0f, .t = 0.0f },
+		// 		});
+		// 		vertices.emplace_back(PosNorTexVertex{
+		// 			.Position{ .x = -length, .y = height, .z = depth },
+		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+		// 			.TexCoord{ .s = 1.0f, .t = 0.0f },
+		// 		});
+		// 		vertices.emplace_back(PosNorTexVertex{
+		// 			.Position{ .x = length, .y = height, .z = -depth },
+		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+		// 			.TexCoord{ .s = 0.0f, .t = 1.0f },
+		// 		});
+
+		// 		// triangle DCB
+		// 		vertices.emplace_back(PosNorTexVertex{
+		// 			.Position{ .x = length, .y = height, .z = depth },
+		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
+		// 			.TexCoord{ .s = 1.0f, .t = 1.0f },
+		// 		});
+		// 		vertices.emplace_back(PosNorTexVertex{
+		// 			.Position{ .x = length, .y = height, .z = -depth },
+		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+		// 			.TexCoord{ .s = 0.0f, .t = 1.0f },
+		// 		});
+		// 		vertices.emplace_back(PosNorTexVertex{
+		// 			.Position{ .x = -length, .y = height, .z = depth },
+		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
+		// 			.TexCoord{ .s = 1.0f, .t = 0.0f },
+		// 		});
+
+		// 		plane_vertices.count = uint32_t(vertices.size()) - plane_vertices.first;
+		// 	}
+
+		// 	{ //object 2: a torus
+		// 		torus_vertices.first = uint32_t(vertices.size());
+
+		// 		// DONE: torus geometry
+		// 		//will parameterize the torus with (u,v) where:
+		// 		//	- u is angle around main axis (+z)
+		// 		//	- v is angle around tube axis (+y)
+
+		// 		constexpr float R1 = 0.35f; //main radius
+		// 		constexpr float R2 = 0.15f; //tube radius
+
+		// 		constexpr uint32_t U_STEPS = 20;
+		// 		constexpr uint32_t V_STEPS = 16;
+
+		// 		//texture repeats around the torus:
+		// 		constexpr float V_REPEATS = 2.0f;
+		// 		const float U_REPEATS = std::ceil(V_REPEATS / R2 * R1); // (U_REPEATS, V_REPEATS) proportional to the (R1, R2)
+
+		// 		auto emplace_vertex = [&](uint32_t ui, uint32_t vi) {
+		// 			//convert steps to angles;
+		// 			// (doing the mod since trig on 2 M_PI may not exactly match 0)
+		// 			float ua = (ui % U_STEPS) / float(U_STEPS) * 2.0f * float(M_PI);
+		// 			float va = (vi % V_STEPS) / float(V_STEPS) * 2.0f * float(M_PI);
+
+		// 			// calculate the origin torus position
+		// 			float torus_x = (R1 + R2 * std::cos(va)) * std::cos(ua);
+		// 			float torus_y = (R1 + R2 * std::cos(va)) * std::sin(ua);
+		// 			float torus_z = R2 * std::sin(va);
+
+		// 			vertices.emplace_back( PosNorTexVertex{
+						
+		// 				//rotate 90deg around x to make it aligned with my plane
+		// 				.Position{
+		// 					//horizontal
+		// 					.x = torus_x,
+		// 					.y = -torus_z,
+		// 					.z = torus_y
+
+		// 					//vertical
+		// 					// .x = torus_x,
+		// 					// .y = torus_y,
+		// 					// .z = torus_z
+		// 				},
+		// 				.Normal{
+		// 					.x = std::cos(va) * std::cos(ua),
+		// 					.y = std::cos(va) * std::sin(ua),
+		// 					.z = std::sin(va)
+		// 				},
+		// 				.TexCoord{
+		// 					.s = (ui) / float(U_STEPS) * U_REPEATS,
+		// 					.t = (vi) / float(V_STEPS) * V_REPEATS
+		// 				}
+		// 			});
+		// 		};
+
+		// 		for (uint32_t ui = 0; ui < U_STEPS; ++ ui) {
+		// 			for (uint32_t vi = 0; vi < V_STEPS; ++ vi) {
+		// 				emplace_vertex(ui, vi + 1);
+		// 				emplace_vertex(ui, vi);
+		// 				emplace_vertex(ui + 1, vi);
+
+		// 				emplace_vertex(ui, vi + 1);
+		// 				emplace_vertex(ui + 1, vi);
+		// 				emplace_vertex(ui + 1, vi + 1);
+		// 			}
+		// 		}
+
+		// 		torus_vertices.count = uint32_t(vertices.size()) - torus_vertices.first;
+		// 	}
+		// };
+		
 
 		size_t bytes = vertices.size() * sizeof(vertices[0]);
 
@@ -343,7 +384,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	{ // create textures
 
 		{ //DONE: make some textures
-			textures.reserve(2);
+			textures.reserve(3);
 
 			{ //texture 0: dark grey / light grey checkerboard with a red square at the origin
 
@@ -400,6 +441,35 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 				textures.emplace_back(rtg.helpers.create_image(
 					VkExtent2D{ .width = size , .height = size }, //size of image
 					VK_FORMAT_R8G8B8A8_SRGB, //how to interpret image data, here SRGB-encoded 8-bit RGBA
+					VK_IMAGE_TILING_OPTIMAL,
+					VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, //will sample and upload
+					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //should be device-local
+					Helpers::Unmapped
+				));
+
+				//transfer data:
+				rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
+			};
+
+			{ //texture 2: sea texture
+
+				//actually make the texture:
+				uint32_t size = 256;
+				std::vector< uint32_t > data;
+				data.reserve(size * size);
+
+				for (uint32_t y = 0; y < size; ++y) {
+					for (uint32_t x = 0; x < size; ++x) {
+						uint32_t blue = floor(std::cos(x / 100.0) * size);
+						data.emplace_back((0x50 << 24) | (blue << 16) | (0x10 << 8) | (0x00));
+					}
+				}
+				assert(data.size() == size*size);
+
+				//make a place for texture to live on the GPU
+				textures.emplace_back(rtg.helpers.create_image(
+					VkExtent2D{ .width = size , .height = size }, //size of image
+					VK_FORMAT_R8G8B8A8_UNORM, //how to interpret image data, here SRGB-encoded 8-bit RGBA
 					VK_IMAGE_TILING_OPTIMAL,
 					VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, //will sample and upload
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, //should be device-local
@@ -861,20 +931,20 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 
 	// TODO: GPU commands here
 	{ // render pass：describes layout, "input from", "output to" of attachments
-		[[maybe_unused]] std::array<VkClearValue, 2> clear_values{
-			VkClearValue{.color{.float32{0.0f, 0.0f, 0.0f, 1.0f}}},
-			VkClearValue{.depthStencil{.depth = 1.0f, .stencil = 0}},
+		// [[maybe_unused]] std::array<VkClearValue, 2> clear_values{
+		// 	VkClearValue{.color{.float32{0.0f, 0.0f, 0.0f, 1.0f}}},
+		// 	VkClearValue{.depthStencil{.depth = 1.0f, .stencil = 0}},
+		// };
+
+		[[maybe_unused]] std::array< VkClearValue, 2 > clear_values1{
+			VkClearValue{ .color{ .float32{1.0f, 1.0f, 1.0f, 1.0f} } },
+			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },
 		};
 
-		// [[maybe_unused]] std::array< VkClearValue, 2 > clear_values1{
-		// 	VkClearValue{ .color{ .float32{1.0f, 1.0f, 1.0f, 1.0f} } },
-		// 	VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },
-		// };
-
-		// [[maybe_unused]] std::array< VkClearValue, 2 > clear_values2{
-		// 	VkClearValue{ .color{ .float32{0.0f, 0.0f, 0.0f, 0.0f} } },
-		// 	VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },
-		// };
+		[[maybe_unused]] std::array< VkClearValue, 2 > clear_values2{
+			VkClearValue{ .color{ .float32{0.0f, 0.0f, 0.0f, 0.0f} } },
+			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },
+		};
 
 		VkRenderPassBeginInfo begin_info{
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -887,21 +957,21 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 			},
 
 			// ver.1 simple color
-			.clearValueCount = uint32_t(clear_values.size()),
-			.pClearValues = clear_values.data(),
+			// .clearValueCount = uint32_t(clear_values.size()),
+			// .pClearValues = clear_values.data(),
 
 			// ver.2. flashing black and white
-			//  .clearValueCount = uint32_t(g_frame % 100 < 50 ? clear_values1.size() : clear_values2.size()),
-			//  .pClearValues = g_frame % 100 < 50 ? clear_values1.data() : clear_values2.data(),
+			 .clearValueCount = uint32_t(g_frame % 100 < 50 ? clear_values1.size() : clear_values2.size()),
+			 .pClearValues = g_frame % 100 < 50 ? clear_values1.data() : clear_values2.data(),
 		};
 
 		vkCmdBeginRenderPass(workspace.command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 		// TODO: run pipelines here
 
-		// {//frame increased for ClearValue ver.2
-		// 	++ g_frame;
-		// };
+		{//frame increased for ClearValue ver.2
+			++ g_frame;
+		};
 
 		{ // configure scissor rectangle
 			VkRect2D scissor{
@@ -1034,7 +1104,7 @@ void Tutorial::update(float dt)
 		float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
 		float fov = 60.0f;
 
-		float lookat_distance = 0.7f;
+		float lookat_distance = 5.f;
 		
 		CLIP_FROM_WORLD = perspective(
 			fov / float(M_PI) * 180.0f, 											//fov in radians
@@ -1042,8 +1112,8 @@ void Tutorial::update(float dt)
 			0.1f,	//near
 			1000.0f //far
 		) * look_at(
-			lookat_distance * std::cos(ang), 0.2f, lookat_distance * std::sin(ang),	//eye
-			0.0f, 0.2f, 0.0f, 														//target
+			lookat_distance * std::cos(ang), 2.f, lookat_distance * std::sin(ang),	//eye
+			0.0f, 1.f, 0.0f, 														//target
 			0.0f, 1.0f, 0.0f 														//up
 		);
 	};
@@ -1069,7 +1139,50 @@ void Tutorial::update(float dt)
 	{ //set objects transformation:
 		object_instances.clear();
 
-		{ //transform for the plane (+x by one unit)
+		// { //transform for the plane (+x by one unit)
+		// 	mat4 WORLD_FROM_LOCAL{
+		// 		1.0f, 0.0f, 0.0f, 0.0f,
+		// 		0.0f, 1.0f, 0.0f, 0.0f,
+		// 		0.0f, 0.0f, 1.0f, 0.0f,
+		// 		0.0f, 0.0f, 0.0f, 1.0f
+		// 	};
+
+		// 	object_instances.emplace_back(ObjectInstance{
+		// 		.vertices = plane_vertices,
+		// 		.transform{
+		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL 
+		// 			//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
+		// 		},
+		// 		.texture = 1,
+		// 	});
+		// };
+
+		// { //transform for the torus (-x by one unit and rotated CCW around +y)
+		// 	float ang = time / 60.0f * 2.0f * float(M_PI) * 10.0f;
+		// 	float ca = std::cos(ang);
+		// 	float sa = std::sin(ang);
+		// 	mat4 WORLD_FROM_LOCAL{
+		// 		ca, 	0.0f, 	-sa, 	0.0f,
+		// 		0.0f, 	1.0f, 	0.0f, 	0.0f,
+		// 		-sa, 	0.0f, 	ca, 	0.0f,
+		// 		-1.0f, 	0.0f, 	0.0f, 	1.0f
+		// 	};
+
+		// 	object_instances.emplace_back(ObjectInstance{
+		// 		.vertices = torus_vertices,
+		// 		.transform{
+		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 			//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
+		// 		},
+		// 		.texture = 1,
+		// 	});
+		// }
+
+		{ //transform for the boat
 			mat4 WORLD_FROM_LOCAL{
 				1.0f, 0.0f, 0.0f, 0.0f,
 				0.0f, 1.0f, 0.0f, 0.0f,
@@ -1078,50 +1191,7 @@ void Tutorial::update(float dt)
 			};
 
 			object_instances.emplace_back(ObjectInstance{
-				.vertices = plane_vertices,
-				.transform{
-					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL 
-					//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
-				},
-				.texture = 1,
-			});
-		};
-
-		{ //transform for the torus (-x by one unit and rotated CCW around +y)
-			float ang = time / 60.0f * 2.0f * float(M_PI) * 10.0f;
-			float ca = std::cos(ang);
-			float sa = std::sin(ang);
-			mat4 WORLD_FROM_LOCAL{
-				ca, 	0.0f, 	-sa, 	0.0f,
-				0.0f, 	1.0f, 	0.0f, 	0.0f,
-				-sa, 	0.0f, 	ca, 	0.0f,
-				-1.0f, 	0.0f, 	0.0f, 	1.0f
-			};
-
-			object_instances.emplace_back(ObjectInstance{
-				.vertices = torus_vertices,
-				.transform{
-					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-					//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
-				},
-				.texture = 1,
-			});
-		}
-
-		{ //transform for the model
-			mat4 WORLD_FROM_LOCAL{
-				1.0f, 0.0f, 0.0f, 0.0f,
-				0.0f, 1.0f, 0.0f, 0.0f,
-				0.0f, 0.0f, 1.0f, 0.0f,
-				0.0f, 0.0f, 0.0f, 1.0f
-			};
-
-			object_instances.emplace_back(ObjectInstance{
-				.vertices = model_vertices,
+				.vertices = boat_vertices,
 				.transform{
 					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
 					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
@@ -1131,7 +1201,28 @@ void Tutorial::update(float dt)
 				.texture = 0,
 			});
 		};
+
+		{ //transform for the sea
+			mat4 WORLD_FROM_LOCAL{
+				1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f, 0.0f,
+				0.0f, 0.0f, 0.0f, 1.0f
+			};
+
+			object_instances.emplace_back(ObjectInstance{
+				.vertices = sea_vertices,
+				.transform{
+					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL 
+					//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3 
+				},
+				.texture = 2,
+			});
+		};
 	};
+	
 	//Edit End ===========================================================================================================
 }
 

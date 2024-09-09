@@ -148,7 +148,9 @@ struct Tutorial : RTG::Application {
 	};
 	ObjectVertices plane_vertices;
 	ObjectVertices torus_vertices;
-	ObjectVertices model_vertices;
+	ObjectVertices boat_vertices;
+	ObjectVertices sea_vertices;
+
 
 	std::vector< Helpers::AllocatedImage > textures; //holds handles of actual image data
 	std::vector< VkImageView > texture_views; //references to portions of of whole textures
