@@ -194,15 +194,15 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			lines_vertices.push_back(v);
 		}
 
-		FileMgr::load_line_from_object("assets/models/obj/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/product/chinese-ceremonial-door-low-poly
-
-		for (auto &v : mesh_vertices) {
-			v.Position.x /= sea_depression;
-			v.Position.y /= sea_depression;
-			v.Position.z /= sea_depression;
-			v.Position.y -= sea_downward;
-			lines_vertices.push_back(v);
-		}
+		// FileMgr::load_line_from_object("assets/models/obj/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/3d-model/pool-art
+		
+		// for (auto &v : mesh_vertices) {
+		// 	v.Position.x /= sea_depression;
+		// 	v.Position.y /= sea_depression;
+		// 	v.Position.z /= sea_depression;
+		// 	v.Position.y -= sea_downward;
+		// 	lines_vertices.push_back(v);
+		// }
 	};
 
 	{ //create object vertices from .obj file:
@@ -936,14 +936,22 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 		// 	VkClearValue{.depthStencil{.depth = 1.0f, .stencil = 0}},
 		// };
 
-		[[maybe_unused]] std::array< VkClearValue, 2 > clear_values1{
-			VkClearValue{ .color{ .float32{1.0f, 1.0f, 1.0f, 1.0f} } },
-			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },
+		auto interpolate_clear_value = [](float t) -> VkClearValue{
+			float intensity = 0.5f * (1.0f + std::sin(t)); // Generates a value between 0 and 1
+			float colorValue = intensity; // Directly use intensity for grayscale value
+
+			VkClearValue clearValue;
+			clearValue.color = {.float32 = {colorValue, colorValue, colorValue, 1.0f}};
+			return clearValue;
 		};
 
-		[[maybe_unused]] std::array< VkClearValue, 2 > clear_values2{
-			VkClearValue{ .color{ .float32{0.0f, 0.0f, 0.0f, 0.0f} } },
-			VkClearValue{ .depthStencil{ .depth = 1.0f, .stencil = 0 } },
+		float t = g_frame * 0.1f; // Adjust time scaling for effect speed
+
+		VkClearValue clearColor = interpolate_clear_value(t);
+
+		std::array<VkClearValue, 2> clear_values = {
+			clearColor,
+			VkClearValue{ .depthStencil = {.depth = 1.0f, .stencil = 0 } },
 		};
 
 		VkRenderPassBeginInfo begin_info{
@@ -956,13 +964,8 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 				.extent = rtg.swapchain_extent, // size of render area
 			},
 
-			// ver.1 simple color
-			// .clearValueCount = uint32_t(clear_values.size()),
-			// .pClearValues = clear_values.data(),
-
-			// ver.2. flashing black and white
-			 .clearValueCount = uint32_t(g_frame % 100 < 50 ? clear_values1.size() : clear_values2.size()),
-			 .pClearValues = g_frame % 100 < 50 ? clear_values1.data() : clear_values2.data(),
+			.clearValueCount = uint32_t(clear_values.size()),
+			.pClearValues = clear_values.data(),
 		};
 
 		vkCmdBeginRenderPass(workspace.command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
@@ -1204,7 +1207,7 @@ void Tutorial::update(float dt)
 
 		{ //transform for the sea
 			mat4 WORLD_FROM_LOCAL{
-				1.0f, 0.0f, 0.0f, 0.0f,
+				1.0f + cos(time * 2.f) * 0.1f, cos(time * 2.f) * 0.1f, sin(time * 2.f) * 0.05f, 0.0f,
 				0.0f, 1.0f, 0.0f, 0.0f,
 				0.0f, 0.0f, 1.0f, 0.0f,
 				0.0f, 0.0f, 0.0f, 1.0f
