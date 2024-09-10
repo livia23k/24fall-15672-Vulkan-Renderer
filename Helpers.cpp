@@ -260,7 +260,12 @@ VkFormat Helpers::find_image_format(std::vector< VkFormat > const &candidates, V
 
 VkShaderModule Helpers::create_shader_module(uint32_t const *code, size_t bytes) const {
 	VkShaderModule shader_module = VK_NULL_HANDLE;
-	refsol::Helpers_create_shader_module(rtg, code, bytes, &shader_module);
+	VkShaderModuleCreateInfo create_info{
+		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		.codeSize = bytes,
+		.pCode = code
+	};
+	VK( vkCreateShaderModule(rtg.device, &create_info, nullptr, &shader_module) );
 	return shader_module;
 }
 
