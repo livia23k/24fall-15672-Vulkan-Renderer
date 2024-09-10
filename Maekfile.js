@@ -30,6 +30,7 @@ const main_objs = [
 	maek.CPP('Tutorial.cpp'),
 	//Edit Start ====================================================================================================
 	maek.CPP('datastructures/PosColVertex.cpp'),
+	maek.CPP('datastructures/PosNorTexVertex.cpp'),
 	maek.CPP('scripts/FileMgr.cpp'),
 	//Edit End ======================================================================================================
 	maek.CPP('RTG.cpp'),
@@ -57,11 +58,11 @@ main_objs.push( maek.CPP('pipelines/Tutorial-LinesPipeline.cpp', undefined, { de
 //Edit End ======================================================================================================
 
 //uncomment to build objects shaders and pipeline:
-//const objects_shaders = [
-//	maek.GLSLC('objects.vert'),
-//	maek.GLSLC('objects.frag'),
-//];
-//main_objs.push( maek.CPP('Tutorial-ObjectsPipeline.cpp', undefined, { depends:[...objects_shaders] } ) );
+const objects_shaders = [
+	maek.GLSLC('shaders/objects.vert'),
+	maek.GLSLC('shaders/objects.frag'),
+];
+main_objs.push( maek.CPP('pipelines/Tutorial-ObjectsPipeline.cpp', undefined, { depends:[...objects_shaders] } ) );
 
 const prebuilt_objs = [ ];
 

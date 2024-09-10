@@ -85,7 +85,7 @@ void Tutorial::LinesPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_
         };
 
         //set input assembly state:
-        //this pipeline will take vertex data as a list of triangles
+        //this pipeline will take vertex data as a list of lines
         VkPipelineInputAssemblyStateCreateInfo input_assembly_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST,

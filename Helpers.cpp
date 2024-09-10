@@ -4,6 +4,8 @@
 #include "VK.hpp"
 #include "refsol.hpp"
 
+#include <vulkan/utility/vk_format_utils.h>
+
 #include <utility>
 #include <cassert>
 #include <cstring>
@@ -64,11 +66,190 @@ void Helpers::destroy_image(AllocatedImage &&image) {
 //----------------------------
 
 void Helpers::transfer_to_buffer(void *data, size_t size, AllocatedBuffer &target) {
-	refsol::Helpers_transfer_to_buffer(rtg, data, size, &target);
+	// Edit Start =========================================================================================================
+	// refsol::Helpers_transfer_to_buffer(rtg, data, size, &target);
+	
+	AllocatedBuffer transfer_src = create_buffer(
+		size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, //host visible memory, coherent (no special sync needed)
+		Mapped
+	);
+
+	//DONE: copy data to transfer buffer
+	std::memcpy(transfer_src.allocation.data(), data, size);
+
+	//DONE: record CPU->GPU transfer to command buffer
+	{
+		VK( vkResetCommandBuffer(transfer_command_buffer, 0) );
+
+		VkCommandBufferBeginInfo begin_info{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT //record again every submit
+		};
+
+		VK( vkBeginCommandBuffer(transfer_command_buffer, &begin_info) );
+
+		VkBufferCopy copy_region{
+			.srcOffset = 0,
+			.dstOffset = 0,
+			.size = size
+		};
+		
+		vkCmdCopyBuffer(transfer_command_buffer, transfer_src.handle, target.handle, 1, &copy_region);
+
+		VK( vkEndCommandBuffer(transfer_command_buffer) );
+	}
+
+	//DONE: run command buffer
+	{
+		VkSubmitInfo submit_info{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.commandBufferCount = 1,
+			.pCommandBuffers = &transfer_command_buffer
+		};
+		VK( vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE) );
+	}
+
+	//DONE: wait for command buffer to finish
+	VK( vkQueueWaitIdle(rtg.graphics_queue) );
+
+	//destroy to avoid buffer memory leaking
+	destroy_buffer(std::move(transfer_src));
+	//Edit End ===========================================================================================================
 }
 
 void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target) {
-	refsol::Helpers_transfer_to_image(rtg, data, size, &target);
+	assert(target.handle); //target image should be allocated already
+
+	//check data is the right size [new]
+	size_t bytes_per_pixel = vkuFormatElementSize(target.format);
+	assert(size == target.extent.width * target.extent.height * bytes_per_pixel);
+
+	//create a host-coherent source buffer
+	AllocatedBuffer transfer_src = create_buffer(
+		size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		Mapped
+	);
+
+	//copy image data into the source buffer
+	std::memcpy(transfer_src.allocation.data(), data, size);
+
+	//TODO: begin recording a command buffer
+	VK( vkResetCommandBuffer(transfer_command_buffer, 0) );
+
+	VkCommandBufferBeginInfo begin_info{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, //will record again every submit
+	};
+
+	VK( vkBeginCommandBuffer(transfer_command_buffer, &begin_info) );
+
+	//
+	VkImageSubresourceRange whole_image{
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.baseMipLevel = 0,
+		.levelCount = 1,
+		.baseArrayLayer = 0,
+		.layerCount = 1,
+	};
+
+	{ //put the receiving image in destination-optimal layout [new]
+		VkImageMemoryBarrier barrier{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = 0,
+			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, //throw away old image
+			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = target.handle,
+			.subresourceRange = whole_image,
+		};	
+
+		vkCmdPipelineBarrier(
+			transfer_command_buffer, //commandBuffer
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, //srcStageMask
+			VK_PIPELINE_STAGE_TRANSFER_BIT, //dstStageMask
+			0, //dependencyFlags
+			0, nullptr, //memory barrier count, pointer
+			0, nullptr, //buffer memory barrier count, pointer
+			1, &barrier //image memory barrier count, pointer
+		);
+	};
+
+	{ //copy the source buffer to the image [new]
+		VkBufferImageCopy region{
+			.bufferOffset = 0,
+			.bufferRowLength = target.extent.width,
+			.bufferImageHeight = target.extent.height,
+			.imageSubresource{
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.mipLevel = 0,
+				.baseArrayLayer = 0,
+				.layerCount = 1,
+			},
+			.imageOffset{ .x = 0, .y = 0, .z = 0 },
+			.imageExtent{
+				.width = target.extent.width,
+				.height = target.extent.height,
+				.depth = 1
+			},
+		};
+
+		vkCmdCopyBufferToImage(
+			transfer_command_buffer,
+			transfer_src.handle,
+			target.handle,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			1, &region
+		);
+
+		//NOTE: if image had mip levels, would need to copy as additional regions here.
+	};
+
+	{ //transition the image memory to shader-read-only-optimal layout [new]
+		VkImageMemoryBarrier barrier{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = target.handle,
+			.subresourceRange = whole_image,
+		};
+
+		vkCmdPipelineBarrier(
+			transfer_command_buffer, //commandBuffer
+			VK_PIPELINE_STAGE_TRANSFER_BIT, //srcStageMask
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, //dstStageMask
+			0, //dependencyFlags
+			0, nullptr, //memory barrier count, pointer
+			0, nullptr, //buffer memory barrier count, pointer
+			1, &barrier //image memory barrier count, pointer
+		);
+	};
+
+	//end and submit the command buffer
+	VK( vkEndCommandBuffer(transfer_command_buffer) );
+
+	VkSubmitInfo submit_info{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &transfer_command_buffer
+	};
+
+	VK( vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE) );
+
+	//wait for command buffer to finish executing
+	VK( vkQueueWaitIdle(rtg.graphics_queue) );
+
+	//destroy the source buffer
+	destroy_buffer(std::move(transfer_src));
 }
 
 //----------------------------
@@ -92,7 +273,34 @@ Helpers::~Helpers() {
 }
 
 void Helpers::create() {
+	//Edit Start =========================================================================================================
+	VkCommandPoolCreateInfo create_info{ //resources made with create and destroy are long-lived
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = rtg.graphics_queue_family.value()
+	};
+	VK( vkCreateCommandPool(rtg.device, &create_info, nullptr, &transfer_command_pool) );
+
+	VkCommandBufferAllocateInfo alloc_info{ //resources made with alloc and free are short-lived, can be changed each frame
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.commandPool = transfer_command_pool,
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, 
+		.commandBufferCount = 1
+	};
+	VK( vkAllocateCommandBuffers(rtg.device, &alloc_info, &transfer_command_buffer) );
+	//Edit End ===========================================================================================================
 }
 
 void Helpers::destroy() {
+	//Edit Start =========================================================================================================	
+	if (transfer_command_buffer != VK_NULL_HANDLE) {
+		vkFreeCommandBuffers(rtg.device, transfer_command_pool, 1, &transfer_command_buffer);
+		transfer_command_buffer = VK_NULL_HANDLE;
+	}
+
+	if (transfer_command_pool != VK_NULL_HANDLE) {
+		vkDestroyCommandPool(rtg.device, transfer_command_pool, nullptr);
+		transfer_command_pool = VK_NULL_HANDLE;
+	}
+	//Edit End ===========================================================================================================
 }

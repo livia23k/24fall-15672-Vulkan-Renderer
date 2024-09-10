@@ -1,6 +1,7 @@
 #pragma once
 
 #include "datastructures/PosColVertex.hpp"
+#include "datastructures/PosNorTexVertex.hpp"
 #include "libs/mat4.hpp"
 
 #include "RTG.hpp"
@@ -54,7 +55,7 @@ struct Tutorial : RTG::Application {
 		};
 		static_assert(sizeof(Camera) == 16 * 4, "camera buffer structure is packed.");
 
-		//push constants
+		//push constants (none)
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 
@@ -65,6 +66,43 @@ struct Tutorial : RTG::Application {
 		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
 		void destroy(RTG &);
 	} lines_pipeline;
+
+	struct ObjectsPipeline {
+		//descriptot set layouts:
+		//VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
+		VkDescriptorSetLayout set0_World = VK_NULL_HANDLE;
+		VkDescriptorSetLayout set1_Transforms = VK_NULL_HANDLE;
+		VkDescriptorSetLayout set2_TEXTURE = VK_NULL_HANDLE;
+
+		//types for descriptors:
+		// using Camera = LinesPipeline::Camera;
+
+		struct World {
+			struct { float x, y, z, padding_; } SKY_DIRECTION;
+			struct { float r, g, b, padding_; } SKY_ENERGY;
+			struct { float x, y, z, padding_; } SUN_DIRECTION;
+			struct { float r, g, b, padding_; } SUN_ENERGY;
+		};
+		static_assert(sizeof(World) == 4*4 + 4*4 + 4*4 + 4*4, "World is the expected size.");
+
+		struct Transform {
+			mat4 CLIP_FROM_LOCAL;
+			mat4 WORLD_FROM_LOCAL;
+			mat4 WORLD_FROM_LOCAL_NORMAL;
+		};
+		static_assert(sizeof(Transform) == 16*4 + 16*4 + 16*4, "Transform is the expected size.");
+
+		// push constants (none)
+
+		VkPipelineLayout layout = VK_NULL_HANDLE;
+
+		using Vertex = PosNorTexVertex;
+
+		VkPipeline handle  = VK_NULL_HANDLE;
+
+		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
+		void destroy(RTG &);
+	} objects_pipeline;
 	//Edit End ===========================================================================================================
 
 	//pools from which per-workspace things are allocated:
@@ -85,6 +123,16 @@ struct Tutorial : RTG::Application {
 		Helpers::AllocatedBuffer Camera_src; //host coherent; mapped to cpu memory
 		Helpers::AllocatedBuffer Camera; //device-local
 		VkDescriptorSet Camera_descriptors; //references Camera
+
+		//location for ObjectsPipeline::World data: (streamed to GPU per-frame)
+		Helpers::AllocatedBuffer World_src; //host coherent; mapped
+		Helpers::AllocatedBuffer World; //device-local
+		VkDescriptorSet World_descriptors; //references World
+
+		//locations for ObjectsPipeline::Transform data (streamed to GPU per-frame):
+		Helpers::AllocatedBuffer Transforms_src; //host coherent; mapped to cpu memory
+		Helpers::AllocatedBuffer Transforms; //device-local
+		VkDescriptorSet Transform_descriptors; //references Transfroms
 		//Edit End ===========================================================================================================
 	};
 	std::vector< Workspace > workspaces;
@@ -92,6 +140,23 @@ struct Tutorial : RTG::Application {
 	//-------------------------------------------------------------------
 	//static scene resources:
 
+	Helpers::AllocatedBuffer object_vertices;
+
+	struct ObjectVertices {
+		uint32_t first = 0; //index of first vertex in object_vertices
+		uint32_t count = 0; //number of vertices in object_vertices
+	};
+	ObjectVertices plane_vertices;
+	ObjectVertices torus_vertices;
+	ObjectVertices boat_vertices;
+	ObjectVertices sea_vertices;
+
+
+	std::vector< Helpers::AllocatedImage > textures; //holds handles of actual image data
+	std::vector< VkImageView > texture_views; //references to portions of of whole textures
+	VkSampler texture_sampler = VK_NULL_HANDLE; //how to sample from textures (wrapping, interpolation, etc.)
+	VkDescriptorPool texture_descriptor_pool = VK_NULL_HANDLE; // pool from which texture descriptors are allocated
+	std::vector< VkDescriptorSet > texture_descriptors; // descriptor for each texture, allocated from texture_descriptor_pool
 	//--------------------------------------------------------------------
 	//Resources that change when the swapchain is resized:
 
@@ -109,13 +174,20 @@ struct Tutorial : RTG::Application {
 	virtual void update(float dt) override;
 	virtual void on_input(InputEvent const &) override;
 
-	//Edit Start =========================================================================================================
 	float time = 0.0f;
 
 	mat4 CLIP_FROM_WORLD;
 
 	std::vector< LinesPipeline::Vertex > lines_vertices;
-	//Edit End ===========================================================================================================
+
+	ObjectsPipeline::World world;
+
+	struct ObjectInstance {
+		ObjectVertices vertices;
+		ObjectsPipeline::Transform transform;
+		uint32_t texture = 0;
+	};
+	std::vector< ObjectInstance > object_instances;
 
 	//--------------------------------------------------------------------
 	//Rendering function, uses all the resources above to queue work to draw a frame:
