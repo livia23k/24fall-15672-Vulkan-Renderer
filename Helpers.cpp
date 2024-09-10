@@ -44,12 +44,35 @@ Helpers::Allocation::~Allocation() {
 
 Helpers::AllocatedBuffer Helpers::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map) {
 	AllocatedBuffer buffer;
-	refsol::Helpers_create_buffer(rtg, size, usage, properties, (map == Mapped), &buffer);
+	// refsol::Helpers_create_buffer(rtg, size, usage, properties, (map == Mapped), &buffer);
+	VkBufferCreateInfo create_info{
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.size = size,
+		.usage = usage,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, //only used by one queue family
+	};
+	VK( vkCreateBuffer(rtg.device, &create_info, nullptr, &buffer.handle) );
+	buffer.size = size;
+
+	// determine memory requirements
+	VkMemoryRequirements req;
+	vkGetBufferMemoryRequirements(rtg.device, buffer.handle, &req);
+
+	// allocate memory
+	buffer.allocation = allocate(req, properties, map);
+
+	// bind memory
+	VK( vkBindBufferMemory(rtg.device, buffer.handle, buffer.allocation.handle, buffer.allocation.offset) );
+
 	return buffer;
 }
 
 void Helpers::destroy_buffer(AllocatedBuffer &&buffer) {
-	refsol::Helpers_destroy_buffer(rtg, &buffer);
+	vkDestroyBuffer(rtg.device, buffer.handle, nullptr);
+	buffer.handle = VK_NULL_HANDLE;
+	buffer.size = 0;
+
+	this->free(std::move(buffer.allocation));
 }
 
 
