@@ -42,6 +42,46 @@ Helpers::Allocation::~Allocation() {
 
 //----------------------------
 
+Helpers::Allocation Helpers::allocate(VkDeviceSize size, VkDeviceSize alignment, uint32_t memory_type_index, MapFlag map) {
+	Helpers::Allocation allocation;
+
+	VkMemoryAllocateInfo alloc_info{
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.allocationSize = size,
+		.memoryTypeIndex = memory_type_index
+	};
+
+	VK( vkAllocateMemory( rtg.device, &alloc_info, nullptr, &allocation.handle ) ); //3rd parameter: custom allocator callbacks
+
+	allocation.size = size;
+	allocation.offset = 0;
+
+	if (map == Mapped) {
+		VK( vkMapMemory(rtg.device, allocation.handle, 0, allocation.size, 0, &allocation.mapped) );
+	}
+
+	return allocation;
+}
+
+Helpers::Allocation Helpers::allocate(VkMemoryRequirements const &req, VkMemoryPropertyFlags properties, MapFlag map) {
+	return allocate(req.size, req.alignment, find_memory_type(req.memoryTypeBits, properties), map);
+}
+
+void Helpers::free(Helpers::Allocation &&allocation) {
+	if (allocation.mapped != nullptr) {
+		vkUnmapMemory(rtg.device, allocation.handle);
+		allocation.mapped = nullptr;
+	}
+
+	vkFreeMemory(rtg.device, allocation.handle, nullptr);
+
+	allocation.handle = VK_NULL_HANDLE;
+	allocation.offset = 0;
+	allocation.size = 0;
+}
+
+//----------------------------
+
 Helpers::AllocatedBuffer Helpers::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map) {
 	AllocatedBuffer buffer;
 	// refsol::Helpers_create_buffer(rtg, size, usage, properties, (map == Mapped), &buffer);
@@ -277,6 +317,17 @@ void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target)
 
 //----------------------------
 
+uint32_t Helpers::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags flags) const {
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
+		VkMemoryType const &type = memory_properties.memoryTypes[i];
+		if ( ( (type_filter & (1 << i)) != 0 )
+			&& ( (type.propertyFlags & flags) == flags ) ) {
+				return i;
+		}
+	}
+	throw std::runtime_error("No suitable memory type found.");
+}
+
 VkFormat Helpers::find_image_format(std::vector< VkFormat > const &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const {
 	return refsol::Helpers_find_image_format(rtg, candidates, tiling, features);
 }
@@ -316,6 +367,22 @@ void Helpers::create() {
 		.commandBufferCount = 1
 	};
 	VK( vkAllocateCommandBuffers(rtg.device, &alloc_info, &transfer_command_buffer) );
+
+	vkGetPhysicalDeviceMemoryProperties(rtg.physical_device, &memory_properties);
+
+	if (rtg.configuration.debug) {
+		std::cout << "Memory types:\n";
+		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
+			VkMemoryType const &type = memory_properties.memoryTypes[i];
+			std::cout << " [" << i << "] heap " << type.heapIndex << ", flags: " << string_VkMemoryPropertyFlags( type.propertyFlags ) << "\n";  
+		}
+		std::cout << "Memory heaps:\n";
+		for (uint32_t i = 0; i < memory_properties.memoryHeapCount; ++i) {
+			VkMemoryHeap const &heap = memory_properties.memoryHeaps[i];
+			std::cout << " [" << i << "] " << heap.size << " bytes, flags: " << string_VkMemoryHeapFlags( heap.flags ) << "\n";
+		}
+		std::cout.flush(); //not appending any char to the output terminal
+	}
 	//Edit End ===========================================================================================================
 }
 

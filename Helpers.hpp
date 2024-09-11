@@ -78,6 +78,10 @@ struct Helpers {
 	//-----------------------
 	//Misc utilities:
 
+	//for selecting memory types (used by allocate function above):
+	VkPhysicalDeviceMemoryProperties memory_properties{};
+	uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags property_flags) const;
+
 	//for selecting image formats:
 	VkFormat find_image_format(std::vector< VkFormat > const &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const;
 
