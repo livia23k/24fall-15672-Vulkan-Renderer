@@ -58,9 +58,15 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	workspaces.resize(rtg.workspaces.size());
 	for (Workspace &workspace : workspaces)
 	{
-		refsol::Tutorial_constructor_workspace(rtg, command_pool, &workspace.command_buffer);
-
-		//Edit Start =========================================================================================================
+		{ // [start] allocate command buffer
+			VkCommandBufferAllocateInfo alloc_info{
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+				.commandPool = command_pool,
+				.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+				.commandBufferCount = 1
+			};
+			VK( vkAllocateCommandBuffers(rtg.device, &alloc_info, &workspace.command_buffer) );
+		} // [end] allocate command buffer
 
 		//descriptor sets alloc
 		{	
@@ -172,8 +178,6 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 
 			VK( vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Transform_descriptors) );
 		}; //end of set1_Transforms
-
-		//Edit End ===========================================================================================================
 	}
 
 	//Edit Start =============================================================================================================
@@ -641,9 +645,11 @@ Tutorial::~Tutorial()
 	//remove per-workspace resources
 	for (Workspace &workspace : workspaces)
 	{
-		refsol::Tutorial_destructor_workspace(rtg, command_pool, &workspace.command_buffer);
+		if (workspace.command_buffer != VK_NULL_HANDLE) {
+			vkFreeCommandBuffers(rtg.device, command_pool, 1, &workspace.command_buffer);
+			workspace.command_buffer = VK_NULL_HANDLE;
+		}
 
-		//Edit Start =========================================================================================================
 		if (workspace.lines_vertices_src.handle != VK_NULL_HANDLE) {
 			rtg.helpers.destroy_buffer(std::move(workspace.lines_vertices_src));
 		}
@@ -677,7 +683,6 @@ Tutorial::~Tutorial()
 			rtg.helpers.destroy_buffer(std::move(workspace.Transforms));
 		}
 		//Transform_descriptors is freed when pool is destroyed.
-		//Edit End ===========================================================================================================
 	}
 	workspaces.clear();
 
