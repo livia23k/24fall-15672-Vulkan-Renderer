@@ -1097,7 +1097,32 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 	//Edit End ===========================================================================================================
 
 	// submit `workspace.command buffer` for the GPU to run:
-	refsol::Tutorial_render_submit(rtg, render_params, workspace.command_buffer);
+	// refsol::Tutorial_render_submit(rtg, render_params, workspace.command_buffer);
+	{
+		std::array< VkSemaphore, 1 > wait_semaphores{
+			render_params.image_available
+		};
+		std::array< VkPipelineStageFlags, 1 > wait_stages{
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+		};
+		static_assert(wait_semaphores.size() == wait_stages.size(), "every semaphore needs a stage");
+
+		std::array< VkSemaphore, 1 > signal_semaphores{
+			render_params.image_done
+		};
+		VkSubmitInfo submit_info{
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.waitSemaphoreCount = uint32_t(wait_semaphores.size()), // whcih semaphore the GPU should wait for before executing this task
+			.pWaitSemaphores = wait_semaphores.data(),
+			.pWaitDstStageMask = wait_stages.data(),
+			.commandBufferCount = 1,
+			.pCommandBuffers = &workspace.command_buffer,
+			.signalSemaphoreCount = uint32_t(signal_semaphores.size()), // signaled when GPU has finished rendering into this swapchain image
+			.pSignalSemaphores = signal_semaphores.data()
+		};
+
+		VK( vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, render_params.workspace_available) );
+	}
 }
 
 void Tutorial::update(float dt)
