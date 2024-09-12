@@ -22,7 +22,105 @@
 
 Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 {
-	refsol::Tutorial_constructor(rtg, &depth_format, &render_pass, &command_pool);
+	// refsol::Tutorial_constructor(rtg, &depth_format, &render_pass, &command_pool);
+	// select a depth format
+	depth_format = rtg.helpers.find_image_format(
+		{ VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32 }, // depth format on current GPU; at least 1 is supported; the former is preferred
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
+	);
+
+	// create render pass
+	{
+		// attachments 
+		//	(1: color image, 2: depth image)
+		std::array< VkAttachmentDescription, 2 > attachments{
+			VkAttachmentDescription{ // specify the initial and final layout states for an image used in the subpass
+				.format = rtg.surface_format.format,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, // clear the screen
+				.storeOp = VK_ATTACHMENT_STORE_OP_STORE, // keep result for later display
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR // only used for image display
+			},
+			VkAttachmentDescription{
+				.format = depth_format,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+				.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			}
+		};
+
+		// subpass
+		VkAttachmentReference color_attachment_ref{
+			.attachment = 0,
+			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		};
+
+		VkAttachmentReference depth_attachment_ref{
+			.attachment = 1,
+			.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		};
+
+		VkSubpassDescription subpass{
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount = 0,
+			.pInputAttachments = nullptr,
+			.colorAttachmentCount = 1,
+			.pColorAttachments = &color_attachment_ref,
+			.pDepthStencilAttachment = &depth_attachment_ref
+		};
+
+		// dependencies
+		//	(this defers the image load actions for the attachments; is a happens-before guarantee for the render pass)
+		std::array< VkSubpassDependency, 2 > dependencies {
+			VkSubpassDependency{
+				.srcSubpass = VK_SUBPASS_EXTERNAL, // where the dependency is
+				.dstSubpass = 0,
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // dependency src to wait
+				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // target dst to do
+				.srcAccessMask = 0, // dependency src resource
+				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, // target dst resource
+			},
+			VkSubpassDependency{
+				.srcSubpass = VK_SUBPASS_EXTERNAL,
+				.dstSubpass = 0,
+				.srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, // finish the last point in the ppl that touches the depth buffer
+				.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+				.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			}
+		};
+
+		// create info wrap-up
+		VkRenderPassCreateInfo create_info{
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+			.attachmentCount = uint32_t(attachments.size()),
+			.pAttachments = attachments.data(),
+			.subpassCount = 1,
+			.pSubpasses = &subpass,
+			.dependencyCount = uint32_t(dependencies.size()),
+			.pDependencies = dependencies.data()
+		};
+
+		VK( vkCreateRenderPass(rtg.device, &create_info, nullptr, &render_pass) );
+	};
+
+	// create command pool
+	{
+		VkCommandPoolCreateInfo create_info{
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = rtg.graphics_queue_family.value()
+		};
+		VK( vkCreateCommandPool(rtg.device, &create_info, nullptr, &command_pool) );
+	}
 
 	//Edit Start =========================================================================================================
 	background_pipeline.create(rtg, render_pass, 0);
@@ -686,7 +784,6 @@ Tutorial::~Tutorial()
 	}
 	workspaces.clear();
 
-	//Edit Start =========================================================================================================
 	if (descriptor_pool) {
 		vkDestroyDescriptorPool(rtg.device, descriptor_pool, nullptr);
 		descriptor_pool = VK_NULL_HANDLE;
@@ -696,9 +793,16 @@ Tutorial::~Tutorial()
 	background_pipeline.destroy(rtg);
 	lines_pipeline.destroy(rtg);
 	objects_pipeline.destroy(rtg);
-	//Edit End ===========================================================================================================
 
-	refsol::Tutorial_destructor(rtg, &render_pass, &command_pool);
+	if (render_pass != VK_NULL_HANDLE) {
+		vkDestroyRenderPass(rtg.device, render_pass, nullptr);
+		render_pass = VK_NULL_HANDLE;
+	}
+
+	if (command_pool != VK_NULL_HANDLE ) {
+		vkDestroyCommandPool(rtg.device, command_pool, nullptr);
+		command_pool = VK_NULL_HANDLE;
+	}
 }
 
 void Tutorial::on_swapchain(RTG &rtg_, RTG::SwapchainEvent const &swapchain)
