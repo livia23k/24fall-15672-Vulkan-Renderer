@@ -4,7 +4,6 @@
 #endif
 
 #include "Tutorial.hpp"
-#include "refsol.hpp"
 #include "scripts/FileMgr.hpp"
 
 #include "VK.hpp"
@@ -805,15 +804,77 @@ Tutorial::~Tutorial()
 	}
 }
 
-void Tutorial::on_swapchain(RTG &rtg_, RTG::SwapchainEvent const &swapchain)
+void Tutorial::on_swapchain(RTG &rtg_, RTG::SwapchainEvent const &swapchain) // re-makes the depth buffer at the correct size, and get a view of it 
 {
-	//[re]create framebuffers:
-	refsol::Tutorial_on_swapchain(rtg, swapchain, depth_format, render_pass, &swapchain_depth_image, &swapchain_depth_image_view, &swapchain_framebuffers);
+	// clean up existing framebuffers
+	if (swapchain_depth_image.handle != VK_NULL_HANDLE) {
+		destroy_framebuffers();
+	}
+
+	// allocate depth image for framebuffers to share
+	swapchain_depth_image = rtg.helpers.create_image(
+		swapchain.extent,
+		depth_format,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		Helpers::Unmapped
+	);
+
+	// create depth image view
+	{
+		VkImageViewCreateInfo create_info{
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = swapchain_depth_image.handle,
+			.viewType = VK_IMAGE_VIEW_TYPE_2D,
+			.format = depth_format,
+			.subresourceRange{
+				.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+				.baseMipLevel = 0,
+				.levelCount = 1,
+				.baseArrayLayer = 0,
+				.layerCount = 1
+			}
+		};
+		VK( vkCreateImageView(rtg.device, &create_info, nullptr, &swapchain_depth_image_view) );
+	};
+
+	// make framebuffers for each swapchain image:
+	swapchain_framebuffers.assign(swapchain.image_views.size(), VK_NULL_HANDLE);
+	for (size_t i = 0; i < swapchain.image_views.size(); ++ i) {
+		std::array< VkImageView, 2 > attachments{
+			swapchain.image_views[i],
+			swapchain_depth_image_view,
+		};
+		VkFramebufferCreateInfo create_info{
+			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			.renderPass = render_pass,
+			.attachmentCount = uint32_t(attachments.size()),
+			.pAttachments = attachments.data(),
+			.width = swapchain.extent.width,
+			.height = swapchain.extent.height,
+			.layers = 1
+		};
+		VK( vkCreateFramebuffer(rtg.device, &create_info, nullptr, &swapchain_framebuffers[i]) );
+	}
 }
 
 void Tutorial::destroy_framebuffers()
 {
 	refsol::Tutorial_destroy_framebuffers(rtg, &swapchain_depth_image, &swapchain_depth_image_view, &swapchain_framebuffers);
+
+	for (VkFramebuffer &framebuffer : swapchain_framebuffers) {
+		assert(framebuffer != VK_NULL_HANDLE);
+		vkDestroyFramebuffer(rtg.device, framebuffer, nullptr);
+		framebuffer = VK_NULL_HANDLE;
+	}
+	swapchain_framebuffers.clear();
+
+	assert(swapchain_depth_image_view != VK_NULL_HANDLE);
+	vkDestroyImageView(rtg.device, swapchain_depth_image_view, nullptr);
+	swapchain_depth_image_view = VK_NULL_HANDLE;
+	
+	rtg.helpers.destroy_image(std::move(swapchain_depth_image));
 }
 
 void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
