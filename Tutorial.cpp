@@ -7,13 +7,14 @@
 #include "scripts/FileMgr.hpp"
 
 #include "VK.hpp"
-#include "refsol.hpp"
 
 #include <array>
 #include <cassert>
 #include <cmath>
 #include <cstring>
 #include <iostream>
+
+#include <vulkan/vk_enum_string_helper.h>
 
 //Edit Start =============================================================================================================
 [[maybe_unused]] u_int16_t g_frame = 0;
@@ -861,8 +862,6 @@ void Tutorial::on_swapchain(RTG &rtg_, RTG::SwapchainEvent const &swapchain) // 
 
 void Tutorial::destroy_framebuffers()
 {
-	refsol::Tutorial_destroy_framebuffers(rtg, &swapchain_depth_image, &swapchain_depth_image_view, &swapchain_framebuffers);
-
 	for (VkFramebuffer &framebuffer : swapchain_framebuffers) {
 		assert(framebuffer != VK_NULL_HANDLE);
 		vkDestroyFramebuffer(rtg.device, framebuffer, nullptr);
