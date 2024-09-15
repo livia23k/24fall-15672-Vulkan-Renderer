@@ -54,6 +54,26 @@ void RTG::Configuration::usage(std::function< void(const char *, const char *) >
 	callback("--drawing-size <w> <h>", "Set the size of the surface to draw to.");
 }
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+	VkDebugUtilsMessageTypeFlagsEXT type,
+	const VkDebugUtilsMessengerCallbackDataEXT *data,
+	void *user_data
+) {
+	if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+		std::cerr << "\x1b[91m" << "E: "; // "E: " (in bright red color)
+	} else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+		std::cerr << "\x1b[33m" << "w: "; // "w: " (in yellow color)
+	} else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
+		std::cerr << "\x1b[90m" << "i: "; // "i: " (in bright black)
+	} else { //VERBOSE
+		std::cerr << "\x1b[90m" << "v: "; // "v: " (in bright black)
+	}
+	std::cerr << data->pMessage << "\x1b[0m" << std::endl; // reset color and formattingto default
+
+	return VK_FALSE;
+}
+
 RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 
 	//copy input configuration:
@@ -62,12 +82,79 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 	//fill in flags/extensions/layers information:
 
 	//create the `instance` (main handle to Vulkan library):
-	refsol::RTG_constructor_create_instance(
-		configuration.application_info,
-		configuration.debug,
-		&instance,
-		&debug_messenger
-	);
+	{
+		VkInstanceCreateFlags instance_flags = 0;
+		std::vector< const char * > instance_extensions;
+		std::vector< const char * > instance_layers;
+
+		// add extensions for MoltenVK portability layer on macOS (only needed on macOS, to translate Vulkan to Metal)
+		#if defined(__APPLE__)
+		instance_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+		instance_extensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+		instance_extensions.emplace_back(VK_KHR_SURFACE_EXTENSION_NAME);
+		instance_extensions.emplace_back(VK_EXT_METAL_SURFACE_EXTENSION_NAME);
+		#endif
+
+		// add extensions and layers for debugging
+		if (configuration.debug) {
+			instance_extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			instance_layers.emplace_back("VK_LAYER_KHRONOS_validation");
+		}
+
+		// add extensions needed by glfw
+		{
+			glfwInit();
+			if (!glfwVulkanSupported()) {
+				throw std::runtime_error("GLFW reports Vulkan is not supported.");
+			}
+
+			uint32_t count;
+			const char **extensions = glfwGetRequiredInstanceExtensions(&count);
+			if (extensions == nullptr) {
+				throw std::runtime_error("GLFW failed to return a list of requested instance extensions. Perhaps it was not compiled with Vulkan support.");
+			}
+			for (uint32_t i = 0; i < count; ++i) {
+				instance_extensions.emplace_back(extensions[i]);
+			}
+		};
+
+		// write debug messenger structure
+		VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info{
+			.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+			.messageSeverity =
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+			.messageType =
+				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
+				| VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+			.pfnUserCallback = debug_callback,
+			.pUserData = nullptr
+		};
+
+		VkInstanceCreateInfo create_info{
+			.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+			.pNext = (configuration.debug ? &debug_messenger_create_info : nullptr), // pass debug structure if configured
+			.flags = instance_flags,
+			.pApplicationInfo = &configuration.application_info,
+			.enabledLayerCount = uint32_t(instance_layers.size()),
+			.ppEnabledLayerNames = instance_layers.data(),
+			.enabledExtensionCount = uint32_t(instance_extensions.size()),
+			.ppEnabledExtensionNames = instance_extensions.data()
+		};
+		VK( vkCreateInstance(&create_info, nullptr, &instance) );
+
+		// create debug messenger
+		if (configuration.debug) {
+			PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+			if (!vkCreateDebugUtilsMessengerEXT) {
+				throw std::runtime_error("Failed to lookup debug utils create fn.");
+			}
+			VK( vkCreateDebugUtilsMessengerEXT(instance, &debug_messenger_create_info, nullptr, &debug_messenger) );
+		}
+	};
 
 	//create the `window` and `surface` (where things get drawn):
 	refsol::RTG_constructor_create_surface(
@@ -172,8 +259,34 @@ RTG::~RTG() {
 	destroy_swapchain();
 
 	//destroy the rest of the resources:
-	refsol::RTG_destructor( &device, &surface, &window, &debug_messenger, &instance );
+	if (device != VK_NULL_HANDLE) {
+		vkDestroyDevice(device, nullptr);
+		device = VK_NULL_HANDLE;
+	}
 
+	if (surface != VK_NULL_HANDLE) {
+		vkDestroySurfaceKHR(instance, surface, nullptr);
+		surface = VK_NULL_HANDLE;
+	}
+
+	if (window != nullptr) {
+		glfwDestroyWindow(window);
+		window = nullptr;
+	}
+
+	if (debug_messenger != VK_NULL_HANDLE) {
+		PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT = 
+			(PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+		if (vkDestroyDebugUtilsMessengerEXT) {
+			vkDestroyDebugUtilsMessengerEXT(instance, debug_messenger, nullptr);
+			debug_messenger = VK_NULL_HANDLE;
+		}
+	}
+
+	if (instance != VK_NULL_HANDLE) {
+		vkDestroyInstance(instance, nullptr);
+		instance = VK_NULL_HANDLE;
+	}
 }
 
 
