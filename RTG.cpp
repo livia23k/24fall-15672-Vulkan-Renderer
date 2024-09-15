@@ -214,9 +214,9 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 
 		if (physical_device == VK_NULL_HANDLE) {
 			// report error
-			std::cerr << "Physical devices: "; // TOCHECK
+				std::cerr << "Physical devices:\n";
 				for (std::string const &name : physical_device_names) {
-					std::cerr << "    " << name << " "; // TOCHECK
+					std::cerr << "    " << name << "\n";
 				}
 				std::cerr.flush();
 
@@ -235,15 +235,61 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 	};
 
 	// select the `surface_format` and `present_mode` which control how colors are represented on the surface and how new images are supplied to the surface:
-	refsol::RTG_constructor_select_format_and_mode(
-		configuration.debug,
-		configuration.surface_formats,
-		configuration.present_modes,
-		physical_device,
-		surface,
-		&surface_format,
-		&present_mode
-	);
+	// refsol::RTG_constructor_select_format_and_mode(
+	// 	configuration.debug,
+	// 	configuration.surface_formats,
+	// 	configuration.present_modes,
+	// 	physical_device,
+	// 	surface,
+	// 	&surface_format,
+	// 	&present_mode
+	// );
+	{
+		std::vector< VkSurfaceFormatKHR > formats;
+		std::vector< VkPresentModeKHR > present_modes;
+
+		// get supported formats
+		{
+			uint32_t count = 0;
+			VK( vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &count, nullptr) );
+			formats.resize(count);
+			VK( vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &count, formats.data()) );
+		}
+
+		// get supported present modes
+		{
+			uint32_t count = 0;
+			VK( vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &count, nullptr) );
+			present_modes.resize(count);
+			VK( vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &count, present_modes.data()) );
+		}
+
+		//find first available surface format matching config:
+		surface_format = [&](){
+			for (auto const &config_format : configuration.surface_formats) {
+				for (auto const &format : formats) {
+					if (config_format.format == format.format && config_format.colorSpace == format.colorSpace) {
+						return format;
+					}
+				}
+			}
+			throw std::runtime_error("No format matching requested format(s) found.");
+		}(); // invokes the lambda immediately after its definition
+
+		//find first available present mode matching config:
+		present_mode = [&](){
+			for (auto const &config_mode : configuration.present_modes) {
+				for (auto const &mode : present_modes) {
+					if (config_mode == mode) {
+						return mode;
+					}
+				}
+			}
+			throw std::runtime_error("No present mode matching requested mode(s) found.");
+		}(); // invokes the lambda immediately after its definition
+	};
+
+
 
 	//create the `device` (logical interface to the GPU) and the `queue`s to which we can submit commands:
 	refsol::RTG_constructor_create_device(
@@ -483,9 +529,9 @@ static void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos) {
 	event.motion.x = float(xpos);
 	event.motion.y = float(ypos);
 	event.motion.state = 0;
-	for (int b = 0; b < 8 && b < GLFW_MOUSE_BUTTON_LAST; ++b) { // different mouse buttons // TOCHECK
-		if (glfwGetMouseButton(window, b) == GLFW_PRESS) {
-			event.button.state |= (1 << b);
+	for (int b = 0; b < 8 && b < GLFW_MOUSE_BUTTON_LAST; ++b) { // different mouse buttons
+		if (glfwGetMouseButton(window, b) == GLFW_PRESS) { // E.g. if the mouse is moving with the right button held down, pan the camera
+			event.motion.state |= (1 << b);
 		}
 	}
 
@@ -513,7 +559,7 @@ static void mouse_button_callback(GLFWwindow *window, int button, int action, in
 	event.button.x = float(xpos);
 	event.button.y = float(ypos);
 	event.button.state = 0;
-	for (int b = 0; b < 8 && b < GLFW_MOUSE_BUTTON_LAST; ++b) {
+	for (int b = 0; b < 8 && b < GLFW_MOUSE_BUTTON_LAST; ++b) { // different mouse buttons
 		if (glfwGetMouseButton(window, b) == GLFW_PRESS) {
 			event.button.state |= (1 << b);
 		}
