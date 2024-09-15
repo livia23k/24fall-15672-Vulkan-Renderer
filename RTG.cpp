@@ -270,16 +270,119 @@ void RTG::destroy_swapchain() {
 	}
 }
 
+static void cursor_pos_callback(GLFWwindow *window, double xpos, double ypos) {
+	std::vector< InputEvent > *event_queue = reinterpret_cast< std::vector< InputEvent > * >(glfwGetWindowUserPointer(window));
+	if (!event_queue) return;
+
+	InputEvent event;
+	std::memset(&event, '\0', sizeof(event)); // make sure the parts we dont write are in known state
+
+	event.type = InputEvent::MouseMotion;
+	event.motion.x = float(xpos);
+	event.motion.y = float(ypos);
+	event.motion.state = 0;
+	for (int b = 0; b < 8 && b < GLFW_MOUSE_BUTTON_LAST; ++b) { // different mouse buttons // TOCHECK
+		if (glfwGetMouseButton(window, b) == GLFW_PRESS) {
+			event.button.state |= (1 << b);
+		}
+	}
+
+	event_queue->emplace_back(event);
+}
+
+static void mouse_button_callback(GLFWwindow *window, int button, int action, int mods) {
+	std::vector< InputEvent > *event_queue = reinterpret_cast< std::vector< InputEvent > * >(glfwGetWindowUserPointer(window));
+	if (!event_queue) return;
+
+	InputEvent event;
+	std::memset(&event, '\0', sizeof(event)); // make sure the parts we dont write are in known state
+
+	if (action == GLFW_PRESS) {
+		event.type = InputEvent::MouseButtonDown;
+	} else if (action == GLFW_RELEASE) {
+		event.type = InputEvent::MouseButtonUp;
+	} else {
+		std::cerr << "Strange: unknown mouse button action." << std::endl;
+		return;
+	}
+
+	double xpos, ypos;
+	glfwGetCursorPos(window, &xpos, &ypos);
+	event.button.x = float(xpos);
+	event.button.y = float(ypos);
+	event.button.state = 0;
+	for (int b = 0; b < 8 && b < GLFW_MOUSE_BUTTON_LAST; ++b) {
+		if (glfwGetMouseButton(window, b) == GLFW_PRESS) {
+			event.button.state |= (1 << b);
+		}
+	}
+	event.button.button = uint8_t(button);
+	event.button.mods = uint8_t(mods);
+
+	event_queue->emplace_back(event);
+}
+
+static void scroll_callback(GLFWwindow *window, double xoffset, double yoffset) {
+	std::vector< InputEvent > *event_queue = reinterpret_cast< std::vector< InputEvent > * >(glfwGetWindowUserPointer(window));
+	if (!event_queue) return;
+
+	InputEvent event;
+	std::memset(&event, '\0', sizeof(event)); // make sure the parts we dont write are in known state
+
+	event.type = InputEvent::MouseWheel;
+	event.wheel.x = float(xoffset);
+	event.wheel.y = float(yoffset);
+
+	event_queue->emplace_back(event);
+}
+
+static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+	std::vector< InputEvent > *event_queue = reinterpret_cast< std::vector< InputEvent > * >(glfwGetWindowUserPointer(window));
+	if (!event_queue) return;
+
+	InputEvent event;
+	std::memset(&event, '\0', sizeof(event)); // make sure the parts we dont write are in known state
+
+	if (action == GLFW_PRESS) {
+		event.type = InputEvent::KeyDown;
+	} else if (action == GLFW_RELEASE) {
+		event.type = InputEvent::KeyUp;
+	} else if (action == GLFW_REPEAT) {
+		//ignore repeats (key repeats behave differently across computers, and users almost never know how to change the behavior)
+		return;
+	} else {
+		std::cerr << "Strange: got unknown keyboard action." << std::endl;
+	}
+
+	event.key.key = key;
+	event.key.mods = mods;
+
+	event_queue->emplace_back(event);
+}
+
 void RTG::run(Application &application) {
 	
 	//TODO: initial on_swapchain
 
-	//TODO: setup event handling
+	// setup event handling
+	std::vector< InputEvent > event_queue;
+	glfwSetWindowUserPointer(window, &event_queue);
+
+	glfwSetCursorPosCallback(window, cursor_pos_callback);
+	glfwSetMouseButtonCallback(window, mouse_button_callback);
+	glfwSetScrollCallback(window, scroll_callback);
+	glfwSetKeyCallback(window, key_callback);
 
 	// setup time handling
 	std::chrono::high_resolution_clock::time_point before = std::chrono::high_resolution_clock::now();
 	while (!glfwWindowShouldClose(window)) {
-		//TODO: event handling
+		// event handling
+		glfwPollEvents();
+
+		for (InputEvent const &input : event_queue) {
+			application.on_input(input);
+		}
+		event_queue.clear();
 
 		// elapsed time handling
 		{
@@ -295,5 +398,11 @@ void RTG::run(Application &application) {
 		//TODO: render handling (with on_swapchain as needed)
 	}
 
-	//TODO: tear down event handling
+	// tear down event handling
+	glfwSetCursorPosCallback(window, nullptr);
+	glfwSetMouseButtonCallback(window, nullptr);
+	glfwSetScrollCallback(window, nullptr);
+	glfwSetKeyCallback(window, nullptr);
+
+	glfwSetWindowUserPointer(window, nullptr);
 }
