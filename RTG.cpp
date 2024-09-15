@@ -360,6 +360,17 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 				});
 			}
 
+			VkPhysicalDeviceFeatures supported_features;
+			vkGetPhysicalDeviceFeatures(physical_device, &supported_features);
+			
+			if (!supported_features.wideLines) {
+				device_features.wideLines = VK_FALSE;
+				if (configuration.debug) std::cout << "[Device Features: LineWidth] Device does not support wide lines; disabled.\n";
+			} else {
+				device_features.wideLines = VK_TRUE;
+				if (configuration.debug) std::cout << "[Device Features: LineWidth] Device supports wide lines; enabled.\n";
+			}
+
 			VkDeviceCreateInfo create_info{
 				.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 				.queueCreateInfoCount = uint32_t(queue_create_infos.size()),
@@ -373,7 +384,7 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 				.ppEnabledExtensionNames = device_extensions.data(),
 
 				//pass a pointer to a VkPhysicalDeviceFeatures to request specific features: (e.g., thick lines)
-				.pEnabledFeatures = nullptr,
+				.pEnabledFeatures = &device_features,
 			};
 
 			VK( vkCreateDevice(physical_device, &create_info, nullptr, &device) );

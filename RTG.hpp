@@ -188,4 +188,10 @@ struct RTG {
 		VkFence workspace_available = VK_NULL_HANDLE; //this should be signal'd when *all* work is done for the frame
 	};
 
+	//------------------------------
+	//Device Features:
+
+	VkPhysicalDeviceFeatures device_features{
+		.wideLines = VK_TRUE, //enable wide lines
+	};
 };
