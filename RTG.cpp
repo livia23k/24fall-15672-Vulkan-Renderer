@@ -239,21 +239,15 @@ void RTG::recreate_swapchain() {
 
 	// report information
 	if (configuration.debug) {
-		std::cout << "Surface is now: transform: " << capabilities.currentTransform << "size: " \
+		std::cout << "[RTG] (recreate_swapchain) Surface is now: transform: " << capabilities.currentTransform << "size: " \
 			<< capabilities.currentExtent.width << "x" << capabilities.currentExtent.height << ".\n";
-		std::cout << "Swapchain is now " << swapchain_images.size() \
+		std::cout << "[RTG] (recreate_swapchain) Swapchain is now " << swapchain_images.size() \
 			<< " images of size " << swapchain_extent.width << "x" << swapchain_extent.height << "." << std::endl;
 	}
 }
 
 
 void RTG::destroy_swapchain() {
-	// refsol::RTG_destroy_swapchain(
-	// 	device,
-	// 	&swapchain,
-	// 	&swapchain_images,
-	// 	&swapchain_image_views
-	// );
 	
 	VK( vkDeviceWaitIdle(device) ); // wait for any rendering to old swapchain to finish
 
