@@ -271,5 +271,29 @@ void RTG::destroy_swapchain() {
 }
 
 void RTG::run(Application &application) {
-	refsol::RTG_run(*this, application);
+	
+	//TODO: initial on_swapchain
+
+	//TODO: setup event handling
+
+	// setup time handling
+	std::chrono::high_resolution_clock::time_point before = std::chrono::high_resolution_clock::now();
+	while (!glfwWindowShouldClose(window)) {
+		//TODO: event handling
+
+		// elapsed time handling
+		{
+			std::chrono::high_resolution_clock::time_point after = std::chrono::high_resolution_clock::now();
+			float dt = float(std::chrono::duration< double >(after - before).count());
+			before = after;
+
+			dt = std::min(dt, 0.1f); // lag if frame rate dips too low
+
+			application.update(dt);
+		};
+
+		//TODO: render handling (with on_swapchain as needed)
+	}
+
+	//TODO: tear down event handling
 }
