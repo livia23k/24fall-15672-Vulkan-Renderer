@@ -414,12 +414,12 @@ void Helpers::create() {
 	vkGetPhysicalDeviceMemoryProperties(rtg.physical_device, &memory_properties);
 
 	if (rtg.configuration.debug) {
-		std::cout << "Memory types:\n";
+		std::cout << "[Helpers] (Device Memory) Memory types:\n";
 		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
 			VkMemoryType const &type = memory_properties.memoryTypes[i];
 			std::cout << " [" << i << "] heap " << type.heapIndex << ", flags: " << string_VkMemoryPropertyFlags( type.propertyFlags ) << "\n";  
 		}
-		std::cout << "Memory heaps:\n";
+		std::cout << "[Helpers] (Device Memory) Memory heaps:\n";
 		for (uint32_t i = 0; i < memory_properties.memoryHeapCount; ++i) {
 			VkMemoryHeap const &heap = memory_properties.memoryHeaps[i];
 			std::cout << " [" << i << "] " << heap.size << " bytes, flags: " << string_VkMemoryHeapFlags( heap.flags ) << "\n";

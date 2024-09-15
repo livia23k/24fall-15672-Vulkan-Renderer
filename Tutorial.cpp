@@ -30,7 +30,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
 	);
 
-	std::cout << "[Step5 Check-in INFO] (Depth Format) " << string_VkFormat(depth_format) << std::endl;
+	std::cout << "[Tutorial] (Depth Format) " << string_VkFormat(depth_format) << std::endl;
 
 	// create render pass
 	{
@@ -861,7 +861,7 @@ void Tutorial::on_swapchain(RTG &rtg_, RTG::SwapchainEvent const &swapchain) // 
 		VK( vkCreateFramebuffer(rtg.device, &create_info, nullptr, &swapchain_framebuffers[i]) );
 	}
 
-	std::cout << "[Step5 Check-in INFO] (Swapchain count) recreating " << swapchain.images.size() << " swapchains" << std::endl;
+	std::cout << "[Tutorial] (Swapchain count) recreating " << swapchain.images.size() << " swapchains" << std::endl;
 }
 
 void Tutorial::destroy_framebuffers()
