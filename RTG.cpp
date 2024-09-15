@@ -305,7 +305,7 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 
 				// print each queue family flag information
 				if (configuration.debug) {
-					std::cout << "Queue family " << i << " supports: ";
+					std::cout << "[RTG] (Queue Family) Queue family " << i << " supports: ";
 					if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT)
 						if (configuration.debug) std::cout << " graphics, ";
 					if (queue_family.queueFlags & VK_QUEUE_COMPUTE_BIT)
@@ -364,10 +364,10 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this) {
 			
 			if (!supported_features.wideLines) {
 				device_features.wideLines = VK_FALSE;
-				if (configuration.debug) std::cout << "[Device Features: LineWidth] Device does not support wide lines; disabled.\n";
+				if (configuration.debug) std::cout << "[RTG] (Device Features) LineWidth: Not supported by device; disabled.\n";
 			} else {
 				device_features.wideLines = VK_TRUE;
-				if (configuration.debug) std::cout << "[Device Features: LineWidth] Device supports wide lines; enabled.\n";
+				if (configuration.debug) std::cout << "[RTG] (Device Features) Supported by device; enabled.\n";
 			}
 
 			VkDeviceCreateInfo create_info{
