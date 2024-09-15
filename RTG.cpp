@@ -362,7 +362,15 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 
 void RTG::run(Application &application) {
 	
-	//TODO: initial on_swapchain
+	// initial on_swapchain
+	auto on_swapchain = [&, this] () {
+		application.on_swapchain(*this, SwapchainEvent{
+			.extent = swapchain_extent,
+			.images = swapchain_images,
+			.image_views = swapchain_image_views,
+		} );
+	};
+	on_swapchain();
 
 	// setup event handling
 	std::vector< InputEvent > event_queue;
@@ -395,7 +403,77 @@ void RTG::run(Application &application) {
 			application.update(dt);
 		};
 
-		//TODO: render handling (with on_swapchain as needed)
+		//render handling (with on_swapchain as needed)
+		{
+			uint32_t workspace_index;
+			// acquire a workspace (getting a set of buffers that aren't being used in a current rendering operation.)
+			{
+				assert(next_workspace < workspaces.size());
+				workspace_index = next_workspace;
+				next_workspace = (next_workspace + 1) % workspaces.size();
+
+				//wait until the workspace is not being used:
+				VK( vkWaitForFences(device, 1, &workspaces[workspace_index].workspace_available, VK_TRUE, UINT64_MAX) );
+
+				//mark the workspace as in use:
+				VK( vkResetFences(device, 1, &workspaces[workspace_index].workspace_available) );
+			};
+
+			uint32_t image_index = -1U;
+			// acquire an image (resize swapchain if needed)
+			{
+retry:
+				// Ask the swapchain for the next image index -- note careful return handling:
+				if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, workspaces[workspace_index].image_available, VK_NULL_HANDLE, &image_index);
+					result == VK_ERROR_OUT_OF_DATE_KHR) { // C++17: if sentence with initializer
+					//if the swapchain is out-of-date, recreate it and run the loop again:
+					std::cerr << "Recreating swapchain because vkAcquireNextImageKHR returned " << string_VkResult(result) << "." << std::endl;
+					recreate_swapchain();
+					on_swapchain();
+					goto retry;
+				} else if (result == VK_SUBOPTIMAL_KHR) {
+					// if the swapchain is suboptimal, render to it and recreate it later:
+					std::cerr << "Suboptimal swapchain format -- ignoring for the moment." << std::endl;
+				} else if (result != VK_SUCCESS) {
+					// other non-success results are genuine errors:
+					throw std::runtime_error("Failed to acquire swapchain image (" + std::string(string_VkResult(result)) + ")!");
+				}
+			};
+
+			// queue rendering work
+			application.render(*this, RenderParams{
+				.workspace_index = workspace_index,
+				.image_index = image_index,
+				.image_available = workspaces[workspace_index].image_available,
+				.image_done = workspaces[workspace_index].image_done,
+				.workspace_available = workspaces[workspace_index].workspace_available,
+			});
+
+			// queue the work for presentation: (resize swapchain if needed)
+			{
+				VkPresentInfoKHR present_info{
+					.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+					.waitSemaphoreCount = 1,
+					.pWaitSemaphores = &workspaces[workspace_index].image_done,
+					.swapchainCount = 1,
+					.pSwapchains = &swapchain,
+					.pImageIndices = &image_index,
+				};
+
+				assert(present_queue);
+
+				//note, again, the careful return handling:
+				if (VkResult result = vkQueuePresentKHR(present_queue, &present_info);
+					result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+					std::cerr << "Recreating swapchain because vkQueuePresentKHR returned " << string_VkResult(result) << "." << std::endl;
+					recreate_swapchain();
+					on_swapchain();
+				} else if (result != VK_SUCCESS) {
+					throw std::runtime_error("failed to queue presentation of image (" + std::string(string_VkResult(result)) + ")!");
+				}
+			}
+		};
+		
 	}
 
 	// tear down event handling
