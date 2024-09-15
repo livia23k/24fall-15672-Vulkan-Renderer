@@ -120,8 +120,8 @@ struct RTG {
 	VkSwapchainKHR swapchain = VK_NULL_HANDLE; //in non-headless mode, swapchain images are managed by this object; in headless mode this will be null
 
 	VkExtent2D swapchain_extent = {.width = 0, .height = 0}; //current size of the swapchain
-	std::vector< VkImage > swapchain_images; //images in the swapchain
-	std::vector< VkImageView > swapchain_image_views; //image views of the images in the swapchain
+	std::vector< VkImage > swapchain_images; //images in the swapchain (the handles)
+	std::vector< VkImageView > swapchain_image_views; //image views of the images in the swapchain (the views)
 
 	//swapchain management: (used from RTG::RTG(), RTG::~RTG(), and RTG::run() [on resize])
 	void recreate_swapchain();

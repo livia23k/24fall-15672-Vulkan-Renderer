@@ -149,30 +149,131 @@ RTG::~RTG() {
 
 
 void RTG::recreate_swapchain() {
-	refsol::RTG_recreate_swapchain(
-		configuration.debug,
-		device,
-		physical_device,
-		surface,
-		surface_format,
-		present_mode,
-		graphics_queue_family,
-		present_queue_family,
-		&swapchain,
-		&swapchain_extent,
-		&swapchain_images,
-		&swapchain_image_views
-	);
+
+	// clean up swapchain if it already exists
+	if (!swapchain_images.empty()) {
+		destroy_swapchain();
+	}
+
+	// determine size, image count, and transform for swapchain
+	VkSurfaceCapabilitiesKHR capabilities;
+	VK( vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &capabilities) );
+
+	swapchain_extent = capabilities.currentExtent;
+
+	uint32_t requested_count = capabilities.minImageCount + 1;
+	if (capabilities.maxImageCount != 0) {
+		requested_count = std::min(capabilities.maxImageCount, requested_count);
+	}
+
+	// make the swapchain
+	{
+		VkSwapchainCreateInfoKHR create_info{
+			.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+			.surface = surface,
+			.minImageCount = requested_count,
+			.imageFormat = surface_format.format,
+			.imageColorSpace = surface_format.colorSpace,
+			.imageExtent = swapchain_extent,
+			.imageArrayLayers = 1,
+			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+			.preTransform = capabilities.currentTransform,
+			.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			.presentMode = present_mode,
+			.clipped = VK_TRUE,
+			.oldSwapchain = VK_NULL_HANDLE //NOTE: could be more efficient by passing old swapchain handle here instead of destroying it
+		};
+
+		std::vector< uint32_t > queue_family_indices{
+			graphics_queue_family.value(),
+			present_queue_family.value()
+		};
+		
+		//if images will be presented on a different queue, make sure they are shared:
+		if (queue_family_indices[0] != queue_family_indices[1]) {
+			create_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT; // shared
+			create_info.queueFamilyIndexCount = uint32_t(queue_family_indices.size());
+			create_info.pQueueFamilyIndices = queue_family_indices.data();
+		} else {
+			create_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE; // not shared
+		}
+		
+		VK( vkCreateSwapchainKHR(device, &create_info, nullptr, &swapchain) );
+	};
+
+	// get the swapchain images
+	{
+		// 2-calls pattern: get the size first, then resize and get the data
+		uint32_t count = 0;
+		VK( vkGetSwapchainImagesKHR(device, swapchain, &count , nullptr) );
+		swapchain_images.resize(count);
+		VK( vkGetSwapchainImagesKHR(device, swapchain, &count, swapchain_images.data()) );
+	};
+
+	//make image views for swapchain images
+	{
+		swapchain_image_views.assign(swapchain_images.size(), VK_NULL_HANDLE);
+		for (size_t i = 0; i < swapchain_images.size(); ++ i) {
+			VkImageViewCreateInfo create_info{
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.image = swapchain_images[i],
+				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.format = surface_format.format,
+				.components{
+					.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+					.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+					.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+					.a = VK_COMPONENT_SWIZZLE_IDENTITY
+				},
+				.subresourceRange{
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				},
+			};
+			VK( vkCreateImageView(device, &create_info, nullptr, &swapchain_image_views[i]) );
+		}
+	}
+
+	// report information
+	if (configuration.debug) {
+		std::cout << "Surface is now: transform: " << capabilities.currentTransform << "size: " \
+			<< capabilities.currentExtent.width << "x" << capabilities.currentExtent.height << ".\n";
+		std::cout << "Swapchain is now " << swapchain_images.size() \
+			<< " images of size " << swapchain_extent.width << "x" << swapchain_extent.height << "." << std::endl;
+	}
 }
 
 
 void RTG::destroy_swapchain() {
-	refsol::RTG_destroy_swapchain(
-		device,
-		&swapchain,
-		&swapchain_images,
-		&swapchain_image_views
-	);
+	// refsol::RTG_destroy_swapchain(
+	// 	device,
+	// 	&swapchain,
+	// 	&swapchain_images,
+	// 	&swapchain_image_views
+	// );
+	
+	VK( vkDeviceWaitIdle(device) ); // wait for any rendering to old swapchain to finish
+
+	// clean up image views referencing the swapchain
+	for (auto &image_view : swapchain_image_views) {
+		vkDestroyImageView(device, image_view, nullptr);
+		image_view = VK_NULL_HANDLE;
+	}
+	swapchain_image_views.clear();
+
+	// forget handles to swapchain images 
+	// (swapchain image handlers are owned by the swapchain itself, 
+	// will destroy by deallocating the swapchain itself)
+	swapchain_images.clear();
+
+	//deallocate the swapchain and (thus) its images:
+	if (swapchain != VK_NULL_HANDLE) {
+		vkDestroySwapchainKHR(device, swapchain, nullptr);
+		swapchain = VK_NULL_HANDLE;
+	}
 }
 
 void RTG::run(Application &application) {
