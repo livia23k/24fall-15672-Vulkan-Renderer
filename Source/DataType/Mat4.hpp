@@ -1,7 +1,7 @@
-//Edit Start =========================================================================================================
 #pragma once
 
-//A *small* matrix math library for 4x4 matrices only
+// A *small* matrix math library for 4x4 matrices only
+
 
 #include <array>
 #include <cmath>
@@ -126,5 +126,3 @@ inline mat4 look_at(
         -right_dot_eye, -up_dot_eye,    in_dot_eye, 1.0f
     };
 }
-
-//Edit End ===========================================================================================================

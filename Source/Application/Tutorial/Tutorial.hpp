@@ -1,10 +1,10 @@
 #pragma once
 
-#include "datastructures/PosColVertex.hpp"
-#include "datastructures/PosNorTexVertex.hpp"
-#include "libs/mat4.hpp"
+#include "Source/DataType/PosColVertex.hpp"
+#include "Source/DataType/PosNorTexVertex.hpp"
+#include "Source/DataType/Mat4.hpp"
 
-#include "RTG.hpp"
+#include "Source/Configuration/RTG.hpp"
 
 struct Tutorial : RTG::Application
 {

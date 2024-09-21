@@ -3,10 +3,10 @@
 #define _USE_MATH_DEFINES
 #endif
 
-#include "Tutorial.hpp"
-#include "scripts/FileMgr.hpp"
+#include "Source/Application/Tutorial/Tutorial.hpp"
+#include "Source/Tools/FileLoader.hpp"
 
-#include "VK.hpp"
+#include "Source/Helper/VK.hpp"
 
 #include <array>
 #include <cassert>
@@ -20,7 +20,6 @@
 
 Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 {
-	// refsol::Tutorial_constructor(rtg, &depth_format, &render_pass, &command_pool);
 	// select a depth format
 	depth_format = rtg.helpers.find_image_format(
 		{VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32}, // depth format on current GPU; at least 1 is supported; the former is preferred
@@ -265,7 +264,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	{ // create line vertices from .obj file:
 		lines_vertices.clear();
 		std::vector<LinesPipeline::Vertex> mesh_vertices;
-		FileMgr::load_line_from_object("assets/models/obj/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
+		FileLoader::load_line_from_object("Assets/Objects/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
 
 		for (auto &v : mesh_vertices)
 		{
@@ -275,7 +274,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			lines_vertices.push_back(v);
 		}
 
-		// FileMgr::load_line_from_object("assets/models/obj/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/3d-model/pool-art
+		// FileLoader::load_line_from_object("Assets/Objects/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/3d-model/pool-art
 
 		// for (auto &v : mesh_vertices) {
 		// 	v.Position.x /= sea_depression;
@@ -293,7 +292,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			boat_vertices.first = uint32_t(vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
-			FileMgr::load_mesh_from_object("assets/models/obj/boat.obj", mesh_vertices);
+			FileLoader::load_mesh_from_object("Assets/Objects/boat.obj", mesh_vertices);
 
 			for (auto &v : mesh_vertices)
 			{
@@ -310,7 +309,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			sea_vertices.first = uint32_t(vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
-			FileMgr::load_mesh_from_object("assets/models/obj/pool.obj", mesh_vertices);
+			FileLoader::load_mesh_from_object("Assets/Objects/pool.obj", mesh_vertices);
 
 			for (auto &v : mesh_vertices)
 			{
@@ -885,7 +884,6 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 	[[maybe_unused]] VkFramebuffer framebuffer = swapchain_framebuffers[render_params.image_index];
 
 	// //record (into `workspace.command_buffer`) commands that run a `render_pass` that just clears `framebuffer`:
-	// refsol::Tutorial_render_record_blank_frame(rtg, render_pass, framebuffer, &workspace.command_buffer);
 
 	// reset the command buffer
 	VK(vkResetCommandBuffer(workspace.command_buffer, 0));
@@ -1251,7 +1249,6 @@ void Tutorial::render(RTG &rtg_, RTG::RenderParams const &render_params)
 	VK(vkEndCommandBuffer(workspace.command_buffer));
 
 	// submit `workspace.command buffer` for the GPU to run:
-	// refsol::Tutorial_render_submit(rtg, render_params, workspace.command_buffer);
 	{
 		std::array<VkSemaphore, 1> wait_semaphores{
 			render_params.image_available};

@@ -1,16 +1,15 @@
-#include "Tutorial.hpp"
+#include "Source/Application/Tutorial/Tutorial.hpp"
 
-#include "Helpers.hpp"
-#include "refsol.hpp"
-#include "VK.hpp"
+#include "Source/VkMemory/Helpers.hpp"
+#include "Source/Helper/VK.hpp"
 #include "vulkan/vulkan_core.h"
 
 static uint32_t vert_code[] =
-#include "spv/shaders/objects.vert.inl"
+#include "spv/Source/Shader/Tutorial/objects.vert.inl"
     ;
 
 static uint32_t frag_code[] =
-#include "spv/shaders/objects.frag.inl"
+#include "spv/Source/Shader/Tutorial/objects.frag.inl"
     ;
 
 void Tutorial::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass)

@@ -1,7 +1,7 @@
 
-#include "RTG.hpp"
+#include "Source/Configuration/RTG.hpp"
 
-#include "Tutorial.hpp"
+#include "Source/Application/Tutorial/Tutorial.hpp"
 
 #include <iostream>
 

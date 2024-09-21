@@ -1,7 +1,7 @@
-#include "Helpers.hpp"
+#include "Source/VkMemory/Helpers.hpp"
 
-#include "RTG.hpp"
-#include "VK.hpp"
+#include "Source/Configuration/RTG.hpp"
+#include "Source/Helper/VK.hpp"
 
 #include <vulkan/utility/vk_format_utils.h>
 

@@ -1,6 +1,6 @@
-#include "RTG.hpp"
+#include "Source/Configuration/RTG.hpp"
 
-#include "VK.hpp"
+#include "Source/Helper/VK.hpp"
 
 #include <vulkan/vulkan_core.h>
 #if defined(__APPLE__)

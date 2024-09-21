@@ -1,7 +1,7 @@
-#include "FileMgr.hpp"
-#include "datastructures/ObjStruct.hpp"
-#include "datastructures/PosColVertex.hpp"
-#include "datastructures/PosNorTexVertex.hpp"
+#include "FileLoader.hpp"
+#include "Source/DataType/ObjStruct.hpp"
+#include "Source/DataType/PosColVertex.hpp"
+#include "Source/DataType/PosNorTexVertex.hpp"
 
 #include <string>
 #include <vector>
@@ -9,7 +9,7 @@
 #include <sstream>
 #include <iostream>
 
-void FileMgr::load_line_from_object(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
+void FileLoader::load_line_from_object(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
     std::vector<Vector3> vertices;
 
     PosColVertex tmp_vertex {
@@ -71,7 +71,7 @@ void FileMgr::load_line_from_object(const std::string& path, std::vector<PosColV
     return;
 }
 
-void FileMgr::load_mesh_from_object(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices) {
+void FileLoader::load_mesh_from_object(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices) {
 
     std::vector<Vector3> vertices;
     std::vector<Vector3> normals;

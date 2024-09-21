@@ -27,13 +27,13 @@ custom_flags_and_rules();
 //maek.CPP(...) builds a c++ file:
 // it returns the path to the output object file
 const main_objs = [
-	maek.CPP('Tutorial.cpp'),
-	maek.CPP('datastructures/PosColVertex.cpp'),
-	maek.CPP('datastructures/PosNorTexVertex.cpp'),
-	maek.CPP('scripts/FileMgr.cpp'),
-	maek.CPP('RTG.cpp'),
-	maek.CPP('Helpers.cpp'),
-	maek.CPP('main.cpp'),
+	maek.CPP('Source/Application/Tutorial/Tutorial.cpp'),
+	maek.CPP('Source/DataType/PosColVertex.cpp'),
+	maek.CPP('Source/DataType/PosNorTexVertex.cpp'),
+	maek.CPP('Source/Tools/FileLoader.cpp'),
+	maek.CPP('Source/Configuration/RTG.cpp'),
+	maek.CPP('Source/VkMemory/Helpers.cpp'),
+	maek.CPP('Source/main.cpp'),
 ];
 
 //maek.GLSLC(...) builds a glsl source file:
@@ -41,24 +41,24 @@ const main_objs = [
 
 //uncomment to build background shaders and pipeline:
 const background_shaders = [
-	maek.GLSLC('shaders/background.vert'),
-	maek.GLSLC('shaders/background.frag'),
+	maek.GLSLC('Source/Shader/Tutorial/background.vert'),
+	maek.GLSLC('Source/Shader/Tutorial/background.frag'),
 ];
-main_objs.push(maek.CPP('pipelines/Tutorial-BackgroundPipeline.cpp', undefined, { depends: [...background_shaders] }));
+main_objs.push(maek.CPP('Source/Pipelines/Tutorial/BackgroundPipeline.cpp', undefined, { depends: [...background_shaders] }));
 
 //uncomment to build lines shaders and pipeline:
 const lines_shaders = [
-	maek.GLSLC('shaders/lines.vert'),
-	maek.GLSLC('shaders/lines.frag'),
+	maek.GLSLC('Source/Shader/Tutorial/lines.vert'),
+	maek.GLSLC('Source/Shader/Tutorial/lines.frag'),
 ];
-main_objs.push(maek.CPP('pipelines/Tutorial-LinesPipeline.cpp', undefined, { depends: [...lines_shaders] }));
+main_objs.push(maek.CPP('Source/Pipelines/Tutorial/LinesPipeline.cpp', undefined, { depends: [...lines_shaders] }));
 
 //uncomment to build objects shaders and pipeline:
 const objects_shaders = [
-	maek.GLSLC('shaders/objects.vert'),
-	maek.GLSLC('shaders/objects.frag'),
+	maek.GLSLC('Source/Shader/Tutorial/objects.vert'),
+	maek.GLSLC('Source/Shader/Tutorial/objects.frag'),
 ];
-main_objs.push(maek.CPP('pipelines/Tutorial-ObjectsPipeline.cpp', undefined, { depends: [...objects_shaders] }));
+main_objs.push(maek.CPP('Source/Pipelines/Tutorial/ObjectsPipeline.cpp', undefined, { depends: [...objects_shaders] }));
 
 const main_exe = maek.LINK([...main_objs], 'bin/main');
 
@@ -83,6 +83,7 @@ function custom_flags_and_rules() {
 			'-O2',
 			`-I${VULKAN_SDK}/include`,
 			`-I${GLFW_DIR}/include`
+			`-I.`, //include the root directory in the search path
 		];
 
 		maek.options.LINKLibs = [
