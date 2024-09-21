@@ -1,4 +1,3 @@
-//Edit Start ========================================================================================================================================
 #version 450
 
 layout(push_constant) uniform Push {
@@ -17,25 +16,25 @@ vec3 hsv2rgb(vec3 c) {
     //from https://www.rapidtables.com/convert/color/hsv-to-rgb.html
         float H = c.x;
         float S = c.y;
-        float V = c.z; 
+        float V = c.z;
 
         float H_prime = H * 6.0; //equals "float H' = H * 360 / 60;"
 
         float C = V * S;
-        float X = C * (1.0 - abs( mod(H_prime, 2) - 1.0 ));
+        float X = C * (1.0 - abs(mod(H_prime, 2) - 1.0));
         float m = V - C;
 
         vec3 rgb;
 
-        if (H_prime < 1.0) {
+        if(H_prime < 1.0) {
             rgb = vec3(C, X, 0.0);
-        } else if (H_prime < 2.0) {
+        } else if(H_prime < 2.0) {
             rgb = vec3(X, C, 0.0);
-        } else if (H_prime < 3.0) {
+        } else if(H_prime < 3.0) {
             rgb = vec3(0.0, C, X);
-        } else if (H_prime < 4.0) {
+        } else if(H_prime < 4.0) {
             rgb = vec3(0.0, X, C);
-        } else if (H_prime < 5.0) {
+        } else if(H_prime < 5.0) {
             rgb = vec3(X, 0.0, C);
         } else {
             rgb = vec3(C, 0.0, X);
@@ -43,7 +42,6 @@ vec3 hsv2rgb(vec3 c) {
 
         return rgb + vec3(m);
     };
-
 
     // {//ver2. a faster version but i don't understand 
     // //from https://web.archive.org/web/20190526052603/http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
@@ -72,10 +70,9 @@ void main() {
 
         float hue = angle_by_time / pi2;                                                //convert angle range to [0,1] and use it as hue
         vec3 color = hsv2rgb(vec3(hue, 1.0, 1.0));
-        
+
         float speed = 2;
-        float alpha = ( cos(pushData.time * speed) / 2 + 0.5 ) / 2 + 0.5;   //alpha range [-1,1] => [0,1] => [0.5,1.0]
+        float alpha = (cos(pushData.time * speed) / 2 + 0.5) / 2 + 0.5;   //alpha range [-1,1] => [0,1] => [0.5,1.0]
         outColor = vec4(color, alpha);
     };
 }
-//Edit End ==========================================================================================================================================

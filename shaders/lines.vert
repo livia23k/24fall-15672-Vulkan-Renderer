@@ -1,7 +1,6 @@
-//Edit Start =================================================================================================
 #version 450
 
-layout(set=0, binding=0, std140) uniform Camera {
+layout(set = 0, binding = 0, std140) uniform Camera {
 	mat4 CLIP_FROM_WORLD;
 };
 
@@ -12,6 +11,5 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 	gl_Position = CLIP_FROM_WORLD * vec4(inPosition, 1.0);
-    outColor = inColor;
+	outColor = inColor;
 }
-//Edit End ===================================================================================================

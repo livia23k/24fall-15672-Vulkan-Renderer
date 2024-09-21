@@ -10,7 +10,8 @@
 #include <cstring>
 #include <iostream>
 
-Helpers::Allocation::Allocation(Allocation &&from) {
+Helpers::Allocation::Allocation(Allocation &&from)
+{
 	assert(handle == VK_NULL_HANDLE && offset == 0 && size == 0 && mapped == nullptr);
 
 	std::swap(handle, from.handle);
@@ -19,9 +20,11 @@ Helpers::Allocation::Allocation(Allocation &&from) {
 	std::swap(mapped, from.mapped);
 }
 
-Helpers::Allocation &Helpers::Allocation::operator=(Allocation &&from) {
-	if (!(handle == VK_NULL_HANDLE && offset == 0 && size == 0 && mapped == nullptr)) {
-		//not fatal, just sloppy, so complain but don't throw:
+Helpers::Allocation &Helpers::Allocation::operator=(Allocation &&from)
+{
+	if (!(handle == VK_NULL_HANDLE && offset == 0 && size == 0 && mapped == nullptr))
+	{
+		// not fatal, just sloppy, so complain but don't throw:
 		std::cerr << "Replacing a non-empty allocation; device memory will leak." << std::endl;
 	}
 
@@ -33,41 +36,47 @@ Helpers::Allocation &Helpers::Allocation::operator=(Allocation &&from) {
 	return *this;
 }
 
-Helpers::Allocation::~Allocation() {
-	if (!(handle == VK_NULL_HANDLE && offset == 0 && size == 0 && mapped == nullptr)) {
+Helpers::Allocation::~Allocation()
+{
+	if (!(handle == VK_NULL_HANDLE && offset == 0 && size == 0 && mapped == nullptr))
+	{
 		std::cerr << "Destructing a non-empty Allocation; device memory will leak." << std::endl;
 	}
 }
 
 //----------------------------
 
-Helpers::Allocation Helpers::allocate(VkDeviceSize size, VkDeviceSize alignment, uint32_t memory_type_index, MapFlag map) {
+Helpers::Allocation Helpers::allocate(VkDeviceSize size, VkDeviceSize alignment, uint32_t memory_type_index, MapFlag map)
+{
 	Helpers::Allocation allocation;
 
 	VkMemoryAllocateInfo alloc_info{
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.allocationSize = size,
-		.memoryTypeIndex = memory_type_index
-	};
+		.memoryTypeIndex = memory_type_index};
 
-	VK( vkAllocateMemory( rtg.device, &alloc_info, nullptr, &allocation.handle ) ); //3rd parameter: custom allocator callbacks
+	VK(vkAllocateMemory(rtg.device, &alloc_info, nullptr, &allocation.handle)); // 3rd parameter: custom allocator callbacks
 
 	allocation.size = size;
 	allocation.offset = 0;
 
-	if (map == Mapped) {
-		VK( vkMapMemory(rtg.device, allocation.handle, 0, allocation.size, 0, &allocation.mapped) );
+	if (map == Mapped)
+	{
+		VK(vkMapMemory(rtg.device, allocation.handle, 0, allocation.size, 0, &allocation.mapped));
 	}
 
 	return allocation;
 }
 
-Helpers::Allocation Helpers::allocate(VkMemoryRequirements const &req, VkMemoryPropertyFlags properties, MapFlag map) {
+Helpers::Allocation Helpers::allocate(VkMemoryRequirements const &req, VkMemoryPropertyFlags properties, MapFlag map)
+{
 	return allocate(req.size, req.alignment, find_memory_type(req.memoryTypeBits, properties), map);
 }
 
-void Helpers::free(Helpers::Allocation &&allocation) {
-	if (allocation.mapped != nullptr) {
+void Helpers::free(Helpers::Allocation &&allocation)
+{
+	if (allocation.mapped != nullptr)
+	{
 		vkUnmapMemory(rtg.device, allocation.handle);
 		allocation.mapped = nullptr;
 	}
@@ -81,16 +90,16 @@ void Helpers::free(Helpers::Allocation &&allocation) {
 
 //----------------------------
 
-Helpers::AllocatedBuffer Helpers::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map) {
+Helpers::AllocatedBuffer Helpers::create_buffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map)
+{
 	AllocatedBuffer buffer;
-	// refsol::Helpers_create_buffer(rtg, size, usage, properties, (map == Mapped), &buffer);
 	VkBufferCreateInfo create_info{
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = size,
 		.usage = usage,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, //only used by one queue family
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by one queue family
 	};
-	VK( vkCreateBuffer(rtg.device, &create_info, nullptr, &buffer.handle) );
+	VK(vkCreateBuffer(rtg.device, &create_info, nullptr, &buffer.handle));
 	buffer.size = size;
 
 	// determine memory requirements
@@ -101,12 +110,13 @@ Helpers::AllocatedBuffer Helpers::create_buffer(VkDeviceSize size, VkBufferUsage
 	buffer.allocation = allocate(req, properties, map);
 
 	// bind memory
-	VK( vkBindBufferMemory(rtg.device, buffer.handle, buffer.allocation.handle, buffer.allocation.offset) );
+	VK(vkBindBufferMemory(rtg.device, buffer.handle, buffer.allocation.handle, buffer.allocation.offset));
 
 	return buffer;
 }
 
-void Helpers::destroy_buffer(AllocatedBuffer &&buffer) {
+void Helpers::destroy_buffer(AllocatedBuffer &&buffer)
+{
 	vkDestroyBuffer(rtg.device, buffer.handle, nullptr);
 	buffer.handle = VK_NULL_HANDLE;
 	buffer.size = 0;
@@ -114,8 +124,8 @@ void Helpers::destroy_buffer(AllocatedBuffer &&buffer) {
 	this->free(std::move(buffer.allocation));
 }
 
-
-Helpers::AllocatedImage Helpers::create_image(VkExtent2D const &extent, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map) {
+Helpers::AllocatedImage Helpers::create_image(VkExtent2D const &extent, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map)
+{
 	AllocatedImage image;
 	image.extent = extent;
 	image.format = format;
@@ -127,30 +137,29 @@ Helpers::AllocatedImage Helpers::create_image(VkExtent2D const &extent, VkFormat
 		.extent{
 			.width = extent.width,
 			.height = extent.height,
-			.depth = 1
-		},
+			.depth = 1},
 		.mipLevels = 1,
-		.arrayLayers = 1, //number of layers in image array
+		.arrayLayers = 1, // number of layers in image array
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = tiling,
 		.usage = usage,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, //only used by one queue family
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-	};
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by one queue family
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED};
 
-	VK( vkCreateImage(rtg.device, &create_info, nullptr, &image.handle) );
+	VK(vkCreateImage(rtg.device, &create_info, nullptr, &image.handle));
 
 	VkMemoryRequirements req;
 	vkGetImageMemoryRequirements(rtg.device, image.handle, &req);
 
 	image.allocation = allocate(req, properties, map);
 
-	VK( vkBindImageMemory(rtg.device, image.handle, image.allocation.handle, image.allocation.offset) );
+	VK(vkBindImageMemory(rtg.device, image.handle, image.allocation.handle, image.allocation.offset));
 
 	return image;
 }
 
-void Helpers::destroy_image(AllocatedImage &&image) {
+void Helpers::destroy_image(AllocatedImage &&image)
+{
 	vkDestroyImage(rtg.device, image.handle, nullptr);
 
 	image.handle = VK_NULL_HANDLE;
@@ -162,87 +171,82 @@ void Helpers::destroy_image(AllocatedImage &&image) {
 
 //----------------------------
 
-void Helpers::transfer_to_buffer(void *data, size_t size, AllocatedBuffer &target) {
-	// Edit Start =========================================================================================================
-	// refsol::Helpers_transfer_to_buffer(rtg, data, size, &target);
-	
+void Helpers::transfer_to_buffer(void *data, size_t size, AllocatedBuffer &target)
+{
+
 	AllocatedBuffer transfer_src = create_buffer(
 		size,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, //host visible memory, coherent (no special sync needed)
-		Mapped
-	);
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // host visible memory, coherent (no special sync needed)
+		Mapped);
 
-	//DONE: copy data to transfer buffer
+	// copy data to transfer buffer
 	std::memcpy(transfer_src.allocation.data(), data, size);
 
-	//DONE: record CPU->GPU transfer to command buffer
+	// record CPU->GPU transfer to command buffer
 	{
-		VK( vkResetCommandBuffer(transfer_command_buffer, 0) );
+		VK(vkResetCommandBuffer(transfer_command_buffer, 0));
 
 		VkCommandBufferBeginInfo begin_info{
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT //record again every submit
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT // record again every submit
 		};
 
-		VK( vkBeginCommandBuffer(transfer_command_buffer, &begin_info) );
+		VK(vkBeginCommandBuffer(transfer_command_buffer, &begin_info));
 
 		VkBufferCopy copy_region{
 			.srcOffset = 0,
 			.dstOffset = 0,
-			.size = size
-		};
-		
+			.size = size};
+
 		vkCmdCopyBuffer(transfer_command_buffer, transfer_src.handle, target.handle, 1, &copy_region);
 
-		VK( vkEndCommandBuffer(transfer_command_buffer) );
+		VK(vkEndCommandBuffer(transfer_command_buffer));
 	}
 
-	//DONE: run command buffer
+	// run command buffer
 	{
 		VkSubmitInfo submit_info{
 			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			.commandBufferCount = 1,
-			.pCommandBuffers = &transfer_command_buffer
-		};
-		VK( vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE) );
+			.pCommandBuffers = &transfer_command_buffer};
+		VK(vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
 	}
 
-	//DONE: wait for command buffer to finish
-	VK( vkQueueWaitIdle(rtg.graphics_queue) );
+	// wait for command buffer to finish
+	VK(vkQueueWaitIdle(rtg.graphics_queue));
 
-	//destroy to avoid buffer memory leaking
+	// destroy to avoid buffer memory leaking
 	destroy_buffer(std::move(transfer_src));
-	//Edit End ===========================================================================================================
 }
 
-void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target) {
-	assert(target.handle); //target image should be allocated already
+void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target)
+{
+	assert(target.handle); // target image should be allocated already
 
-	//check data is the right size [new]
+	// check data is the right size [new]
 	size_t bytes_per_pixel = vkuFormatElementSize(target.format);
 	assert(size == target.extent.width * target.extent.height * bytes_per_pixel);
 
-	//create a host-coherent source buffer
+	// create a host-coherent source buffer
 	AllocatedBuffer transfer_src = create_buffer(
 		size,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		Mapped
-	);
+		Mapped);
 
-	//copy image data into the source buffer
+	// copy image data into the source buffer
 	std::memcpy(transfer_src.allocation.data(), data, size);
 
-	//TODO: begin recording a command buffer
-	VK( vkResetCommandBuffer(transfer_command_buffer, 0) );
+	// begin recording a command buffer
+	VK(vkResetCommandBuffer(transfer_command_buffer, 0));
 
 	VkCommandBufferBeginInfo begin_info{
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, //will record again every submit
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, // will record again every submit
 	};
 
-	VK( vkBeginCommandBuffer(transfer_command_buffer, &begin_info) );
+	VK(vkBeginCommandBuffer(transfer_command_buffer, &begin_info));
 
 	//
 	VkImageSubresourceRange whole_image{
@@ -253,31 +257,31 @@ void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target)
 		.layerCount = 1,
 	};
 
-	{ //put the receiving image in destination-optimal layout [new]
+	{ // put the receiving image in destination-optimal layout [new]
 		VkImageMemoryBarrier barrier{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			.srcAccessMask = 0,
 			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, //throw away old image
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, // throw away old image
 			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.image = target.handle,
 			.subresourceRange = whole_image,
-		};	
+		};
 
 		vkCmdPipelineBarrier(
-			transfer_command_buffer, //commandBuffer
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, //srcStageMask
-			VK_PIPELINE_STAGE_TRANSFER_BIT, //dstStageMask
-			0, //dependencyFlags
-			0, nullptr, //memory barrier count, pointer
-			0, nullptr, //buffer memory barrier count, pointer
-			1, &barrier //image memory barrier count, pointer
+			transfer_command_buffer,		   // commandBuffer
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // srcStageMask
+			VK_PIPELINE_STAGE_TRANSFER_BIT,	   // dstStageMask
+			0,								   // dependencyFlags
+			0, nullptr,						   // memory barrier count, pointer
+			0, nullptr,						   // buffer memory barrier count, pointer
+			1, &barrier						   // image memory barrier count, pointer
 		);
 	};
 
-	{ //copy the source buffer to the image [new]
+	{ // copy the source buffer to the image [new]
 		VkBufferImageCopy region{
 			.bufferOffset = 0,
 			.bufferRowLength = target.extent.width,
@@ -288,12 +292,11 @@ void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target)
 				.baseArrayLayer = 0,
 				.layerCount = 1,
 			},
-			.imageOffset{ .x = 0, .y = 0, .z = 0 },
+			.imageOffset{.x = 0, .y = 0, .z = 0},
 			.imageExtent{
 				.width = target.extent.width,
 				.height = target.extent.height,
-				.depth = 1
-			},
+				.depth = 1},
 		};
 
 		vkCmdCopyBufferToImage(
@@ -301,13 +304,12 @@ void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target)
 			transfer_src.handle,
 			target.handle,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1, &region
-		);
+			1, &region);
 
-		//NOTE: if image had mip levels, would need to copy as additional regions here.
+		// NOTE: if image had mip levels, would need to copy as additional regions here.
 	};
 
-	{ //transition the image memory to shader-read-only-optimal layout [new]
+	{ // transition the image memory to shader-read-only-optimal layout [new]
 		VkImageMemoryBarrier barrier{
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -321,124 +323,133 @@ void Helpers::transfer_to_image(void *data, size_t size, AllocatedImage &target)
 		};
 
 		vkCmdPipelineBarrier(
-			transfer_command_buffer, //commandBuffer
-			VK_PIPELINE_STAGE_TRANSFER_BIT, //srcStageMask
-			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, //dstStageMask
-			0, //dependencyFlags
-			0, nullptr, //memory barrier count, pointer
-			0, nullptr, //buffer memory barrier count, pointer
-			1, &barrier //image memory barrier count, pointer
+			transfer_command_buffer,			   // commandBuffer
+			VK_PIPELINE_STAGE_TRANSFER_BIT,		   // srcStageMask
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, // dstStageMask
+			0,									   // dependencyFlags
+			0, nullptr,							   // memory barrier count, pointer
+			0, nullptr,							   // buffer memory barrier count, pointer
+			1, &barrier							   // image memory barrier count, pointer
 		);
 	};
 
-	//end and submit the command buffer
-	VK( vkEndCommandBuffer(transfer_command_buffer) );
+	// end and submit the command buffer
+	VK(vkEndCommandBuffer(transfer_command_buffer));
 
 	VkSubmitInfo submit_info{
 		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		.commandBufferCount = 1,
-		.pCommandBuffers = &transfer_command_buffer
-	};
+		.pCommandBuffers = &transfer_command_buffer};
 
-	VK( vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE) );
+	VK(vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
 
-	//wait for command buffer to finish executing
-	VK( vkQueueWaitIdle(rtg.graphics_queue) );
+	// wait for command buffer to finish executing
+	VK(vkQueueWaitIdle(rtg.graphics_queue));
 
-	//destroy the source buffer
+	// destroy the source buffer
 	destroy_buffer(std::move(transfer_src));
 }
 
 //----------------------------
 
-uint32_t Helpers::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags flags) const {
-	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
+uint32_t Helpers::find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags flags) const
+{
+	for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
+	{
 		VkMemoryType const &type = memory_properties.memoryTypes[i];
-		if ( ( (type_filter & (1 << i)) != 0 )
-			&& ( (type.propertyFlags & flags) == flags ) ) {
-				return i;
+		if (((type_filter & (1 << i)) != 0) && ((type.propertyFlags & flags) == flags))
+		{
+			return i;
 		}
 	}
 	throw std::runtime_error("No suitable memory type found.");
 }
 
-VkFormat Helpers::find_image_format(std::vector< VkFormat > const &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const {
-	for (VkFormat format : candidates) {
+VkFormat Helpers::find_image_format(std::vector<VkFormat> const &candidates, VkImageTiling tiling, VkFormatFeatureFlags features) const
+{
+	for (VkFormat format : candidates)
+	{
 		VkFormatProperties props;
 		vkGetPhysicalDeviceFormatProperties(rtg.physical_device, format, &props);
-		if ( tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) ) {
+		if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features))
+		{
 			return format;
-		} else if ( tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures &features) == features ) {
+		}
+		else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features)
+		{
 			return format;
 		}
 	}
 	throw std::runtime_error("No supported format matches request.");
 }
 
-VkShaderModule Helpers::create_shader_module(uint32_t const *code, size_t bytes) const {
+VkShaderModule Helpers::create_shader_module(uint32_t const *code, size_t bytes) const
+{
 	VkShaderModule shader_module = VK_NULL_HANDLE;
 	VkShaderModuleCreateInfo create_info{
 		.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 		.codeSize = bytes,
-		.pCode = code
-	};
-	VK( vkCreateShaderModule(rtg.device, &create_info, nullptr, &shader_module) );
+		.pCode = code};
+	VK(vkCreateShaderModule(rtg.device, &create_info, nullptr, &shader_module));
 	return shader_module;
 }
 
 //----------------------------
 
-Helpers::Helpers(RTG const &rtg_) : rtg(rtg_) {
+Helpers::Helpers(RTG const &rtg_) : rtg(rtg_)
+{
 }
 
-Helpers::~Helpers() {
+Helpers::~Helpers()
+{
 }
 
-void Helpers::create() {
-	//Edit Start =========================================================================================================
-	VkCommandPoolCreateInfo create_info{ //resources made with create and destroy are long-lived
-		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		.queueFamilyIndex = rtg.graphics_queue_family.value()
-	};
-	VK( vkCreateCommandPool(rtg.device, &create_info, nullptr, &transfer_command_pool) );
+void Helpers::create()
+{
+	VkCommandPoolCreateInfo create_info{// resources made with create and destroy are long-lived
+										.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+										.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+										.queueFamilyIndex = rtg.graphics_queue_family.value()};
+	VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &transfer_command_pool));
 
-	VkCommandBufferAllocateInfo alloc_info{ //resources made with alloc and free are short-lived, can be changed each frame
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		.commandPool = transfer_command_pool,
-		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, 
-		.commandBufferCount = 1
-	};
-	VK( vkAllocateCommandBuffers(rtg.device, &alloc_info, &transfer_command_buffer) );
+	VkCommandBufferAllocateInfo alloc_info{// resources made with alloc and free are short-lived, can be changed each frame
+										   .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+										   .commandPool = transfer_command_pool,
+										   .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+										   .commandBufferCount = 1};
+	VK(vkAllocateCommandBuffers(rtg.device, &alloc_info, &transfer_command_buffer));
 
 	vkGetPhysicalDeviceMemoryProperties(rtg.physical_device, &memory_properties);
 
-	if (rtg.configuration.debug) {
+	if (rtg.configuration.debug)
+	{
 		std::cout << "[Helpers] (Device Memory) Memory types:\n";
-		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i) {
+		for (uint32_t i = 0; i < memory_properties.memoryTypeCount; ++i)
+		{
 			VkMemoryType const &type = memory_properties.memoryTypes[i];
-			std::cout << " [" << i << "] heap " << type.heapIndex << ", flags: " << string_VkMemoryPropertyFlags( type.propertyFlags ) << "\n";  
+			std::cout << " [" << i << "] heap " << type.heapIndex << ", flags: " << string_VkMemoryPropertyFlags(type.propertyFlags) << "\n";
 		}
 		std::cout << "[Helpers] (Device Memory) Memory heaps:\n";
-		for (uint32_t i = 0; i < memory_properties.memoryHeapCount; ++i) {
+		for (uint32_t i = 0; i < memory_properties.memoryHeapCount; ++i)
+		{
 			VkMemoryHeap const &heap = memory_properties.memoryHeaps[i];
-			std::cout << " [" << i << "] " << heap.size << " bytes, flags: " << string_VkMemoryHeapFlags( heap.flags ) << "\n";
+			std::cout << " [" << i << "] " << heap.size << " bytes, flags: " << string_VkMemoryHeapFlags(heap.flags) << "\n";
 		}
-		std::cout.flush(); //not appending any char to the output terminal
+		std::cout.flush(); // not appending any char to the output terminal
 	}
-	//Edit End ===========================================================================================================
 }
 
-void Helpers::destroy() {
-	//Edit Start =========================================================================================================	
-	if (transfer_command_buffer != VK_NULL_HANDLE) {
+void Helpers::destroy()
+{
+	if (transfer_command_buffer != VK_NULL_HANDLE)
+	{
 		vkFreeCommandBuffers(rtg.device, transfer_command_pool, 1, &transfer_command_buffer);
 		transfer_command_buffer = VK_NULL_HANDLE;
 	}
 
-	if (transfer_command_pool != VK_NULL_HANDLE) {
+	if (transfer_command_pool != VK_NULL_HANDLE)
+	{
 		vkDestroyCommandPool(rtg.device, transfer_command_pool, nullptr);
 		transfer_command_pool = VK_NULL_HANDLE;
 	}
-	//Edit End ===========================================================================================================
 }

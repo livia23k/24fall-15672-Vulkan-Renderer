@@ -28,11 +28,9 @@ custom_flags_and_rules();
 // it returns the path to the output object file
 const main_objs = [
 	maek.CPP('Tutorial.cpp'),
-	//Edit Start ====================================================================================================
 	maek.CPP('datastructures/PosColVertex.cpp'),
 	maek.CPP('datastructures/PosNorTexVertex.cpp'),
 	maek.CPP('scripts/FileMgr.cpp'),
-	//Edit End ======================================================================================================
 	maek.CPP('RTG.cpp'),
 	maek.CPP('Helpers.cpp'),
 	maek.CPP('main.cpp'),
@@ -41,28 +39,26 @@ const main_objs = [
 //maek.GLSLC(...) builds a glsl source file:
 // it returns the path to the output .inl file
 
-//Edit Start ====================================================================================================
 //uncomment to build background shaders and pipeline:
 const background_shaders = [
 	maek.GLSLC('shaders/background.vert'),
 	maek.GLSLC('shaders/background.frag'),
 ];
-main_objs.push( maek.CPP('pipelines/Tutorial-BackgroundPipeline.cpp', undefined, { depends:[...background_shaders] } ) );
+main_objs.push(maek.CPP('pipelines/Tutorial-BackgroundPipeline.cpp', undefined, { depends: [...background_shaders] }));
 
 //uncomment to build lines shaders and pipeline:
 const lines_shaders = [
 	maek.GLSLC('shaders/lines.vert'),
 	maek.GLSLC('shaders/lines.frag'),
 ];
-main_objs.push( maek.CPP('pipelines/Tutorial-LinesPipeline.cpp', undefined, { depends:[...lines_shaders] } ) );
-//Edit End ======================================================================================================
+main_objs.push(maek.CPP('pipelines/Tutorial-LinesPipeline.cpp', undefined, { depends: [...lines_shaders] }));
 
 //uncomment to build objects shaders and pipeline:
 const objects_shaders = [
 	maek.GLSLC('shaders/objects.vert'),
 	maek.GLSLC('shaders/objects.frag'),
 ];
-main_objs.push( maek.CPP('pipelines/Tutorial-ObjectsPipeline.cpp', undefined, { depends:[...objects_shaders] } ) );
+main_objs.push(maek.CPP('pipelines/Tutorial-ObjectsPipeline.cpp', undefined, { depends: [...objects_shaders] }));
 
 const main_exe = maek.LINK([...main_objs], 'bin/main');
 
@@ -139,9 +135,7 @@ function custom_flags_and_rules() {
 		maek.options.CPPFlags = [
 			'-O2',
 			`-I${VULKAN_SDK}/include`,
-			//Edit Start ====================================================================================================
 			`-I.`, //include the root directory in the search path
-			//Edit End ======================================================================================================
 			`-I/opt/homebrew/include`, //for brew-installed GLFW
 			`-I../glfw-3.4.bin.MACOS/include`, //for release from github
 		];
@@ -165,7 +159,7 @@ function custom_flags_and_rules() {
 
 	//- - - - - - - - - - - - -
 	//custom rule that runs glslc:
-	
+
 	maek.DEFAULT_OPTIONS.GLSLC = [`${VULKAN_SDK}/bin/glslc` + (maek.OS === 'windows' ? '.exe' : ''), '-Werror', '-g', '-mfmt=c', '--target-env=vulkan1.2'];
 	maek.DEFAULT_OPTIONS.GLSLCFlags = [];
 	maek.DEFAULT_OPTIONS.spirvSuffix = '.inl';
@@ -199,8 +193,8 @@ function custom_flags_and_rules() {
 			await maek.run(command, `${task.label}: compile`,
 				async () => {
 					return {
-						read:[glslFile],
-						written:[spirvFile]
+						read: [glslFile],
+						written: [spirvFile]
 					};
 				}
 			);
@@ -418,8 +412,8 @@ function init_maek() {
 			await run(command, `${task.label}: compile + prerequisites`,
 				async () => {
 					return {
-						read:[...await loadDeps()],
-						written:[objFile, depsFile]
+						read: [...await loadDeps()],
+						written: [objFile, depsFile]
 					};
 				}
 			);
@@ -460,8 +454,8 @@ function init_maek() {
 			await run(linkCommand, `${task.label}: link`,
 				async () => {
 					return {
-						read:[...objFiles],
-						written:[exeFile]
+						read: [...objFiles],
+						written: [exeFile]
 					};
 				}
 			);
@@ -498,8 +492,8 @@ function init_maek() {
 				//cache will have a 'files' and a 'hashes' line
 				if ('files' in loaded[command] && 'hashes' in loaded[command]) {
 					cache[command] = {
-						files:loaded[command].files,
-						hashes:loaded[command].hashes
+						files: loaded[command].files,
+						hashes: loaded[command].hashes
 					};
 					assigned += 1;
 				} else {
@@ -594,7 +588,7 @@ function init_maek() {
 
 		//store result in cache:
 		if (cacheInfoFn) {
-			const {read, written} = await cacheInfoFn();
+			const { read, written } = await cacheInfoFn();
 
 			//if hashed one of the written files before, can't rely on it:
 			for (const file of written) {
@@ -604,8 +598,8 @@ function init_maek() {
 			//update cache with file content hashes:
 			const files = [...read, ...written];
 			cache[cacheKey] = {
-				files:files,
-				hashes:await hashFiles([exe, ...files])
+				files: files,
+				hashes: await hashFiles([exe, ...files])
 			};
 		}
 
@@ -802,7 +796,7 @@ function init_maek() {
 			//remove task from 'running' list:
 			let i = running.indexOf(task);
 			console.assert(i !== -1, "running tasks must exist within running list");
-			running.splice(i,1);
+			running.splice(i, 1);
 		}
 
 		//ready up anything that can be:
@@ -813,7 +807,7 @@ function init_maek() {
 		}
 
 		//launch tasks until no more can be launched:
-		await new Promise((resolve,reject) => {
+		await new Promise((resolve, reject) => {
 			function pollTasks() {
 				//if can run something now, do so:
 				while (running.length < maek.JOBS && !CANCEL_ALL_TASKS && ready.length > 0) {

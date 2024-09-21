@@ -1,4 +1,3 @@
-//Edit Start =================================================================================================
 #version 450
 
 struct Transform {
@@ -7,7 +6,7 @@ struct Transform {
 	mat4 WORLD_FROM_LOCAL_NORMAL;
 };
 
-layout(set=1, binding=0, std140) readonly buffer Transforms {
+layout(set = 1, binding = 0, std140) readonly buffer Transforms {
 	Transform TRANSFORMS[];
 };
 
@@ -22,8 +21,7 @@ layout(location = 2) out vec2 outTexCoord;
 void main() {
 	gl_Position = TRANSFORMS[gl_InstanceIndex].CLIP_FROM_LOCAL * vec4(inPosition, 1.0);
 
-    outPosition = mat4x3(TRANSFORMS[gl_InstanceIndex].WORLD_FROM_LOCAL) * vec4(inPosition, 1.0);
+	outPosition = mat4x3(TRANSFORMS[gl_InstanceIndex].WORLD_FROM_LOCAL) * vec4(inPosition, 1.0);
 	outNormal = mat3(TRANSFORMS[gl_InstanceIndex].WORLD_FROM_LOCAL_NORMAL) * Normal;
 	outTexCoord = TexCoord;
 }
-//Edit End ===================================================================================================
