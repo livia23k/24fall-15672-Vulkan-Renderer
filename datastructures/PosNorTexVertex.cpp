@@ -1,4 +1,3 @@
-// Edit Start ===========================================================================================================
 #include "datastructures/PosNorTexVertex.hpp"
 
 #include <array>
@@ -32,4 +31,3 @@ const VkPipelineVertexInputStateCreateInfo PosNorTexVertex::array_input_state{
     .pVertexBindingDescriptions = bindings.data(),
     .vertexAttributeDescriptionCount = uint32_t(attributes.size()),
     .pVertexAttributeDescriptions = attributes.data()};
-// Edit End =============================================================================================================

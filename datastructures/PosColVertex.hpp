@@ -1,4 +1,3 @@
-// Edit Start ===========================================================================================================
 #pragma once
 
 #include <vulkan/vulkan_core.h>
@@ -22,5 +21,3 @@ struct PosColVertex
 };
 
 static_assert(sizeof(PosColVertex) == 3 * 4 + 4 * 1, "PosColVertex is packed."); // size check, ensure no padding
-
-// Edit End =============================================================================================================

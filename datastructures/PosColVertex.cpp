@@ -1,4 +1,3 @@
-// Edit Start ===========================================================================================================
 #include "datastructures/PosColVertex.hpp"
 
 #include <array>
@@ -27,4 +26,3 @@ const VkPipelineVertexInputStateCreateInfo PosColVertex::array_input_state{
     .pVertexBindingDescriptions = bindings.data(),
     .vertexAttributeDescriptionCount = uint32_t(attributes.size()),
     .pVertexAttributeDescriptions = attributes.data()};
-// Edit End =============================================================================================================

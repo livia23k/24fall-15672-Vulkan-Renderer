@@ -1,4 +1,3 @@
-// Edit Start ===========================================================================================================
 #pragma once
 
 #include <vulkan/vulkan_core.h>
@@ -26,5 +25,3 @@ struct PosNorTexVertex
 };
 
 static_assert(sizeof(PosNorTexVertex) == 3 * 4 + 3 * 4 + 2 * 4, "PosNorTexVertex is packed."); // size check, ensure no padding
-
-// Edit End =============================================================================================================
