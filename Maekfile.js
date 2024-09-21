@@ -82,7 +82,7 @@ function custom_flags_and_rules() {
 		maek.options.CPPFlags = [
 			'-O2',
 			`-I${VULKAN_SDK}/include`,
-			`-I${GLFW_DIR}/include`
+			`-I${GLFW_DIR}/include`,
 			`-I.`, //include the root directory in the search path
 		];
 
@@ -122,7 +122,8 @@ function custom_flags_and_rules() {
 		maek.options.CPPFlags = [
 			`/I${VULKAN_SDK}/Include`,
 			`/I../glfw-3.4.bin.WIN64/include`,
-			'/O2'
+			'/O2',
+			`-I.`, //include the root directory in the search path
 		];
 
 	} else if (maek.OS === 'macos') {
