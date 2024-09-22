@@ -1,7 +1,7 @@
 
 #include "Source/Configuration/RTG.hpp"
 
-#include "Source/Application/Tutorial/Tutorial.hpp"
+#include "Source/Application/Wanderer/Wanderer.hpp"
 
 #include <iostream>
 
@@ -15,7 +15,7 @@ int main(int argc, char **argv)
 		RTG::Configuration configuration;
 
 		configuration.application_info = VkApplicationInfo{
-			.pApplicationName = "nakluV Tutorial",
+			.pApplicationName = "Wanderer",
 			.applicationVersion = VK_MAKE_VERSION(0, 0, 0),
 			.pEngineName = "Unknown",
 			.engineVersion = VK_MAKE_VERSION(0, 0, 0),
@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 		RTG rtg(configuration);
 
 		// initializes global (whole-life-of-application) resources:
-		Tutorial application(rtg);
+		Wanderer application(rtg);
 
 		// main loop -- handles events, renders frames, etc:
 		rtg.run(application);
