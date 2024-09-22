@@ -28,6 +28,7 @@ custom_flags_and_rules();
 // it returns the path to the output object file
 const main_objs = [
 	maek.CPP('Source/Application/Tutorial/Tutorial.cpp'),
+	// maek.CPP('Source/Application/Wanderer/Wanderer.cpp'),
 	maek.CPP('Source/DataType/PosColVertex.cpp'),
 	maek.CPP('Source/DataType/PosNorTexVertex.cpp'),
 	maek.CPP('Source/Tools/FileLoader.cpp'),
@@ -323,7 +324,7 @@ function init_maek() {
 	maek.tasks = {};
 
 	//-----------------------------------------
-	//RULES.
+	//RULES.fz
 	// helper functions that specify tasks:
 
 	//COPY adds a task that copies a file:
