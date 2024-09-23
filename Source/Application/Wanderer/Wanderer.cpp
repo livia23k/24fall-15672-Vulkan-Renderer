@@ -322,10 +322,10 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	};
 
 	{ // create object vertices from .obj file:
-		std::vector<ObjectsPipeline::Vertex> vertices;
+		std::vector<ObjectsPipeline::Vertex> tmp_object_vertices;
 
 		{ // object 0: boat read from .obj file
-			boat_vertices.first = uint32_t(vertices.size());
+			boat_vertices.first = uint32_t(tmp_object_vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
 			FileLoader::load_mesh_from_object("Assets/Objects/boat.obj", mesh_vertices);
@@ -335,14 +335,14 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 				v.Position.x *= boat_amplification;
 				v.Position.y *= boat_amplification;
 				v.Position.z *= boat_amplification;
-				vertices.push_back(v);
+				tmp_object_vertices.push_back(v);
 			}
 
-			boat_vertices.count = uint32_t(vertices.size()) - boat_vertices.first;
+			boat_vertices.count = uint32_t(tmp_object_vertices.size()) - boat_vertices.first;
 		}
 
 		{ // object 0: environment read from .obj file
-			sea_vertices.first = uint32_t(vertices.size());
+			sea_vertices.first = uint32_t(tmp_object_vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
 			FileLoader::load_mesh_from_object("Assets/Objects/pool.obj", mesh_vertices);
@@ -353,13 +353,13 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 				v.Position.y /= sea_depression;
 				v.Position.z /= sea_depression;
 				v.Position.y -= sea_downward;
-				vertices.push_back(v);
+				tmp_object_vertices.push_back(v);
 			}
 
-			sea_vertices.count = uint32_t(vertices.size()) - sea_vertices.first;
+			sea_vertices.count = uint32_t(tmp_object_vertices.size()) - sea_vertices.first;
 		}
 
-		size_t bytes = vertices.size() * sizeof(vertices[0]);
+		size_t bytes = tmp_object_vertices.size() * sizeof(tmp_object_vertices[0]);
 
 		object_vertices = rtg.helpers.create_buffer(
 			bytes,
@@ -368,7 +368,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 			Helpers::Unmapped);
 
 		// copy data to buffer
-		rtg.helpers.transfer_to_buffer(vertices.data(), bytes, object_vertices);
+		rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
 	}
 
 	{ // create textures
