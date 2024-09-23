@@ -1,4 +1,4 @@
-#include "Source/Tools/FileLoader.hpp"
+#include "Source/Tools/LoadMgr.hpp"
 #include "Source/DataType/ObjStruct.hpp"
 #include "Source/DataType/PosColVertex.hpp"
 #include "Source/DataType/PosNorTexVertex.hpp"
@@ -9,7 +9,7 @@
 #include <sstream>
 #include <iostream>
 
-void FileLoader::load_line_from_object(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
+void LoadMgr::load_line_from_object(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
     std::vector<Vector3> vertices;
 
     PosColVertex tmp_vertex {
@@ -71,7 +71,7 @@ void FileLoader::load_line_from_object(const std::string& path, std::vector<PosC
     return;
 }
 
-void FileLoader::load_mesh_from_object(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices) {
+void LoadMgr::load_mesh_from_object(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices) {
 
     std::vector<Vector3> vertices;
     std::vector<Vector3> normals;
