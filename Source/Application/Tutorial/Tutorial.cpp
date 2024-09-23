@@ -264,7 +264,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 	{ // create line vertices from .obj file:
 		lines_vertices.clear();
 		std::vector<LinesPipeline::Vertex> mesh_vertices;
-		LoadMgr::load_line_from_object("Assets/Objects/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
+		LoadMgr::load_line_from_OBJ("Assets/Objects/boat.obj", mesh_vertices); // boat model from https://www.thebasemesh.com/asset/boat-ornament
 
 		for (auto &v : mesh_vertices)
 		{
@@ -274,7 +274,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			lines_vertices.push_back(v);
 		}
 
-		// LoadMgr::load_line_from_object("Assets/Objects/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/3d-model/pool-art
+		// LoadMgr::load_line_from_OBJ("Assets/Objects/pool.obj", mesh_vertices); // ocean model from https://www.cgtrader.com/3d-model/pool-art
 
 		// for (auto &v : mesh_vertices) {
 		// 	v.Position.x /= sea_depression;
@@ -292,7 +292,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			boat_vertices.first = uint32_t(vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
-			LoadMgr::load_mesh_from_object("Assets/Objects/boat.obj", mesh_vertices);
+			LoadMgr::load_object_from_OBJ("Assets/Objects/boat.obj", mesh_vertices);
 
 			for (auto &v : mesh_vertices)
 			{
@@ -309,7 +309,7 @@ Tutorial::Tutorial(RTG &rtg_) : rtg(rtg_)
 			sea_vertices.first = uint32_t(vertices.size());
 
 			std::vector<ObjectsPipeline::Vertex> mesh_vertices;
-			LoadMgr::load_mesh_from_object("Assets/Objects/pool.obj", mesh_vertices);
+			LoadMgr::load_object_from_OBJ("Assets/Objects/pool.obj", mesh_vertices);
 
 			for (auto &v : mesh_vertices)
 			{

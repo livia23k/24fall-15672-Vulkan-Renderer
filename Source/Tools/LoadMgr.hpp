@@ -12,6 +12,10 @@ struct LoadMgr {
     ~LoadMgr() = default;
     LoadMgr(LoadMgr const &) = delete;
 
-    static void load_line_from_object(const std::string& path, std::vector<PosColVertex>& mesh_vertices);
-    static void load_mesh_from_object(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices);
+    // .OBJ
+    static void load_line_from_OBJ(const std::string& path, std::vector<PosColVertex>& mesh_vertices);
+    static void load_object_from_OBJ(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices);
+
+    // .M
+
 };

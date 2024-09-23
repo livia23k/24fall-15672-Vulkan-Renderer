@@ -9,7 +9,7 @@
 #include <sstream>
 #include <iostream>
 
-void LoadMgr::load_line_from_object(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
+void LoadMgr::load_line_from_OBJ(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
     std::vector<Vector3> vertices;
 
     PosColVertex tmp_vertex {
@@ -71,7 +71,7 @@ void LoadMgr::load_line_from_object(const std::string& path, std::vector<PosColV
     return;
 }
 
-void LoadMgr::load_mesh_from_object(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices) {
+void LoadMgr::load_object_from_OBJ(const std::string& path, std::vector<PosNorTexVertex>& mesh_vertices) {
 
     std::vector<Vector3> vertices;
     std::vector<Vector3> normals;

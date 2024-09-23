@@ -209,12 +209,20 @@ struct Wanderer : RTG::Application
 	//--------------------------------------------------------------------
 	// Constructor modules functions, breaking up the constructor into smaller parts:
 
-	void initDepthFormat();
-    void createRenderPass();
-    void createCommandPool();
-    void createPipelines();
-    void createDescriptorPool();
-    void setupWorkspaces();
+	void init_depth_format();
+    void create_render_pass();
+    void create_command_pool();
+    void create_pipelines();
+    void create_description_pool();
+    void setup_workspaces();
+
+	//--------------------------------------------------------------------
+	// Load resources:
+
+	void load_lines();
+	void load_objects();
+	void create_diy_textures();
+	void create_textures_descriptor();
 
 
 
