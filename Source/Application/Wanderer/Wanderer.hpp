@@ -207,6 +207,18 @@ struct Wanderer : RTG::Application
 	std::vector<ObjectInstance> object_instances;
 
 	//--------------------------------------------------------------------
+	// Constructor modules functions, breaking up the constructor into smaller parts:
+
+	void initDepthFormat();
+    void createRenderPass();
+    void createCommandPool();
+    void createPipelines();
+    void createDescriptorPool();
+    void setupWorkspaces();
+
+
+
+	//--------------------------------------------------------------------
 	// Rendering function, uses all the resources above to queue work to draw a frame:
 
 	virtual void render(RTG &, RTG::RenderParams const &) override;

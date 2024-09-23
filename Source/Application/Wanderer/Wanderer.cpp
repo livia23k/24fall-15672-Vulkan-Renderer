@@ -18,169 +18,189 @@
 
 [[maybe_unused]] u_int16_t g_frame = 0;
 
-Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
+void Wanderer::initDepthFormat()
 {
-	// select a depth format
+	// select the depth format ==================================================================
 	depth_format = rtg.helpers.find_image_format(
 		{VK_FORMAT_D32_SFLOAT, VK_FORMAT_X8_D24_UNORM_PACK32}, // depth format on current GPU; at least 1 is supported; the former is preferred
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 	std::cout << "[Wanderer] (Depth Format) " << string_VkFormat(depth_format) << std::endl;
+}
 
-	// create render pass
-	{
-		// attachments
-		//	(1: color image, 2: depth image)
-		std::array<VkAttachmentDescription, 2> attachments{
-			VkAttachmentDescription{
-				// specify the initial and final layout states for an image used in the subpass
-				.format = rtg.surface_format.format,
-				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,	 // clear the screen
-				.storeOp = VK_ATTACHMENT_STORE_OP_STORE, // keep result for later display
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-				.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR // only used for image display
-			},
-			VkAttachmentDescription{
-				.format = depth_format,
-				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-				.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-				.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}};
+void Wanderer::createRenderPass()
+{
+	// set attachments info =====================================================================
+	//	(1: color image, 2: depth image)
+	std::array<VkAttachmentDescription, 2> attachments{
+		VkAttachmentDescription{
+			// specify the initial and final layout states for an image used in the subpass
+			.format = rtg.surface_format.format,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,	 // clear the screen
+			.storeOp = VK_ATTACHMENT_STORE_OP_STORE, // keep result for later display
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR // only used for image display
+		},
+		VkAttachmentDescription{
+			.format = depth_format,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+			.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL}};
 
-		// subpass
-		VkAttachmentReference color_attachment_ref{
-			.attachment = 0,
-			.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+	// set subpass info =========================================================================
+	VkAttachmentReference color_attachment_ref{
+		.attachment = 0,
+		.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
 
-		VkAttachmentReference depth_attachment_ref{
-			.attachment = 1,
-			.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+	VkAttachmentReference depth_attachment_ref{
+		.attachment = 1,
+		.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
 
-		VkSubpassDescription subpass{
-			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-			.inputAttachmentCount = 0,
-			.pInputAttachments = nullptr,
-			.colorAttachmentCount = 1,
-			.pColorAttachments = &color_attachment_ref,
-			.pDepthStencilAttachment = &depth_attachment_ref};
+	VkSubpassDescription subpass{
+		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+		.inputAttachmentCount = 0,
+		.pInputAttachments = nullptr,
+		.colorAttachmentCount = 1,
+		.pColorAttachments = &color_attachment_ref,
+		.pDepthStencilAttachment = &depth_attachment_ref};
 
-		// dependencies
-		//	(this defers the image load actions for the attachments; is a happens-before guarantee for the render pass)
-		std::array<VkSubpassDependency, 2> dependencies{
-			VkSubpassDependency{
-				.srcSubpass = VK_SUBPASS_EXTERNAL, // where the dependency is
-				.dstSubpass = 0,
-				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // dependency src to wait
-				.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // target dst to do
-				.srcAccessMask = 0,											   // dependency src resource
-				.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,		   // target dst resource
-			},
-			VkSubpassDependency{
-				.srcSubpass = VK_SUBPASS_EXTERNAL,
-				.dstSubpass = 0,
-				.srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, // finish the last point in the ppl that touches the depth buffer
-				.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-				.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-				.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-			}};
+	// set dependencies info ====================================================================
+	//	(this defers the image load actions for the attachments; is a happens-before guarantee for the render pass)
+	std::array<VkSubpassDependency, 2> dependencies{
+		VkSubpassDependency{
+			.srcSubpass = VK_SUBPASS_EXTERNAL, // where the dependency is
+			.dstSubpass = 0,
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // dependency src to wait
+			.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, // target dst to do
+			.srcAccessMask = 0,											   // dependency src resource
+			.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,		   // target dst resource
+		},
+		VkSubpassDependency{
+			.srcSubpass = VK_SUBPASS_EXTERNAL,
+			.dstSubpass = 0,
+			.srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT, // finish the last point in the ppl that touches the depth buffer
+			.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+			.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+		}};
 
-		// create info wrap-up
-		VkRenderPassCreateInfo create_info{
-			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			.attachmentCount = uint32_t(attachments.size()),
-			.pAttachments = attachments.data(),
-			.subpassCount = 1,
-			.pSubpasses = &subpass,
-			.dependencyCount = uint32_t(dependencies.size()),
-			.pDependencies = dependencies.data()};
+	// wrap-up create info ======================================================================
+	VkRenderPassCreateInfo create_info{
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		.attachmentCount = uint32_t(attachments.size()),
+		.pAttachments = attachments.data(),
+		.subpassCount = 1,
+		.pSubpasses = &subpass,
+		.dependencyCount = uint32_t(dependencies.size()),
+		.pDependencies = dependencies.data()};
 
-		VK(vkCreateRenderPass(rtg.device, &create_info, nullptr, &render_pass));
-	};
+	// create render pass =======================================================================
+	VK(vkCreateRenderPass(rtg.device, &create_info, nullptr, &render_pass));
+}
 
-	// create command pool
-	{
-		VkCommandPoolCreateInfo create_info{
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			.queueFamilyIndex = rtg.graphics_queue_family.value()};
-		VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &command_pool));
-	}
+void Wanderer::createCommandPool()
+{
+	// wrap-up create info ======================================================================
+	VkCommandPoolCreateInfo create_info{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = rtg.graphics_queue_family.value()};
+	
+	// create command pool ======================================================================
+	VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &command_pool));
+}
 
+void Wanderer::createPipelines()
+{
+	// create pipelines ========================================================================
+	//  1: background, 2: lines, 3: objects (impl in Source/Pipelines/Wanderer/*)
 	background_pipeline.create(rtg, render_pass, 0);
 	lines_pipeline.create(rtg, render_pass, 0);
 	objects_pipeline.create(rtg, render_pass, 0);
+}
 
-	{															  // create descriptor pool:
-		uint32_t per_workspace = uint32_t(rtg.workspaces.size()); // for easier-to-read counting
+void Wanderer::createDescriptorPool()
+{
+	uint32_t per_workspace = uint32_t(rtg.workspaces.size()); // for easier-to-read counting
 
-		std::array<VkDescriptorPoolSize, 2> pool_sizes{
-			VkDescriptorPoolSize{
-				// for camera
-				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount = 2 * per_workspace // 1 descriptor per set, 2 set per workspace
-			},
-			VkDescriptorPoolSize{
-				// for transform
-				.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.descriptorCount = 1 * per_workspace // 1 descriptor per set, 1 set per workspace
-			},
-		};
-
-		VkDescriptorPoolCreateInfo create_info{
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			.flags = 0,					  // because CREATE_FREE_DESCRIPTOR_SET_BIT isn't included, can't free individual descriptors allocated from this pool
-			.maxSets = 3 * per_workspace, // one set per workspace
-			.poolSizeCount = uint32_t(pool_sizes.size()),
-			.pPoolSizes = pool_sizes.data()};
-
-		VK(vkCreateDescriptorPool(rtg.device, &create_info, nullptr, &descriptor_pool));
+	std::array<VkDescriptorPoolSize, 2> pool_sizes{
+		VkDescriptorPoolSize{
+			// for camera
+			.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			.descriptorCount = 2 * per_workspace // 1 descriptor per set, 2 set per workspace
+		},
+		VkDescriptorPoolSize{
+			// for transform
+			.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			.descriptorCount = 1 * per_workspace // 1 descriptor per set, 1 set per workspace
+		},
 	};
 
+	VkDescriptorPoolCreateInfo create_info{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = 0,					  // because CREATE_FREE_DESCRIPTOR_SET_BIT isn't included, can't free individual descriptors allocated from this pool
+		.maxSets = 3 * per_workspace, // one set per workspace
+		.poolSizeCount = uint32_t(pool_sizes.size()),
+		.pPoolSizes = pool_sizes.data()};
+
+	// create description pool ==================================================================
+	VK(vkCreateDescriptorPool(rtg.device, &create_info, nullptr, &descriptor_pool));
+}
+
+void Wanderer::setupWorkspaces()
+{
 	workspaces.resize(rtg.workspaces.size());
 	for (Workspace &workspace : workspaces)
 	{
-		{ // [start] allocate command buffer
+		// allocate command buffer ==============================================================
+		{
 			VkCommandBufferAllocateInfo alloc_info{
 				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 				.commandPool = command_pool,
 				.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 				.commandBufferCount = 1};
 			VK(vkAllocateCommandBuffers(rtg.device, &alloc_info, &workspace.command_buffer));
-		} // [end] allocate command buffer
+		}
 
-		// descriptor sets alloc
+		// allocate Camera and World descriptor sets =============================================
 		{
-			// create buffers for sources and destinations for lines_pipeline.set0_Camera
+			// lines_pipeline.set0_Camera --------------------------------------------------------
+
+			// create buffers for sources
 			workspace.Camera_src = rtg.helpers.create_buffer(
 				sizeof(LinesPipeline::Camera),
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // host visible memory, coherent (no special sync needed)
 				Helpers::Mapped																// put it somewhere in the CPU address space
 			);
+
+			// create buffers for destinations
 			workspace.Camera = rtg.helpers.create_buffer(
 				sizeof(LinesPipeline::Camera),
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // use as a uniform buffer, and a target of a memory copy
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,								   // on GPU, not host visible
 				Helpers::Unmapped);
 
-			{ // allocate descriptor set for lines_pipeline.set0_Camera
-				VkDescriptorSetAllocateInfo alloc_info{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-					.descriptorPool = descriptor_pool,
-					.descriptorSetCount = 1,
-					.pSetLayouts = &lines_pipeline.set0_Camera};
+			// allocate descriptor set
+			VkDescriptorSetAllocateInfo camera_set_alloc_info{
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool = descriptor_pool,
+				.descriptorSetCount = 1,
+				.pSetLayouts = &lines_pipeline.set0_Camera};
 
-				VK(vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Camera_descriptors));
-			};
+			VK(vkAllocateDescriptorSets(rtg.device, &camera_set_alloc_info, &workspace.Camera_descriptors));
 
-			// create buffers for sources and destinations for objects_pipeline.set0_World
+			// objects_pipeline.set0_World --------------------------------------------------------
+
+			// create buffers for sources
 			workspace.World_src = rtg.helpers.create_buffer(
 				sizeof(ObjectsPipeline::World),
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -188,32 +208,30 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 				Helpers::Mapped																// put it somewhere in the CPU address space
 			);
 
+			// create buffers for destinations
 			workspace.World = rtg.helpers.create_buffer(
 				sizeof(ObjectsPipeline::World),
 				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // use as a uniform buffer, and a target of a memory copy
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,								   // on GPU, not host visible
 				Helpers::Unmapped);
 
-			{ // allocate descriptor set for objects_pipeline.set0_World
-				VkDescriptorSetAllocateInfo alloc_info{
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-					.descriptorPool = descriptor_pool,
-					.descriptorSetCount = 1,
-					.pSetLayouts = &objects_pipeline.set0_World};
+			// allocate descriptor set
+			VkDescriptorSetAllocateInfo world_set_alloc_info{
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.descriptorPool = descriptor_pool,
+				.descriptorSetCount = 1,
+				.pSetLayouts = &objects_pipeline.set0_World};
 
-				VK(vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.World_descriptors));
-			};
+			VK(vkAllocateDescriptorSets(rtg.device, &world_set_alloc_info, &workspace.World_descriptors));
 		};
 
-		// descriptor sets write
+		// bind Camera and World descriptor set to buffer =======================================
 		{
-			// point descriptor to Camera buffer:
 			VkDescriptorBufferInfo Camera_info{
 				.buffer = workspace.Camera.handle,
 				.offset = 0,
 				.range = workspace.Camera.size};
 
-			// point descriptor to World buffer:
 			VkDescriptorBufferInfo World_info{
 				.buffer = workspace.World.handle,
 				.offset = 0,
@@ -227,7 +245,9 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 					.dstArrayElement = 0,
 					.descriptorCount = 1,
 					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					.pBufferInfo = &Camera_info},
+					.pBufferInfo = &Camera_info
+				},
+
 				VkWriteDescriptorSet{
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.dstSet = workspace.World_descriptors,
@@ -235,7 +255,9 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 					.dstArrayElement = 0,
 					.descriptorCount = 1,
 					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					.pBufferInfo = &World_info}};
+					.pBufferInfo = &World_info
+				}
+			};
 
 			vkUpdateDescriptorSets(
 				rtg.device,
@@ -246,7 +268,8 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 			);
 		};
 
-		{ // set1_Transforms
+		// allocate descriptor sets for set1 descriptor ==========================================
+		{ 
 			VkDescriptorSetAllocateInfo alloc_info{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				.descriptorPool = descriptor_pool,
@@ -254,8 +277,21 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 				.pSetLayouts = &objects_pipeline.set1_Transforms};
 
 			VK(vkAllocateDescriptorSets(rtg.device, &alloc_info, &workspace.Transform_descriptors));
-		}; // end of set1_Transforms
+		};
+
+		// bind Transform descriptor set to buffer is done in the render loop
 	}
+}
+
+Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
+{
+	initDepthFormat();
+	createRenderPass();
+	createCommandPool();
+	createPipelines();
+	createDescriptorPool();
+	setupWorkspaces();
+	
 
 	const float boat_amplification = 5.f;
 	const float sea_depression = 4.f;
@@ -322,131 +358,6 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 
 			sea_vertices.count = uint32_t(vertices.size()) - sea_vertices.first;
 		}
-
-		// { //objects from tutorial
-		// 	{ //object 1: a quadrilateral
-
-		// 		/* (x, z)
-		// 			(-length, -depth)	(-length, -depth)
-		// 				C  /--------\ D
-		// 					/		    \
-		// 				A	/------------\ B
-		// 			(-length, depth)	(length, depth)
-		// 		*/
-
-		// 		plane_vertices.first = uint32_t(vertices.size());
-
-		// 		const float height = -0.0f;
-		// 		const float length = 2.0f;
-		// 		const float depth = 1.0f;
-
-		// 		// triangle ABC
-		// 		vertices.emplace_back(PosNorTexVertex{
-		// 			.Position{ .x = -length, .y = height, .z = -depth },
-		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-		// 			.TexCoord{ .s = 0.0f, .t = 0.0f },
-		// 		});
-		// 		vertices.emplace_back(PosNorTexVertex{
-		// 			.Position{ .x = -length, .y = height, .z = depth },
-		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-		// 			.TexCoord{ .s = 1.0f, .t = 0.0f },
-		// 		});
-		// 		vertices.emplace_back(PosNorTexVertex{
-		// 			.Position{ .x = length, .y = height, .z = -depth },
-		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-		// 			.TexCoord{ .s = 0.0f, .t = 1.0f },
-		// 		});
-
-		// 		// triangle DCB
-		// 		vertices.emplace_back(PosNorTexVertex{
-		// 			.Position{ .x = length, .y = height, .z = depth },
-		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f },
-		// 			.TexCoord{ .s = 1.0f, .t = 1.0f },
-		// 		});
-		// 		vertices.emplace_back(PosNorTexVertex{
-		// 			.Position{ .x = length, .y = height, .z = -depth },
-		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-		// 			.TexCoord{ .s = 0.0f, .t = 1.0f },
-		// 		});
-		// 		vertices.emplace_back(PosNorTexVertex{
-		// 			.Position{ .x = -length, .y = height, .z = depth },
-		// 			.Normal{ .x = 0.0f, .y = 0.0f, .z = 1.0f},
-		// 			.TexCoord{ .s = 1.0f, .t = 0.0f },
-		// 		});
-
-		// 		plane_vertices.count = uint32_t(vertices.size()) - plane_vertices.first;
-		// 	}
-
-		// 	{ //object 2: a torus
-		// 		torus_vertices.first = uint32_t(vertices.size());
-
-		// 		// DONE: torus geometry
-		// 		//will parameterize the torus with (u,v) where:
-		// 		//	- u is angle around main axis (+z)
-		// 		//	- v is angle around tube axis (+y)
-
-		// 		constexpr float R1 = 0.35f; //main radius
-		// 		constexpr float R2 = 0.15f; //tube radius
-
-		// 		constexpr uint32_t U_STEPS = 20;
-		// 		constexpr uint32_t V_STEPS = 16;
-
-		// 		//texture repeats around the torus:
-		// 		constexpr float V_REPEATS = 2.0f;
-		// 		const float U_REPEATS = std::ceil(V_REPEATS / R2 * R1); // (U_REPEATS, V_REPEATS) proportional to the (R1, R2)
-
-		// 		auto emplace_vertex = [&](uint32_t ui, uint32_t vi) {
-		// 			//convert steps to angles;
-		// 			// (doing the mod since trig on 2 M_PI may not exactly match 0)
-		// 			float ua = (ui % U_STEPS) / float(U_STEPS) * 2.0f * float(M_PI);
-		// 			float va = (vi % V_STEPS) / float(V_STEPS) * 2.0f * float(M_PI);
-
-		// 			// calculate the origin torus position
-		// 			float torus_x = (R1 + R2 * std::cos(va)) * std::cos(ua);
-		// 			float torus_y = (R1 + R2 * std::cos(va)) * std::sin(ua);
-		// 			float torus_z = R2 * std::sin(va);
-
-		// 			vertices.emplace_back( PosNorTexVertex{
-
-		// 				//rotate 90deg around x to make it aligned with my plane
-		// 				.Position{
-		// 					//horizontal
-		// 					.x = torus_x,
-		// 					.y = -torus_z,
-		// 					.z = torus_y
-
-		// 					//vertical
-		// 					// .x = torus_x,
-		// 					// .y = torus_y,
-		// 					// .z = torus_z
-		// 				},
-		// 				.Normal{
-		// 					.x = std::cos(va) * std::cos(ua),
-		// 					.y = std::cos(va) * std::sin(ua),
-		// 					.z = std::sin(va)
-		// 				},
-		// 				.TexCoord{
-		// 					.s = (ui) / float(U_STEPS) * U_REPEATS,
-		// 					.t = (vi) / float(V_STEPS) * V_REPEATS
-		// 				}
-		// 			});
-		// 		};
-
-		// 		for (uint32_t ui = 0; ui < U_STEPS; ++ ui) {
-		// 			for (uint32_t vi = 0; vi < V_STEPS; ++ vi) {
-		// 				emplace_vertex(ui, vi + 1);
-		// 				emplace_vertex(ui, vi);
-		// 				emplace_vertex(ui + 1, vi);
-
-		// 				emplace_vertex(ui, vi + 1);
-		// 				emplace_vertex(ui + 1, vi);
-		// 				emplace_vertex(ui + 1, vi + 1);
-		// 			}
-		// 		}
-
-		// 		torus_vertices.count = uint32_t(vertices.size()) - torus_vertices.first;
-		// 	}
-		// };
 
 		size_t bytes = vertices.size() * sizeof(vertices[0]);
 
@@ -1286,7 +1197,7 @@ void Wanderer::update(float dt)
 		float lookat_distance = 5.f;
 
 		CLIP_FROM_WORLD = perspective(
-							  fov / float(M_PI) * 180.0f,											  // fov in radians
+							  fov * float(M_PI) / 180.0f,											  // fov in radians
 							  float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height), // aspect
 							  0.1f,																	  // near
 							  1000.0f																  // far

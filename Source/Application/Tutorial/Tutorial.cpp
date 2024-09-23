@@ -1286,7 +1286,7 @@ void Tutorial::update(float dt)
 		float lookat_distance = 5.f;
 
 		CLIP_FROM_WORLD = perspective(
-							  fov / float(M_PI) * 180.0f,											  // fov in radians
+							  60.0f * float(M_PI) / 180.0f,											  // fov in radians
 							  float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height), // aspect
 							  0.1f,																	  // near
 							  1000.0f																  // far

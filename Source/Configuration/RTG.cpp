@@ -56,6 +56,12 @@ void RTG::Configuration::parse(int argc, char **argv)
 			surface_extent.width = conv("width");
 			surface_extent.height = conv("height");
 		}
+		else if (arg == "--scene")
+		{
+			if (argi + 1 >= argc)
+				throw std::runtime_error("--scene requires a parameter (a scene graph file name).");
+			argi += 1;
+		}
 		else
 		{
 			throw std::runtime_error("Unrecognized argument '" + arg + "'.");
