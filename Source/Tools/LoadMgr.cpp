@@ -293,55 +293,44 @@ void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneM
             if (!propertyInfo.as_object()) continue;
 
             auto &attributesObject = propertyInfo.as_object().value();
-            for (auto & [attributeName, attributesInfo] : attributesObject)
+            for (auto & [attributeName, attributeInfo] : attributesObject)
             {
                 if (attributeName == "POSITION")
                 {
-                    if (!attributesInfo.as_object()) continue;
+                    if (!attributeInfo.as_object()) continue;
 
-                    auto &positionObject = attributesInfo.as_object().value();
-                    for (auto & [subAttributeName, subAttributeInfo] : positionObject)
-                    {
-                        if (subAttributeName == "src")
-                        {
-                            if (!subAttributeInfo.as_string()) continue;
-
-                            meshObject->attrPosition.src = subAttributeInfo.as_string().value();
-                            // std::cout << meshObject->attrPosition.src << std::endl; // [PASS]
-                        }
-                        else if (subAttributeName == "offset")
-                        {
-                            if (!subAttributeInfo.as_number()) continue;
-
-                            meshObject->attrPosition.offset = static_cast<uint32_t>(subAttributeInfo.as_number().value());
-                            // std::cout << meshObject->attrPosition.offset << std::endl; // [PASS]
-                        }
-                        else if (subAttributeName == "stride")
-                        {
-                            if (!subAttributeInfo.as_number()) continue;
-
-                            meshObject->attrPosition.stride = static_cast<uint32_t>(subAttributeInfo.as_number().value());
-                            // std::cout << meshObject->attrPosition.stride << std::endl; // [PASS]
-                        }
-                        else if (subAttributeName == "format")
-                        {
-                            if (!subAttributeInfo.as_string()) continue;
-
-                            std::string formatStr = subAttributeInfo.as_string().value();
-                            std::optional<VkFormat> typeConvertedResult = VkTypeHelper::findVkFormat(formatStr);
-                            if (typeConvertedResult == std::nullopt) continue;
-                            meshObject->attrPosition.format = typeConvertedResult.value();
-                            std::cout << formatStr << ": " << meshObject->attrPosition.format << std::endl; // [PASS] R32G32B32_SFLOAT: 26
-                        }
-                    }
+                    OptionalPropertyMap subAttributePropertyMap = attributeInfo.as_object().value();
+                    parse_sub_attribute_info(subAttributePropertyMap, meshObject->attrPosition);
                 }
                 else if (attributeName == "NORMAL")
                 {
+                    if (!attributeInfo.as_object()) continue;
 
+                    OptionalPropertyMap subAttributePropertyMap = attributeInfo.as_object().value();
+                    parse_sub_attribute_info(subAttributePropertyMap, meshObject->attrNormal);
+                }
+                else if (attributeName == "TANGENT")
+                {
+                    if (!attributeInfo.as_object()) continue;
+
+                    OptionalPropertyMap subAttributePropertyMap = attributeInfo.as_object().value();
+                    parse_sub_attribute_info(subAttributePropertyMap, meshObject->attrTangent);
+                }
+                else if (attributeName == "TEXCOORD")
+                {
+                    if (!attributeInfo.as_object()) continue;
+
+                    OptionalPropertyMap subAttributePropertyMap = attributeInfo.as_object().value();
+                    parse_sub_attribute_info(subAttributePropertyMap, meshObject->attrTexcoord);
                 }
             }
+        }
+        else if (propertyName == "material")
+        {
+            if (!propertyInfo.as_string()) continue;
 
-            
+            meshObject->refMaterialName = propertyInfo.as_string().value();
+            // std::cout << meshObject->refMaterialName << std::endl; // [PASS]
         }
     }
 
@@ -374,6 +363,44 @@ void LoadMgr::parse_light_object_info(OptionalPropertyMap &lightObjectInfo, Scen
 
 }
 
+
+void LoadMgr::parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, SceneMgr::AttributeStream &attrStream)
+{
+    for (auto & [propertyName, propertyInfo] : *subAttributeInfo)
+    {
+        if (propertyName == "src")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            attrStream.src = propertyInfo.as_string().value();
+            // std::cout << attrStream.src << std::endl; // [PASS]
+        }
+        else if (propertyName == "offset")
+        {
+            if (!propertyInfo.as_number()) continue;
+
+            attrStream.offset = static_cast<uint32_t>(propertyInfo.as_number().value());
+            // std::cout << attrStream.offset << std::endl; // [PASS]
+        }
+        else if (propertyName == "stride")
+        {
+            if (!propertyInfo.as_number()) continue;
+
+            attrStream.stride = static_cast<uint32_t>(propertyInfo.as_number().value());
+            // std::cout << attrStream.stride << std::endl; // [PASS]
+        }
+        else if (propertyName == "format")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            std::string formatStr = propertyInfo.as_string().value();
+            std::optional<VkFormat> typeConvertedResult = VkTypeHelper::findVkFormat(formatStr);
+            if (typeConvertedResult == std::nullopt) continue;
+            attrStream.format = typeConvertedResult.value();
+            // std::cout << formatStr << ": " << attrStream.format << std::endl; // [PASS]
+        }
+    }
+}
 
 
 

@@ -35,6 +35,7 @@ struct LoadMgr {
     static void parse_material_object_info(OptionalPropertyMap &materialObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_environment_object_info(OptionalPropertyMap &environmentObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr);
+    static void parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, SceneMgr::AttributeStream &attrStream);
 
 
 };
