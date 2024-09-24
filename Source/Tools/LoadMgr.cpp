@@ -1,13 +1,383 @@
 #include "Source/Tools/LoadMgr.hpp"
+#include "Source/Tools/SceneMgr.hpp"
+#include "Source/Tools/VkTypeHelper.hpp"
 #include "Source/DataType/ObjStruct.hpp"
 #include "Source/DataType/PosColVertex.hpp"
 #include "Source/DataType/PosNorTexVertex.hpp"
+#include "lib/sejp.hpp"
 
-#include <string>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <iostream>
+// Scene Graph Loader functions =================================================================================
+
+void LoadMgr::load_objects_from_s72(const std::string& path, SceneMgr &targetSceneMgr) {
+
+    // Valid Test ----------------------------------------------------------------------------------
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        std::cerr << "Failed to open file: " << path << std::endl;
+        return;
+    }
+
+    std::string line;
+    getline(file, line);
+    
+    if (line.substr(0, 9) != "[\"s72-v2\"")
+    {
+        std::cerr << "Invalid scene graph file: " << path << std::endl;
+        return;
+    }
+    std::cout << "valid scene graph file: " << path << std::endl;
+
+    // Prepare to parse the scene graph -----------------------------------------------------------
+
+    targetSceneMgr.clean_all();
+
+    // Parse the scene graph -----------------------------------------------------------------------
+
+    sejp::value sceneGraphInfo = sejp::load(path);
+
+    // Handle the info by scene objects ------------------------------------------------------------
+
+    parse_scene_graph_info(sceneGraphInfo, targetSceneMgr);
+}
+
+void LoadMgr::parse_scene_graph_info(const sejp::value& sceneGraphInfo, SceneMgr& targetSceneMgr)
+{
+    // parse object ARRAY included by `[]` ------------------------------------------------------
+
+    if (!sceneGraphInfo.as_array().has_value()) return;
+
+    auto &objectMap = sceneGraphInfo.as_array().value();
+    for (auto &object : objectMap)
+    {
+        // parse property OBJECT included by `{}` ------------------------------------------------
+
+        if (!object.as_object().has_value()) continue;
+
+        OptionalPropertyMap propertyMap = object.as_object().value();
+        
+        // 1. find object type
+
+        std::string objectType = propertyMap->find("type")->second.as_string().value(); 
+
+        // 2. parse `[]` scene object info ARRAY to cpp scene object data structure ---------------
+        {
+            if (objectType == "SCENE")
+            {
+                parse_scene_object_info(propertyMap, targetSceneMgr);
+            } 
+            else if (objectType == "NODE")
+            {
+                parse_node_object_info(propertyMap, targetSceneMgr);
+            }
+            else if (objectType == "MESH")
+            {
+                parse_mesh_object_info(propertyMap, targetSceneMgr);
+            }
+            else if (objectType == "CAMERA")
+            {
+                parse_camera_object_info(propertyMap, targetSceneMgr);
+            }
+            else if (objectType == "DRIVER")
+            {
+                parse_driver_object_info(propertyMap, targetSceneMgr);
+            }
+            else if (objectType == "MATERIAL")
+            {
+                parse_material_object_info(propertyMap, targetSceneMgr);
+            }
+            else if (objectType == "ENVIRONMENT")
+            {
+                parse_environment_object_info(propertyMap, targetSceneMgr);
+            }
+            else if (objectType == "LIGHT")
+            {
+                parse_light_object_info(propertyMap, targetSceneMgr);
+            }
+            else
+            {
+                std::cerr << "Unknown object type: " << objectType << std::endl;
+            }
+        };
+    }
+}
+
+void LoadMgr::parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, SceneMgr &targetSceneMgr)
+{
+    SceneMgr::SceneObject* sceneObject = new SceneMgr::SceneObject;
+
+    for (auto & [propertyName, propertyInfo] : *sceneObjectInfo)
+    {
+        if (propertyName == "name")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            sceneObject->name = propertyInfo.as_string().value();
+        }
+        else if (propertyName == "roots")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto & rootArray = propertyInfo.as_array().value();
+            for (const auto &root : rootArray)
+            {
+                if (!root.as_number()) continue;
+                sceneObject->rootIdx.push_back( static_cast<uint32_t>( root.as_number().value() ) );
+            }
+        }
+    }
+
+    targetSceneMgr.sceneObject = sceneObject;
+    // std::cout << sceneObject->name << " updated to sceneObject." << std::endl;
+}
+
+void LoadMgr::parse_node_object_info(OptionalPropertyMap &nodeObjectInfo, SceneMgr &targetSceneMgr)
+{
+    SceneMgr::NodeObject* nodeObject = new SceneMgr::NodeObject;
+
+    for (auto & [propertyName, propertyInfo] : *nodeObjectInfo)
+    {
+        if (propertyName == "name")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            nodeObject->name = propertyInfo.as_string().value();
+        }
+        else if (propertyName == "translation")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto &translationArray = propertyInfo.as_array().value();
+            for (int i = 0; i < 3; ++ i)
+            {
+                if (!translationArray[i].as_number()) continue;
+                nodeObject->translation[i] = translationArray[i].as_number().value();
+                // std::cout << nodeObject->translation[i] << ", "; // [PASS]
+            }
+        }
+        else if (propertyName == "rotation")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto &rotationArray = propertyInfo.as_array().value();
+            for (int i = 0; i < 4; ++ i)
+            {
+                if (!rotationArray[i].as_number()) continue;
+                nodeObject->rotation[i] = rotationArray[i].as_number().value();
+                // std::cout << nodeObject->rotation[i] << ", "; // [PASS]
+            }
+        }
+        else if (propertyName == "scale")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto &scaleArray = propertyInfo.as_array().value();
+            for (int i = 0; i < 3; ++ i)
+            {
+                if (!scaleArray[i].as_number()) continue;
+                nodeObject->scale[i] = scaleArray[i].as_number().value();
+                // std::cout << nodeObject->scale[i] << ", "; // [PASS]
+            }
+        }
+        else if (propertyName == "children")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto &childrenArray = propertyInfo.as_array().value();
+            for (const auto &child : childrenArray)
+            {
+                if (!child.as_string()) continue;
+                nodeObject->childName.push_back(child.as_string().value());
+                // std::cout << child.as_string().value() << ", "; // [PASS]
+            }
+        }
+        else if (propertyName == "camera")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            nodeObject->refCameraName = propertyInfo.as_string().value();
+            // std::cout << nodeObject->refCameraName << std::endl; // [PASS]
+        }
+         else if (propertyName == "mesh")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            nodeObject->refMeshName = propertyInfo.as_string().value();
+            // std::cout << nodeObject->refMeshName << std::endl; // [PASS]
+        }
+        else if (propertyName == "environment")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            nodeObject->refEnvironmentName = propertyInfo.as_string().value();
+            // std::cout << nodeObject->refEnvironmentName << std::endl; // [PASS]
+        }
+        else if (propertyName == "light")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            nodeObject->refLightName = propertyInfo.as_string().value();
+            // std::cout << nodeObject->refLightName << std::endl; // [PASS]
+        }
+    }
+
+    targetSceneMgr.nodeObjectMap[nodeObject->name] = nodeObject;
+    // std::cout << nodeObject->name << " added to nodeObjectMap." << std::endl; // [PASS]
+}
+
+void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneMgr &targetSceneMgr)
+{
+    SceneMgr::MeshObject* meshObject = new SceneMgr::MeshObject;
+
+    for (auto & [propertyName, propertyInfo] : *meshObjectInfo)
+    {
+        if (propertyName == "name")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            meshObject->name = propertyInfo.as_string().value();
+            // std::cout << meshObject->name << std::endl; // [PASS]
+        }
+        else if (propertyName == "topology")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            std::string topologyStr = propertyInfo.as_string().value();
+            std::optional<VkPrimitiveTopology>  typeConvertedResult = VkTypeHelper::findVkPrimitiveTopology(topologyStr);
+            if (typeConvertedResult == std::nullopt) continue;
+            meshObject->topology = typeConvertedResult.value();
+            // std::cout << topology_str << ": " << meshObject->topology << std::endl; // [PASS] TRIANGLE_LIST: 3
+        }
+        else if (propertyName == "count")
+        {
+            if (!propertyInfo.as_number()) continue;
+
+            meshObject->count = static_cast<uint32_t>(propertyInfo.as_number().value());
+            // std::cout << meshObject->count << std::endl; // [PASS]
+        }
+        else if (propertyName == "indices")
+        {
+            if (!propertyInfo.as_object()) continue;
+
+            auto &indicesObject = propertyInfo.as_object().value();
+            for (auto & [indiceName, indiceInfo] : indicesObject)
+            {
+                if (indiceName == "src")
+                {
+                    if (!indiceInfo.as_string()) continue;
+
+                    meshObject->indices.src = indiceInfo.as_string().value();
+                    // std::cout << meshObject->indices.src << std::endl; // [PASS]
+                }
+                else if (indiceName == "offset")
+                {
+                    if (!indiceInfo.as_number()) continue;
+
+                    meshObject->indices.offset = static_cast<uint32_t>(indiceInfo.as_number().value());
+                    // std::cout << meshObject->indices.offset << std::endl; // [PASS]
+                }
+                else if (indiceName == "format")
+                {
+                    if (!indiceInfo.as_string()) continue;
+
+                    std::string formatStr = indiceInfo.as_string().value();
+                    std::optional<VkIndexType> typeConvertedResult = VkTypeHelper::findVkIndexType(formatStr);
+                    if (typeConvertedResult == std::nullopt) continue;
+                    meshObject->indices.format = typeConvertedResult.value();
+                    // std::cout << formatStr << ": " << meshObject->indices.format << std::endl; // [PASS] UINT32: 7
+                }
+            }
+        }
+        else if (propertyName == "attributes")
+        {
+            if (!propertyInfo.as_object()) continue;
+
+            auto &attributesObject = propertyInfo.as_object().value();
+            for (auto & [attributeName, attributesInfo] : attributesObject)
+            {
+                if (attributeName == "POSITION")
+                {
+                    if (!attributesInfo.as_object()) continue;
+
+                    auto &positionObject = attributesInfo.as_object().value();
+                    for (auto & [subAttributeName, subAttributeInfo] : positionObject)
+                    {
+                        if (subAttributeName == "src")
+                        {
+                            if (!subAttributeInfo.as_string()) continue;
+
+                            meshObject->attrPosition.src = subAttributeInfo.as_string().value();
+                            // std::cout << meshObject->attrPosition.src << std::endl; // [PASS]
+                        }
+                        else if (subAttributeName == "offset")
+                        {
+                            if (!subAttributeInfo.as_number()) continue;
+
+                            meshObject->attrPosition.offset = static_cast<uint32_t>(subAttributeInfo.as_number().value());
+                            // std::cout << meshObject->attrPosition.offset << std::endl; // [PASS]
+                        }
+                        else if (subAttributeName == "stride")
+                        {
+                            if (!subAttributeInfo.as_number()) continue;
+
+                            meshObject->attrPosition.stride = static_cast<uint32_t>(subAttributeInfo.as_number().value());
+                            // std::cout << meshObject->attrPosition.stride << std::endl; // [PASS]
+                        }
+                        else if (subAttributeName == "format")
+                        {
+                            if (!subAttributeInfo.as_string()) continue;
+
+                            std::string formatStr = subAttributeInfo.as_string().value();
+                            std::optional<VkFormat> typeConvertedResult = VkTypeHelper::findVkFormat(formatStr);
+                            if (typeConvertedResult == std::nullopt) continue;
+                            meshObject->attrPosition.format = typeConvertedResult.value();
+                            std::cout << formatStr << ": " << meshObject->attrPosition.format << std::endl; // [PASS] R32G32B32_SFLOAT: 26
+                        }
+                    }
+                }
+                else if (attributeName == "NORMAL")
+                {
+
+                }
+            }
+
+            
+        }
+    }
+
+    targetSceneMgr.meshObjectMap[meshObject->name] = meshObject;
+    // std::cout << meshObject->name << " added to meshObjectMap." << std::endl;
+}
+
+void LoadMgr::parse_camera_object_info(OptionalPropertyMap &cameraObjectInfo, SceneMgr &targetSceneMgr)
+{
+
+}
+
+void LoadMgr::parse_driver_object_info(OptionalPropertyMap &driverObjectInfo, SceneMgr &targetSceneMgr)
+{
+
+}
+
+void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo, SceneMgr &targetSceneMgr)
+{
+
+}
+
+void LoadMgr::parse_environment_object_info(OptionalPropertyMap &environmentObjectInfo, SceneMgr &targetSceneMgr)
+{
+
+}
+
+void LoadMgr::parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr)
+{
+
+}
+
+
+
+
+// OBJ Loader functions ================================================================================================
 
 void LoadMgr::load_line_from_OBJ(const std::string& path, std::vector<PosColVertex>& mesh_vertices) {
     std::vector<Vector3> vertices;

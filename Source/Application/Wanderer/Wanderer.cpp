@@ -5,14 +5,8 @@
 
 #include "Source/Application/Wanderer/Wanderer.hpp"
 #include "Source/Tools/LoadMgr.hpp"
-
+#include "Source/Tools/SceneMgr.hpp"
 #include "Source/Helper/VK.hpp"
-
-#include <array>
-#include <cassert>
-#include <cmath>
-#include <cstring>
-#include <iostream>
 
 #include <vulkan/vk_enum_string_helper.h>
 
@@ -30,6 +24,11 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	load_objects();
 	create_diy_textures();
 	create_textures_descriptor();
+
+	// [TEST]
+	SceneMgr sceneMgr;
+	const std::string s72path = "Assets/SceneGraphs/lights-Mix.s72";
+	LoadMgr::load_objects_from_s72(s72path, sceneMgr);
 }
 
 Wanderer::~Wanderer()
