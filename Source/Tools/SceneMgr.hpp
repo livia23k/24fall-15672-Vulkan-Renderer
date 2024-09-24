@@ -213,4 +213,8 @@ struct SceneMgr
     std::map<std::string, CameraObject*> cameraMap;
     std::map<std::string, DriverObject*> driverMap;
     std::map<std::string, MaterialObject*> materialMap;
+
+    // methods
+
+    void clean_all();
 };

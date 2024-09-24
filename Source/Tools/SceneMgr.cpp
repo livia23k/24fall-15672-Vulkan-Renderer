@@ -1,4 +1,4 @@
-#include "SceneMgr.hpp"
+#include "Source/Tools/SceneMgr.hpp"
 
 SceneMgr::SceneMgr()
 {
@@ -11,6 +11,11 @@ SceneMgr::SceneMgr()
 }
 
 SceneMgr::~SceneMgr()
+{
+    this->clean_all();
+}
+
+void SceneMgr::clean_all()
 {
     for (auto &pair : sceneMap) {
         delete pair.second;
