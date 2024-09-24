@@ -108,7 +108,11 @@ void LoadMgr::parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, Scen
 
     for (auto & [propertyName, propertyInfo] : *sceneObjectInfo)
     {
-        if (propertyName == "name")
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName == "name")
         {
             if (!propertyInfo.as_string()) continue;
 
@@ -125,6 +129,11 @@ void LoadMgr::parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, Scen
                 sceneObject->rootIdx.push_back( static_cast<uint32_t>( root.as_number().value() ) );
             }
         }
+        else 
+        {
+            std::cerr << "[parse_scene_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
     }
 
     targetSceneMgr.sceneObject = sceneObject;
@@ -133,11 +142,15 @@ void LoadMgr::parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, Scen
 
 void LoadMgr::parse_node_object_info(OptionalPropertyMap &nodeObjectInfo, SceneMgr &targetSceneMgr)
 {
-    SceneMgr::NodeObject* nodeObject = new SceneMgr::NodeObject;
+    SceneMgr::NodeObject *nodeObject = new SceneMgr::NodeObject;
 
     for (auto & [propertyName, propertyInfo] : *nodeObjectInfo)
     {
-        if (propertyName == "name")
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName == "name")
         {
             if (!propertyInfo.as_string()) continue;
 
@@ -219,6 +232,11 @@ void LoadMgr::parse_node_object_info(OptionalPropertyMap &nodeObjectInfo, SceneM
             nodeObject->refLightName = propertyInfo.as_string().value();
             // std::cout << nodeObject->refLightName << std::endl; // [PASS]
         }
+        else
+        {
+            std::cerr << "[parse_node_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
     }
 
     targetSceneMgr.nodeObjectMap[nodeObject->name] = nodeObject;
@@ -227,11 +245,15 @@ void LoadMgr::parse_node_object_info(OptionalPropertyMap &nodeObjectInfo, SceneM
 
 void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneMgr &targetSceneMgr)
 {
-    SceneMgr::MeshObject* meshObject = new SceneMgr::MeshObject;
+    SceneMgr::MeshObject *meshObject = new SceneMgr::MeshObject;
 
     for (auto & [propertyName, propertyInfo] : *meshObjectInfo)
     {
-        if (propertyName == "name")
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName == "name")
         {
             if (!propertyInfo.as_string()) continue;
 
@@ -286,6 +308,11 @@ void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneM
                     meshObject->indices.format = typeConvertedResult.value();
                     // std::cout << formatStr << ": " << meshObject->indices.format << std::endl; // [PASS] UINT32: 7
                 }
+                else
+                {
+                    std::cerr << "[parse_mesh_object_info] (indices) Unknown indice name: " << indiceName << std::endl;
+                    continue;
+                }
             }
         }
         else if (propertyName == "attributes")
@@ -323,6 +350,11 @@ void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneM
                     OptionalPropertyMap subAttributePropertyMap = attributeInfo.as_object().value();
                     parse_sub_attribute_info(subAttributePropertyMap, meshObject->attrTexcoord);
                 }
+                else 
+                {
+                    std::cerr << "[parse_mesh_object_info] (attributes) Unknown attribute name: " << attributeName << std::endl;
+                    continue;
+                }
             }
         }
         else if (propertyName == "material")
@@ -332,6 +364,11 @@ void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneM
             meshObject->refMaterialName = propertyInfo.as_string().value();
             // std::cout << meshObject->refMaterialName << std::endl; // [PASS]
         }
+        else
+        {
+            std::cerr << "[parse_mesh_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
     }
 
     targetSceneMgr.meshObjectMap[meshObject->name] = meshObject;
@@ -340,7 +377,135 @@ void LoadMgr::parse_mesh_object_info(OptionalPropertyMap &meshObjectInfo, SceneM
 
 void LoadMgr::parse_camera_object_info(OptionalPropertyMap &cameraObjectInfo, SceneMgr &targetSceneMgr)
 {
+    SceneMgr::CameraObject *cameraObject = new SceneMgr::CameraObject;
 
+    for (auto & [propertyName, propertyInfo] : *cameraObjectInfo)
+    {
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName == "name")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            cameraObject->name = propertyInfo.as_string().value();
+            // std::cout << cameraObjectInfo->name << std::endl; // [PASS]
+        }
+        else if (propertyName == "perspective")
+        {
+            if (!propertyInfo.as_object()) continue;
+        
+            cameraObject->projectionType = SceneMgr::ProjectionType::Perspective;
+            SceneMgr::PerspectiveParameters curPerspectiveParameters;
+
+            auto &perspectiveINFO = propertyInfo.as_object().value();
+            for (auto & [perspectivePropertyName, perspectivePropertyInfo] : perspectiveINFO)
+            {
+                if (perspectivePropertyName == "aspect")
+                {
+                    if (!perspectivePropertyInfo.as_number()) continue;
+
+                    curPerspectiveParameters.aspect = perspectivePropertyInfo.as_number().value();
+                    // std::cout << "aspect " << curPerspectiveParameters.aspect << std::endl; // [PASS]
+                }
+                else if (perspectivePropertyName == "vfov")
+                {
+                    if (!perspectivePropertyInfo.as_number()) continue;
+
+                    curPerspectiveParameters.vfov = perspectivePropertyInfo.as_number().value();
+                    // std::cout << "vfov " << curPerspectiveParameters.vfov << std::endl; // [PASS]
+                }
+                else if (perspectivePropertyName == "near")
+                {
+                    if (!perspectivePropertyInfo.as_number()) continue;
+
+                    curPerspectiveParameters.nearZ = perspectivePropertyInfo.as_number().value();
+                    // std::cout << "near " << curPerspectiveParameters.nearZ << std::endl; // [PASS]
+                }
+                else if (perspectivePropertyName == "far")
+                {
+                    if (!perspectivePropertyInfo.as_number()) continue;
+
+                    curPerspectiveParameters.farZ = perspectivePropertyInfo.as_number().value();
+                    // std::cout << "far " << curPerspectiveParameters.farZ << std::endl; // [PASS]
+                }
+                else
+                {
+                    std::cerr << "[parse_camera_object_info] (perspective) Unknown perspective property name: " << perspectivePropertyName << std::endl;
+                    continue;
+                }
+            }
+
+            cameraObject->projectionParameters = curPerspectiveParameters;
+        }
+        else if (propertyName == "orthographic") // [TOCHECK] both .s72 format support and load implementation
+        {
+            if (!propertyInfo.as_object()) continue;
+
+            cameraObject->projectionType = SceneMgr::ProjectionType::Orthographic;
+            SceneMgr::OrthographicParameters curOrthographicParameters;
+
+            auto &orthographicINFO = propertyInfo.as_object().value();
+            for (auto & [orthographicPropertyName, orthographicPropertyInfo] : orthographicINFO)
+            {
+                if (orthographicPropertyName == "left")
+                {
+                    if (!orthographicPropertyInfo.as_number()) continue;
+
+                    curOrthographicParameters.left = orthographicPropertyInfo.as_number().value();
+                    // std::cout << "left " << curOrthographicParameters.left << std::endl;
+                }
+                else if (orthographicPropertyName == "right")
+                {
+                    if (!orthographicPropertyInfo.as_number()) continue;
+
+                    curOrthographicParameters.right = orthographicPropertyInfo.as_number().value();
+                    // std::cout << "right " << curOrthographicParameters.right << std::endl;
+                }
+                else if (orthographicPropertyName == "bottom")
+                {
+                    if (!orthographicPropertyInfo.as_number()) continue;
+
+                    curOrthographicParameters.bottom = orthographicPropertyInfo.as_number().value();
+                    // std::cout << "bottom " << curOrthographicParameters.bottom << std::endl;
+                }
+                else if (orthographicPropertyName == "top")
+                {
+                    if (!orthographicPropertyInfo.as_number()) continue;
+
+                    curOrthographicParameters.top = orthographicPropertyInfo.as_number().value();
+                    // std::cout << "top " << curOrthographicParameters.top << std::endl;
+                }
+                else if (orthographicPropertyName == "near")
+                {
+                    if (!orthographicPropertyInfo.as_number()) continue;
+
+                    curOrthographicParameters.nearZ = orthographicPropertyInfo.as_number().value();
+                    // std::cout << "near " << curOrthographicParameters.nearZ << std::endl;
+                }
+                else if (orthographicPropertyName == "far")
+                {
+                    if (!orthographicPropertyInfo.as_number()) continue;
+
+                    curOrthographicParameters.farZ = orthographicPropertyInfo.as_number().value();
+                    // std::cout << "far " << curOrthographicParameters.farZ << std::endl;
+                }
+                else
+                {
+                    std::cerr << "[parse_camera_object_info] (orthographic) Unknown orthographic property name: " << orthographicPropertyName << std::endl;
+                    continue;
+                }
+            }
+
+            cameraObject->projectionParameters = curOrthographicParameters;
+        }
+        else
+        {
+            std::cerr << "[parse_camera_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
+    }
 }
 
 void LoadMgr::parse_driver_object_info(OptionalPropertyMap &driverObjectInfo, SceneMgr &targetSceneMgr)
@@ -398,6 +563,11 @@ void LoadMgr::parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, Sc
             if (typeConvertedResult == std::nullopt) continue;
             attrStream.format = typeConvertedResult.value();
             // std::cout << formatStr << ": " << attrStream.format << std::endl; // [PASS]
+        }
+        else 
+        {
+            std::cerr << "[parse_sub_attribute_info] Unknown property name: " << propertyName << std::endl;
+            continue;
         }
     }
 }
