@@ -5,3 +5,27 @@ This is the starter code for the [nakluV](http://naak.love) inside-out and backw
 It contains code you will modify throughout the tutorial along with a pre-built object files (`pre/*/refsol.o*`) containing code you will replace during the tutorial.
 
 See [step0](http://naak.love/step0/) for information about how to set up your development environment.
+
+
+# Dependencies (available to build on MacOS)
+
+## Vulkan-Hpp 
+
+    1. Install vkpkg
+
+    `brew install vkpkg`
+    `git clone https://github.com/microsoft/vcpkg "$HOME/vcpkg"`
+    `export VCPKG_ROOT="$HOME/vcpkg"`
+
+    2. Install Vulkan-Hpp
+
+    `vcpkg install vulkan-headers`
+
+    3. Line Vulkan-Hpp in the file header
+
+    `#include <vulkan/vulkan.hpp>`
+    `#include <Vulkan/vulkan_raii.hpp>`
+
+## GLM
+
+    `brew install glm`
