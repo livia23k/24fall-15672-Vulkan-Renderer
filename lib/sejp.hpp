@@ -9,6 +9,12 @@
 #include <map>
 #include <optional>
 #include <memory>
+#include <stdexcept>
+#include <cassert>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <charconv>
 
 namespace sejp {
 	//sejp::parsed represents the results of scanning a JSON file:

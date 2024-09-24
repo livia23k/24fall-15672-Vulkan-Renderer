@@ -3,8 +3,6 @@
 #include "Source/Configuration/RTG.hpp"
 #include "Source/Helper/VK.hpp"
 
-#include <vulkan/utility/vk_format_utils.h>
-
 #include <utility>
 #include <cassert>
 #include <cstring>

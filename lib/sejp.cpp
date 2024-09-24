@@ -1,12 +1,5 @@
 #include "sejp.hpp"
 
-#include <stdexcept>
-#include <cassert>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <charconv>
-
 namespace sejp {
 
 struct parsed {
