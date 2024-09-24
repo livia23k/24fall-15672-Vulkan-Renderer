@@ -2,12 +2,12 @@
 
 SceneMgr::SceneMgr()
 {
-    sceneMap.clear();
-    nodeMap.clear();
-    meshMap.clear();
-    cameraMap.clear();
-    driverMap.clear();
-    materialMap.clear();
+    sceneObject = nullptr;
+    nodeObjectMap.clear();
+    meshObjectMap.clear();
+    cameraObjectMap.clear();
+    driverObjectMap.clear();
+    materialObjectMap.clear();
 }
 
 SceneMgr::~SceneMgr()
@@ -17,33 +17,34 @@ SceneMgr::~SceneMgr()
 
 void SceneMgr::clean_all()
 {
-    for (auto &pair : sceneMap) {
-        delete pair.second;
+    if (sceneObject)
+    {
+        delete sceneObject;
+        sceneObject = nullptr;
     }
-    sceneMap.clear();
 
-    for (auto &pair : nodeMap) {
+    for (auto &pair : nodeObjectMap) {
         delete pair.second;
     }
-    nodeMap.clear();
+    nodeObjectMap.clear();
 
-    for (auto &pair : meshMap) {
+    for (auto &pair : meshObjectMap) {
         delete pair.second;
     }
-    meshMap.clear();
+    meshObjectMap.clear();
 
-    for (auto &pair : cameraMap) {
+    for (auto &pair : cameraObjectMap) {
         delete pair.second;
     }
-    cameraMap.clear();
+    cameraObjectMap.clear();
 
-    for (auto &pair : driverMap) {
+    for (auto &pair : driverObjectMap) {
         delete pair.second;
     }
-    driverMap.clear();
+    driverObjectMap.clear();
 
-    for (auto &pair : materialMap) {
+    for (auto &pair : materialObjectMap) {
         delete pair.second;
     }
-    materialMap.clear();
+    materialObjectMap.clear();
 }

@@ -41,14 +41,6 @@ struct SceneMgr
         SLERP,
     };
 
-    enum AttributeType
-    {
-        POSITION,
-        NORMAL,
-        TEXCOORD,
-        TANGENT,
-    };
-
     enum ProjectionType {
         Perspective,
         Orthographic
@@ -79,7 +71,6 @@ struct SceneMgr
 
     struct AttributeStream
     {
-        AttributeType type;
         std::string src;
         uint32_t offset;
         uint32_t stride;
@@ -137,7 +128,7 @@ struct SceneMgr
     struct SceneObject 
     {
         std::string name;
-        std::vector<std::string> rootIdx;
+        std::vector<uint32_t> rootIdx;
     };
 
     struct NodeObject
@@ -148,7 +139,7 @@ struct SceneMgr
         glm::vec3 scale = glm::vec3(1, 1, 1);
         glm::vec4 rotation = glm::vec4(0, 0, 0, 1);
 
-        std::vector<std::string> childName();
+        std::vector<std::string> childName;
 
         std::string refCameraName;
         std::string refMeshName;
@@ -159,10 +150,13 @@ struct SceneMgr
     struct MeshObject
     {
         std::string name;
-        VkPrimitiveTopology typology;
+        VkPrimitiveTopology topology;
         uint32_t count;
         IndiceStream indices;
-        AttributeStream attributes;
+        AttributeStream attrPosition;
+        AttributeStream attrNormal;
+        AttributeStream attrTangent;
+        AttributeStream attrTexcoord;
 
         std::string refMaterialName;   
     };
@@ -207,12 +201,14 @@ struct SceneMgr
 
     };
 
-    std::map<std::string, SceneObject*> sceneMap;
-    std::map<std::string, NodeObject*> nodeMap;
-    std::map<std::string, MeshObject*> meshMap;
-    std::map<std::string, CameraObject*> cameraMap;
-    std::map<std::string, DriverObject*> driverMap;
-    std::map<std::string, MaterialObject*> materialMap;
+    SceneObject* sceneObject;
+    std::unordered_map<std::string, NodeObject*> nodeObjectMap;
+    std::unordered_map<std::string, MeshObject*> meshObjectMap;
+    std::unordered_map<std::string, CameraObject*> cameraObjectMap;
+    std::unordered_map<std::string, DriverObject*> driverObjectMap;
+    std::unordered_map<std::string, MaterialObject*> materialObjectMap;
+    std::unordered_map<std::string, EnvironmentObject*> environmentObjectMap;
+    std::unordered_map<std::string, LightObject*> lightObjectMap;
 
     // methods
 
