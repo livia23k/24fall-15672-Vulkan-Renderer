@@ -759,7 +759,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                     materialObject->normalmap = SceneMgr::Texture(); // replacing the std::nullopt
                     materialObject->normalmap->src = normalmapPropertyInfo.as_string().value();
-                    std::cout << materialObject->normalmap->src << std::endl; // [PASS]
+                    // std::cout << materialObject->normalmap->src << std::endl; // [PASS]
                 }
                 else
                 {
@@ -815,11 +815,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                         }
                         pbrMaterial.albedo = albedoVec3;
 
-                        if (std::holds_alternative<glm::vec3>(pbrMaterial.albedo))
-                        { // [PASS]
-                            glm::vec3 albedoValue = std::get<glm::vec3>(pbrMaterial.albedo);
-                            std::cout << "pbr albedo (vec3): " << albedoValue.x << ", " << albedoValue.y << ", " << albedoValue.z << std::endl;
-                        }
+                        // if (std::holds_alternative<glm::vec3>(pbrMaterial.albedo))
+                        // { // [PASS]
+                        //     glm::vec3 albedoValue = std::get<glm::vec3>(pbrMaterial.albedo);
+                        //     std::cout << "pbr albedo (vec3): " << albedoValue.x << ", " << albedoValue.y << ", " << albedoValue.z << std::endl;
+                        // }
                     }
                     else if (pbrPropertyInfo.as_object())
                     {
@@ -835,11 +835,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                                 albedo_tex.src = albedoPropertyInfo.as_string().value();
                                 pbrMaterial.albedo = albedo_tex;
 
-                                if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.albedo))
-                                { // [PASS]
-                                    SceneMgr::Texture albedoTexture = std::get<SceneMgr::Texture>(pbrMaterial.albedo);
-                                    std::cout << "pbr albedo (tex): " << albedoTexture.src << std::endl;
-                                }
+                                // if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.albedo))
+                                // { // [PASS]
+                                //     SceneMgr::Texture albedoTexture = std::get<SceneMgr::Texture>(pbrMaterial.albedo);
+                                //     std::cout << "pbr albedo (tex): " << albedoTexture.src << std::endl;
+                                // }
                             }
                             else
                             {
@@ -861,11 +861,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                         float roughness_flt = pbrPropertyInfo.as_number().value();
                         pbrMaterial.roughness = roughness_flt;
 
-                        if (std::holds_alternative<float>(pbrMaterial.roughness))
-                        { // [PASS]
-                            float roughnessValue = std::get<float>(pbrMaterial.roughness);
-                            std::cout << "pbr roughness (flt): " << roughnessValue << std::endl;
-                        }
+                        // if (std::holds_alternative<float>(pbrMaterial.roughness))
+                        // { // [PASS]
+                        //     float roughnessValue = std::get<float>(pbrMaterial.roughness);
+                        //     std::cout << "pbr roughness (flt): " << roughnessValue << std::endl;
+                        // }
                     }
                     else if (pbrPropertyInfo.as_object())
                     {
@@ -881,11 +881,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                                 roughness_tex.src = roughnessPropertyInfo.as_string().value();
                                 pbrMaterial.roughness = roughness_tex;
 
-                                if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.roughness))
-                                { // [PASS]
-                                    SceneMgr::Texture roughnessTexture = std::get<SceneMgr::Texture>(pbrMaterial.roughness);
-                                    std::cout << "pbr roughness (tex): " << roughnessTexture.src << std::endl;
-                                }
+                                // if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.roughness))
+                                // { // [PASS]
+                                //     SceneMgr::Texture roughnessTexture = std::get<SceneMgr::Texture>(pbrMaterial.roughness);
+                                //     std::cout << "pbr roughness (tex): " << roughnessTexture.src << std::endl;
+                                // }
                             }
                             else
                             {
@@ -907,11 +907,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                         float metalness_flt = pbrPropertyInfo.as_number().value();
                         pbrMaterial.metalness = metalness_flt;
 
-                        if (std::holds_alternative<float>(pbrMaterial.metalness))
-                        { // [PASS]
-                            float metalnessValue = std::get<float>(pbrMaterial.metalness);
-                            std::cout << "pbr metalness (flt): " << metalnessValue << std::endl;
-                        }
+                        // if (std::holds_alternative<float>(pbrMaterial.metalness))
+                        // { // [PASS]
+                        //     float metalnessValue = std::get<float>(pbrMaterial.metalness);
+                        //     std::cout << "pbr metalness (flt): " << metalnessValue << std::endl;
+                        // }
                     }
                     else if (pbrPropertyInfo.as_object())
                     {
@@ -927,11 +927,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                                 metalness_tex.src = metalnessPropertyInfo.as_string().value();
                                 pbrMaterial.metalness = metalness_tex;
 
-                                if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.metalness))
-                                { // [PASS]
-                                    SceneMgr::Texture metalnessTexture = std::get<SceneMgr::Texture>(pbrMaterial.metalness);
-                                    std::cout << "pbr metalness (tex): " << metalnessTexture.src << std::endl;
-                                }
+                                // if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.metalness))
+                                // { // [PASS]
+                                //     SceneMgr::Texture metalnessTexture = std::get<SceneMgr::Texture>(pbrMaterial.metalness);
+                                //     std::cout << "pbr metalness (tex): " << metalnessTexture.src << std::endl;
+                                // }
                             }
                             else
                             {
@@ -954,7 +954,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
             }
 
             materialObject->material = pbrMaterial;
-            std::cout << "pbr material added." << std::endl;
+            // std::cout << "pbr material added." << std::endl;
         }
         else if (propertyName == "lambertian")
         {
@@ -979,11 +979,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                         }
                         lambMaterial.albedo = albedoVec3;
 
-                        if (std::holds_alternative<glm::vec3>(lambMaterial.albedo))
-                        { // [PASS]
-                            glm::vec3 albedoValue = std::get<glm::vec3>(lambMaterial.albedo);
-                            std::cout << "albedo (vec3): " << albedoValue.x << ", " << albedoValue.y << ", " << albedoValue.z << std::endl;
-                        }
+                        // if (std::holds_alternative<glm::vec3>(lambMaterial.albedo))
+                        // { // [PASS]
+                        //     glm::vec3 albedoValue = std::get<glm::vec3>(lambMaterial.albedo);
+                        //     std::cout << "albedo (vec3): " << albedoValue.x << ", " << albedoValue.y << ", " << albedoValue.z << std::endl;
+                        // }
                     }
                     else if (lambPropertyInfo.as_object())
                     {
@@ -999,11 +999,11 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                                 albedo_tex.src = albedoPropertyInfo.as_string().value();
                                 lambMaterial.albedo = albedo_tex;
 
-                                if (std::holds_alternative<SceneMgr::Texture>(lambMaterial.albedo))
-                                { // [PASS]
-                                    SceneMgr::Texture albedoTexture = std::get<SceneMgr::Texture>(lambMaterial.albedo);
-                                    std::cout << "albedo (tex): " << albedoTexture.src << std::endl;
-                                }
+                                // if (std::holds_alternative<SceneMgr::Texture>(lambMaterial.albedo))
+                                // { // [PASS]
+                                //     SceneMgr::Texture albedoTexture = std::get<SceneMgr::Texture>(lambMaterial.albedo);
+                                //     std::cout << "albedo (tex): " << albedoTexture.src << std::endl;
+                                // }
                             }
                             else
                             {
@@ -1051,6 +1051,76 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
 void LoadMgr::parse_environment_object_info(OptionalPropertyMap &environmentObjectInfo, SceneMgr &targetSceneMgr)
 {
+    if (environmentObjectInfo == std::nullopt)
+    {
+        std::cerr << "[parse_environment_object_info] environmentObjectInfo is null." << std::endl;
+        return;
+    }
+
+    SceneMgr::EnvironmentObject *environmentObject = new SceneMgr::EnvironmentObject;
+
+    for (auto & [propertyName, propertyInfo] : environmentObjectInfo.value())
+    {
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName =="name")
+        {
+            if (!propertyInfo.as_string())
+                continue;
+
+            environmentObject->name = propertyInfo.as_string().value();
+            // std::cout << environmentObject->name << std::endl; // [PASS]
+        }
+        else if (propertyName == "radiance")
+        {
+            if (!propertyInfo.as_object())
+                continue;
+
+            PropertyMap radianceObjects = propertyInfo.as_object().value();
+            for (auto & [radiancePropertyName, radiancePropertyInfo] : radianceObjects)
+            {
+                if (radiancePropertyName == "src")
+                {
+                    if (!radiancePropertyInfo.as_string())
+                        continue;
+                    
+                    environmentObject->radiance.src = radiancePropertyInfo.as_string().value();
+                    // std::cout << "src " << environmentObject->radiance.src << std::endl; // [PASS]
+                }
+                else if (radiancePropertyName == "type")
+                {
+                    if (!radiancePropertyInfo.as_string())
+                        continue;
+                    
+                    environmentObject->radiance.type = radiancePropertyInfo.as_string().value();
+                    // std::cout << "type " << environmentObject->radiance.type << std::endl; // [PASS]
+                }
+                else if (radiancePropertyName == "format")
+                {
+                    if (!radiancePropertyInfo.as_string())
+                        continue;
+
+                    environmentObject->radiance.format = radiancePropertyInfo.as_string().value();
+                    // std::cout << "format " << environmentObject->radiance.format << std::endl; // [PASS]
+                }
+                else
+                {
+                    std::cerr << "[parse_environment_object_info] (radiance) Unknown radiance property name: " << radiancePropertyName << std::endl;
+                    continue;
+                }
+            }
+        }
+        else
+        {
+            std::cerr << "[parse_environment_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
+    }
+
+    targetSceneMgr.environmentObjectMap[environmentObject->name] = environmentObject;
+    // std::cout << environmentObject->name << " added to environmentObjectMap." << std::endl;
 }
 
 void LoadMgr::parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr)

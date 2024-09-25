@@ -17,16 +17,6 @@ struct SceneMgr
 
     // Enums
 
-    enum TextureType
-    {
-        cube,
-    };
-
-    enum TextureFormat
-    {
-        rgbe,
-    };
-
     enum DriverChannleType
     {
         TRANSLATION,
@@ -58,8 +48,8 @@ struct SceneMgr
     struct Texture
     {
         std::string src;
-        TextureType type;
-        TextureFormat format;
+        std::string type;
+        std::string format;
     };
 
     struct IndiceStream
