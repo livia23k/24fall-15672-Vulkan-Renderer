@@ -1,6 +1,5 @@
 #include "Source/DataType/PosNorTexVertex.hpp"
 
-#include <array>
 
 static std::array<VkVertexInputBindingDescription, 1> bindings{
     VkVertexInputBindingDescription{

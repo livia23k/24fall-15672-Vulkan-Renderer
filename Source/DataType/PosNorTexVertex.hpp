@@ -3,6 +3,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include <cstdint>
+#include <array>
 
 struct PosNorTexVertex
 {
