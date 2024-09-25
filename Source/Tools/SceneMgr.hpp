@@ -220,7 +220,26 @@ struct SceneMgr
     std::unordered_map<std::string, EnvironmentObject*> environmentObjectMap;
     std::unordered_map<std::string, LightObject*> lightObjectMap;
 
+
     // methods
 
     void clean_all();
+
+    
+
+    void print_single_node_object(NodeObject* nodeObject);
+    void print_single_mesh_object(MeshObject* meshObject);
+    void print_single_camera_object(CameraObject* cameraObject);
+    void print_single_driver_object(DriverObject* driverObject);
+    void print_single_material_object(MaterialObject* materialObject);
+    void print_single_environment_object(EnvironmentObject* environmentObject);
+    void print_single_light_object(LightObject* lightObject);
+
+    void print_node_object_map();
+    void print_mesh_object_map();
+    void print_camera_object_map();
+    void print_driver_object_map();
+    void print_material_object_map();
+    void print_environment_object_map();
+    void print_light_object_map();
 };

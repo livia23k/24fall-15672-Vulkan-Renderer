@@ -744,7 +744,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
             materialObject->name = propertyInfo.as_string().value();
             // std::cout << materialObject->name << std::endl; // [PASS]
         }
-        else if (propertyName == "normalmap")
+        else if (propertyName == "normalMap")
         {
             if (!propertyInfo.as_object())
                 continue;
@@ -768,7 +768,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
                 }
             }
         }
-        else if (propertyName == "displacementmap")
+        else if (propertyName == "displacementMap")
         {
             if (!propertyInfo.as_object())
                 continue;
