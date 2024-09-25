@@ -2,6 +2,7 @@
 
 #include "Source/VkMemory/Helpers.hpp"
 #include "Source/DataType/InputEvent.hpp"
+#include "Source/Tools/SceneMgr.hpp"
 
 #include <vulkan/vulkan_core.h>
 
@@ -62,6 +63,10 @@ struct RTG
 		// if set, render a specific scene graph:
 		//  `--scene <filename>` command-line flag
 		std::string scene_graph_name = "";
+		SceneMgr sceneMgr;
+
+		// if set, use a specific camera:
+		std::string active_camera_name = "";
 
 		// requested (priority-ranked) formats for output surface: (will use first available)
 		std::vector<VkSurfaceFormatKHR> surface_formats{

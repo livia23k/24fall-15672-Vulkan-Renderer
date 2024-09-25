@@ -61,6 +61,14 @@ void RTG::Configuration::parse(int argc, char **argv)
 			if (argi + 1 >= argc)
 				throw std::runtime_error("--scene requires a parameter (a scene graph file name).");
 			argi += 1;
+			scene_graph_name = argv[argi];
+		}
+		else if (arg == "--camera")
+		{
+			if (argi + 1 >= argc)
+				throw std::runtime_error("--camera requires a parameter (a camera name).");
+			argi += 1;
+			active_camera_name = argv[argi];
 		}
 		else
 		{
