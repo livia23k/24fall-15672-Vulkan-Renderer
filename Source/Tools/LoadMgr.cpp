@@ -1125,6 +1125,202 @@ void LoadMgr::parse_environment_object_info(OptionalPropertyMap &environmentObje
 
 void LoadMgr::parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr)
 {
+    if (lightObjectInfo == std::nullopt)
+    {
+        std::cerr << "[parse_light_object_info] lightObjectInfo is null." << std::endl;
+        return;
+    }
+
+    SceneMgr::LightObject *lightObject = new SceneMgr::LightObject;
+
+    for (auto & [propertyName, propertyInfo] : lightObjectInfo.value())
+    {
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName == "name")
+        {
+            if (!propertyInfo.as_string())
+                continue;
+
+            lightObject->name = propertyInfo.as_string().value();
+            // std::cout << "name " << lightObject->name << std::endl;
+        }
+        else if (propertyName == "tint")
+        {
+            if (!propertyInfo.as_array())
+                continue;
+
+            auto &tintArray = propertyInfo.as_array().value();
+            // std::cout << "tint ";
+            for (int i = 0; i < 3; ++ i)
+            {
+                if (!tintArray[i].as_number())
+                    continue;
+
+                lightObject->tint[i] = tintArray[i].as_number().value();
+                // std::cout << lightObject->tint[i] << ", ";
+            }
+            // std::cout << std::endl;
+        }
+        else if (propertyName == "sun")
+        {
+            SceneMgr::SunLight sunLight;
+
+            if (!propertyInfo.as_object())
+                continue;
+
+            PropertyMap sunProperties = propertyInfo.as_object().value();
+            for (auto & [sunPropertyName, sunPropertyInfo] : sunProperties)
+            {
+                if (sunPropertyName == "angle")
+                {
+                    if (!sunPropertyInfo.as_number())
+                        continue;
+
+                    sunLight.angle = sunPropertyInfo.as_number().value();
+                    // std::cout << "angle " << sunLight.angle << std::endl;
+                }
+                else if (sunPropertyName == "strength")
+                {
+                    if (!sunPropertyInfo.as_number())
+                        continue;
+
+                    sunLight.strength = sunPropertyInfo.as_number().value();
+                    // std::cout << "strength " << sunLight.strength << std::endl;
+                }
+                else
+                {
+                    std::cerr << "[parse_light_object_info] (sun) Unknown sun property name: " << sunPropertyName << std::endl;
+                    continue;
+                }
+            }
+
+            lightObject->light = sunLight;
+            // std::cout << "SunLight read." << std::endl;
+        }
+        else if (propertyName == "sphere")
+        {
+            SceneMgr::SphereLight sphereLight;
+
+            if (!propertyInfo.as_object())
+                continue;
+
+            PropertyMap sphereProperties = propertyInfo.as_object().value();
+            for (auto & [spherePropertyName, spherePropertyInfo] : sphereProperties)
+            {
+                if (spherePropertyName == "radius")
+                {
+                    if (!spherePropertyInfo.as_number())
+                        continue;
+
+                    sphereLight.radius = spherePropertyInfo.as_number().value();
+                    // std::cout << "radius " << sphereLight.radius << std::endl;
+                }
+                else if (spherePropertyName == "power")
+                {
+                    if (!spherePropertyInfo.as_number())
+                        continue;
+
+                    sphereLight.power = spherePropertyInfo.as_number().value();
+                    // std::cout << "power " << sphereLight.power << std::endl;
+                }
+                else if (spherePropertyName == "limit")
+                {
+                    if (!spherePropertyInfo.as_number())
+                        continue;
+
+                    sphereLight.limit = spherePropertyInfo.as_number().value();
+                    // std::cout << "limit " << sphereLight.limit << std::endl;
+                }
+                else
+                {
+                    std::cerr << "[parse_light_object_info] (sphere) Unknown sphere property name: " << spherePropertyName << std::endl;
+                    continue;
+                }
+            }
+
+            lightObject->light = sphereLight;
+            // std::cout << "SphereLight read." << std::endl;
+        }
+        else if (propertyName == "spot")
+        {
+            SceneMgr::SpotLight spotLight;
+
+            if (!propertyInfo.as_object())
+                continue;
+
+            PropertyMap spotProperties = propertyInfo.as_object().value();
+            for (auto & [spotPropertyName, spotPropertyInfo] : spotProperties)
+            {
+                if (spotPropertyName == "radius")
+                {
+                    if (!spotPropertyInfo.as_number())
+                        continue;
+                    
+                    spotLight.radius = spotPropertyInfo.as_number().value();
+                    // std::cout << "radius " << spotLight.radius << std::endl;
+                }
+                else if (spotPropertyName == "power")
+                {
+                    if (!spotPropertyInfo.as_number())
+                        continue;
+                    
+                    spotLight.power = spotPropertyInfo.as_number().value();
+                    // std::cout << "power " << spotLight.power << std::endl;
+                }
+                else if (spotPropertyName == "fov")
+                {
+                    if (!spotPropertyInfo.as_number())
+                        continue;
+
+                    spotLight.fov = spotPropertyInfo.as_number().value();
+                    // std::cout << "fov " << spotLight.fov << std::endl;
+                }
+                else if (spotPropertyName == "blend")
+                {
+                    if (!spotPropertyInfo.as_number())
+                        continue;
+                    
+                    spotLight.blend = spotPropertyInfo.as_number().value();
+                    // std::cout << "blend " << spotLight.blend << std::endl;
+                }
+                else if (spotPropertyName == "limit")
+                {
+                    if (!spotPropertyInfo.as_number())
+                        continue;
+
+                    spotLight.limit = spotPropertyInfo.as_number().value();
+                    // std::cout << "limit " << spotLight.limit << std::endl;
+                }
+                else
+                {
+                    std::cerr << "[parse_light_object_info] (spot) Unknown spot property name: " << spotPropertyName << std::endl;
+                    continue;
+                }
+            }
+
+            lightObject->light = spotLight;
+            // std::cout << "SpotLight read." << std::endl;
+        }
+        else if (propertyName == "shadow")
+        {
+            if (!propertyInfo.as_number())
+                continue;
+
+            lightObject->shadow = propertyInfo.as_number().value();
+            // std::cout << "shadow " << lightObject->shadow << std::endl;
+        }
+        else
+        {
+            std::cerr << "[parse_light_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
+    }
+
+    targetSceneMgr.lightObjectMap[lightObject->name] = lightObject;
+    // std::cout << lightObject->name << " added to lightObjectMap." << std::endl;
 }
 
 void LoadMgr::parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, SceneMgr::AttributeStream &attrStream)

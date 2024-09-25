@@ -113,6 +113,25 @@ struct SceneMgr
             albedo(albedo) {}
     };
 
+    struct SunLight {
+        float angle;
+        float strength;
+    };
+
+    struct SphereLight {
+        float radius;
+        float power;
+        float limit;
+    };
+
+    struct SpotLight {
+        float radius;
+        float power;
+        float fov;
+        float blend;
+        float limit;
+    };
+
     // Object types
 
     struct SceneObject 
@@ -188,7 +207,8 @@ struct SceneMgr
     {
         std::string name;
         glm::vec3 tint;
-
+        std::variant<SunLight, SphereLight, SpotLight> light;
+        uint32_t shadow;
     };
 
     SceneObject* sceneObject;
