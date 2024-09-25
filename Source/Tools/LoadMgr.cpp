@@ -506,11 +506,132 @@ void LoadMgr::parse_camera_object_info(OptionalPropertyMap &cameraObjectInfo, Sc
             continue;
         }
     }
+
+    targetSceneMgr.cameraObjectMap[cameraObject->name] = cameraObject;
+    // std::cout << cameraObject->name << " added to cameraObjectMap." << std::endl;
 }
 
 void LoadMgr::parse_driver_object_info(OptionalPropertyMap &driverObjectInfo, SceneMgr &targetSceneMgr)
 {
+    SceneMgr::DriverObject* driverObject = new SceneMgr::DriverObject;
 
+    for (auto & [propertyName, propertyInfo] : *driverObjectInfo)
+    {
+        if (propertyName == "type")
+        {
+            continue;
+        }
+        else if (propertyName == "name")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            driverObject->name = propertyInfo.as_string().value();
+            // std::cout << "name " << driverObject->name << std::endl; // [PASS]
+        }
+        else if (propertyName == "node")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            driverObject->refObjectName = propertyInfo.as_string().value();
+            // std::cout << "target node " << driverObject->refObjectName << std::endl; // [PASS]
+        }
+        else if (propertyName == "channel")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            std::string channelStr = propertyInfo.as_string().value();
+            if (channelStr == "translation")
+            {
+                driverObject->channel = SceneMgr::DriverChannleType::TRANSLATION;
+                driverObject->channelDim = 3;
+                // std::cout << "channel " << driverObject->channel << std::endl; // [PASS]
+                // std::cout << "channelDim " << driverObject->channelDim << std::endl; // [PASS]
+            }
+            else if (channelStr == "scale")
+            {
+                driverObject->channel = SceneMgr::DriverChannleType::SCALE;
+                driverObject->channelDim = 3;
+                // std::cout << "channel " << driverObject->channel << std::endl; // [PASS]
+                // std::cout << "channelDim " << driverObject->channelDim << std::endl; // [PASS]
+            }
+            else if (channelStr == "rotation")
+            {
+                driverObject->channel = SceneMgr::DriverChannleType::ROTATION;
+                driverObject->channelDim = 4;
+                // std::cout << "channel " << driverObject->channel << std::endl; // [PASS]
+                // std::cout << "channelDim " << driverObject->channelDim << std::endl; // [PASS]
+            }
+            else
+            {
+                std::cerr << "[parse_driver_object_info] (channel) Unknown channel name: " << channelStr << std::endl;
+                continue;
+            }
+        }
+        else if (propertyName == "times")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto &timesArray = propertyInfo.as_array().value();
+            // std::cout << "times ";
+            for (const auto &time : timesArray)
+            {
+                if (!time.as_number()) continue;
+
+                driverObject->times.push_back(time.as_number().value());
+                // std::cout << time.as_number().value() << ", "; // [PASS]
+            }
+            // std::cout << std::endl;
+        }
+        else if (propertyName == "values")
+        {
+            if (!propertyInfo.as_array()) continue;
+
+            auto &valuesArray = propertyInfo.as_array().value();
+            // std::cout << "values ";
+            for (const auto &value : valuesArray)
+            {
+                if (!value.as_number()) continue;
+
+                driverObject->values.push_back(value.as_number().value());
+                // std::cout << value.as_number().value() << ", "; // [PASS]
+            }
+            // std::cout << std::endl;
+        }
+        else if (propertyName == "interpolation")
+        {
+            if (!propertyInfo.as_string()) continue;
+
+            std::string interpolationStr = propertyInfo.as_string().value();
+            if (interpolationStr == "STEP")
+            {
+                driverObject->interpolation = SceneMgr::DriverInterpolation::STEP;
+                // std::cout << "interpolation " << driverObject->interpolation << std::endl; // [PASS]
+            }
+            else if (interpolationStr == "LINEAR")
+            {
+                driverObject->interpolation = SceneMgr::DriverInterpolation::LINEAR;
+                // std::cout << "interpolation " << driverObject->interpolation << std::endl; // [PASS]
+            }
+            else if (interpolationStr == "SLERP")
+            {
+                driverObject->interpolation = SceneMgr::DriverInterpolation::SLERP;
+                // std::cout << "interpolation " << driverObject->interpolation << std::endl; // [PASS]
+            }
+            else
+            {
+                std::cerr << "[parse_driver_object_info] (interpolation) Unknown interpolation name: " << interpolationStr << std::endl;
+                continue;
+            }
+        }
+        else 
+        {
+            std::cerr << "[parse_driver_object_info] Unknown property name: " << propertyName << std::endl;
+            continue;
+        }
+    }
+
+    targetSceneMgr.driverObjectMap[driverObject->name] = driverObject;
+    // std::cout << driverObject->name << " added to driverObjectMap." << std::endl;
 }
 
 void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo, SceneMgr &targetSceneMgr)

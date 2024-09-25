@@ -173,7 +173,7 @@ struct SceneMgr
         std::string name;
         std::string refObjectName; // target object
         DriverChannleType channel;
-        uint8_t channelDim;
+        uint32_t channelDim;
         std::vector<float> times;
         std::vector<float> values;
         DriverInterpolation interpolation = DriverInterpolation::LINEAR;
