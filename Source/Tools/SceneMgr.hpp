@@ -48,7 +48,7 @@ struct SceneMgr
 
     enum MaterialType {
         PBR,
-        LAMBERTION,
+        LAMBERTIAN,
         MIRROR,
         ENVIRONMENT,
     };
@@ -113,13 +113,13 @@ struct SceneMgr
             metalness(metalness) {}
     };
 
-    struct LambertionMaterial {
+    struct LambertianMaterial {
         AlbedoParam albedo;
 
-        LambertionMaterial() :
+        LambertianMaterial() :
             albedo(glm::vec3(1.0f)) {}
         
-        LambertionMaterial(glm::vec3 albedo) :
+        LambertianMaterial(glm::vec3 albedo) :
             albedo(albedo) {}
     };
 
@@ -182,10 +182,10 @@ struct SceneMgr
 
     struct MaterialObject {
         std::string name;
-        std::optional<Texture> normalmap;
-        std::optional<Texture> displacementmap;
+        std::optional<Texture> normalmap; // std::nullopt
+        std::optional<Texture> displacementmap; // std::nullopt
         MaterialType type;
-        std::variant<std::monostate, PBRMaterial, LambertionMaterial> parameters;
+        std::variant<std::monostate, PBRMaterial, LambertianMaterial> material;// std::monostate
     };
 
     struct EnvironmentObject

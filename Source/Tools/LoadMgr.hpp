@@ -18,6 +18,7 @@ struct LoadMgr {
     ~LoadMgr() = default;
     LoadMgr(LoadMgr const &) = delete;
 
+    using PropertyMap = std::map<std::string, sejp::value>;
     using OptionalPropertyMap = std::optional<std::map<std::string, sejp::value>>;
 
     // .OBJ
