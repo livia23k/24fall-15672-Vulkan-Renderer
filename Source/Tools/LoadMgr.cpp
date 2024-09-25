@@ -1,6 +1,7 @@
 #include "Source/Tools/LoadMgr.hpp"
 #include "Source/Tools/SceneMgr.hpp"
 #include "Source/Tools/VkTypeHelper.hpp"
+#include "Source/DataType/ObjStruct.hpp"
 #include "Source/DataType/PosColVertex.hpp"
 #include "Source/DataType/PosNorTexVertex.hpp"
 #include "lib/sejp.hpp"
