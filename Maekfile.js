@@ -31,6 +31,7 @@ const main_objs = [
 	maek.CPP('Source/Application/Wanderer/Wanderer.cpp'),
 	maek.CPP('Source/DataType/PosColVertex.cpp'),
 	maek.CPP('Source/DataType/PosNorTexVertex.cpp'),
+	maek.CPP('Source/DataType/MeshAttribute.cpp'),
 	maek.CPP('Source/Tools/LoadMgr.cpp'),
 	maek.CPP('Source/Tools/SceneMgr.cpp'),
 	maek.CPP('Source/Tools/VkTypeHelper.cpp'),
