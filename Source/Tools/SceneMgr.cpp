@@ -1,4 +1,5 @@
 #include "Source/Tools/SceneMgr.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 
 SceneMgr::SceneMgr()
 {
@@ -52,6 +53,19 @@ void SceneMgr::clean_all()
         delete pair.second;
     }
     materialObjectMap.clear();
+}
+
+// Function functions ========================================================================================================================
+
+glm::mat4 SceneMgr::calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale)
+{
+    glm::mat4 identity = glm::mat4(1.0f);
+
+    glm::mat4 T = glm::translate(identity, translation);
+    glm::mat4 R = glm::mat4_cast(rotation); /* learned from https://stackoverflow.com/questions/38145042/quaternion-to-matrix-using-glm */
+    glm::mat4 S = glm::scale(identity, scale);
+
+    return S * R * T;
 }
 
 // Printer functions (single object) =========================================================================================================

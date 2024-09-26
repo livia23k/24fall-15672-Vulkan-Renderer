@@ -137,9 +137,10 @@ void LoadMgr::parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, Scen
             auto &rootArray = propertyInfo.as_array().value();
             for (const auto &root : rootArray)
             {
-                if (!root.as_number())
+                if (!root.as_string())
                     continue;
-                sceneObject->rootIdx.push_back(static_cast<uint32_t>(root.as_number().value()));
+                sceneObject->rootName.push_back(root.as_string().value());
+                // std::cout << sceneObject->rootName.back() << ", "; // [PASS]
             }
         }
         else
@@ -1046,7 +1047,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
     }
 
     targetSceneMgr.materialObjectMap[materialObject->name] = materialObject;
-    std::cout << materialObject->name << " added to materialObjectMap." << std::endl;
+    // std::cout << materialObject->name << " added to materialObjectMap." << std::endl;
 }
 
 void LoadMgr::parse_environment_object_info(OptionalPropertyMap &environmentObjectInfo, SceneMgr &targetSceneMgr)
@@ -1444,7 +1445,7 @@ void LoadMgr::load_line_from_OBJ(const std::string &path, std::vector<PosColVert
     return;
 }
 
-void LoadMgr::load_object_from_OBJ(const std::string &path, std::vector<PosNorTexVertex> &mesh_vertices)
+void LoadMgr::load_object_from_OBJ(const std::string &path, std::vector<MeshAttribute> &mesh_vertices)
 {
 
     std::vector<Vector3> vertices;
@@ -1477,7 +1478,6 @@ void LoadMgr::load_object_from_OBJ(const std::string &path, std::vector<PosNorTe
 
         if (type == "v")
         {
-
             Vector3 vertex;
             stream >> vertex.x >> vertex.y >> vertex.z;
             vertices.push_back(vertex);
@@ -1531,6 +1531,7 @@ void LoadMgr::load_object_from_OBJ(const std::string &path, std::vector<PosNorTe
 
                     mesh_vertices.push_back({{vertices[v1].x, vertices[v1].y, vertices[v1].z},
                                              {normals[vn1].x, normals[vn1].y, normals[vn1].z},
+                                             {0.0, 0.0, 0.0, 1.0},
                                              {texcoords[vt1].x, texcoords[vt1].y}});
                 }
             }
@@ -1560,23 +1561,29 @@ void LoadMgr::load_object_from_OBJ(const std::string &path, std::vector<PosNorTe
                 // triangle 1
                 mesh_vertices.push_back({{vertices[vA].x, vertices[vA].y, vertices[vA].z},
                                          {normals[vnA].x, normals[vnA].y, normals[vnA].z},
+                                         {0.0, 0.0, 0.0, 1.0},
                                          {texcoords[vtA].x, texcoords[vtA].y}});
                 mesh_vertices.push_back({{vertices[vB].x, vertices[vB].y, vertices[vB].z},
                                          {normals[vnB].x, normals[vnB].y, normals[vnB].z},
+                                         {0.0, 0.0, 0.0, 1.0},
                                          {texcoords[vtB].x, texcoords[vtB].y}});
                 mesh_vertices.push_back({{vertices[vC].x, vertices[vC].y, vertices[vC].z},
                                          {normals[vnC].x, normals[vnC].y, normals[vnC].z},
+                                         {0.0, 0.0, 0.0, 1.0},
                                          {texcoords[vtC].x, texcoords[vtC].y}});
 
                 // triangle 2
                 mesh_vertices.push_back({{vertices[vA].x, vertices[vA].y, vertices[vA].z},
                                          {normals[vnA].x, normals[vnA].y, normals[vnA].z},
+                                         {0.0, 0.0, 0.0, 1.0},
                                          {texcoords[vtA].x, texcoords[vtA].y}});
                 mesh_vertices.push_back({{vertices[vC].x, vertices[vC].y, vertices[vC].z},
                                          {normals[vnC].x, normals[vnC].y, normals[vnC].z},
+                                         {0.0, 0.0, 0.0, 1.0},
                                          {texcoords[vtC].x, texcoords[vtC].y}});
                 mesh_vertices.push_back({{vertices[vD].x, vertices[vD].y, vertices[vD].z},
                                          {normals[vnD].x, normals[vnD].y, normals[vnD].z},
+                                         {0.0, 0.0, 0.0, 1.0},
                                          {texcoords[vtD].x, texcoords[vtD].y}});
             }
         }

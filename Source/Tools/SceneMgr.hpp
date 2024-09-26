@@ -1,13 +1,15 @@
 #pragma once
 
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <map>
-#include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
-#include <cstdint>
+#include "Source/DataType/Mat4.hpp"
 
 struct SceneMgr
 {
@@ -137,16 +139,16 @@ struct SceneMgr
     struct SceneObject 
     {
         std::string name;
-        std::vector<uint32_t> rootIdx;
+        std::vector<std::string> rootName;
     };
 
     struct NodeObject
     {
         std::string name;
 
-        glm::vec3 translation = glm::vec3(0, 0, 0);
-        glm::vec3 scale = glm::vec3(1, 1, 1);
-        glm::vec4 rotation = glm::vec4(0, 0, 0, 1);
+        glm::vec3 translation = glm::vec3(0.f, 0.f, 0.f);
+        glm::vec3 scale = glm::vec3(1.f, 1.f, 1.f);
+        glm::quat rotation = glm::quat(0.f, 0.f, 0.f, 1.f);
 
         std::vector<std::string> childName;
 
@@ -225,7 +227,7 @@ struct SceneMgr
 
     void clean_all();
 
-    
+    glm::mat4 calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
 
     void print_single_node_object(NodeObject* nodeObject);
     void print_single_mesh_object(MeshObject* meshObject);

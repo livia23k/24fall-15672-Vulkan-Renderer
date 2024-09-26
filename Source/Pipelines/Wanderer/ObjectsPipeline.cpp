@@ -204,12 +204,6 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
 
 void Wanderer::ObjectsPipeline::destroy(RTG &rtg)
 {
-
-    // if (set0_Camera != VK_NULL_HANDLE) {
-    //     vkDestroyDescriptorSetLayout(rtg.device, set0_Camera, nullptr);
-    //     set0_Camera = VK_NULL_HANDLE;
-    // }
-
     if (set0_World != VK_NULL_HANDLE)
     {
         vkDestroyDescriptorSetLayout(rtg.device, set0_World, nullptr);

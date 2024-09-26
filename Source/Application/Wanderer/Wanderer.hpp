@@ -123,8 +123,7 @@ struct Wanderer : RTG::Application
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 
-		using Vertex = PosNorTexVertex;
-		// using Vertex = MeshAttribute;
+		using Vertex = MeshAttribute;
 
 		VkPipeline handle = VK_NULL_HANDLE;
 
@@ -231,7 +230,8 @@ struct Wanderer : RTG::Application
 
 	void load_lines();
 	void load_objects();
-	void build_scene_objects();
+	void load_scene_objects_vertices();
+	void load_node_object_vertices(SceneMgr::NodeObject *nodeObject);
 	void create_diy_textures();
 	void create_textures_descriptor();
 

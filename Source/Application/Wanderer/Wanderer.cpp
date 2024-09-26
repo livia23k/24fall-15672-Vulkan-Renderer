@@ -29,7 +29,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_textures_descriptor();
 
 	LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
-	build_scene_objects();
+	load_scene_objects_vertices();
 	
 	// 3. prepare for performance logging
 	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
@@ -1160,8 +1160,41 @@ void Wanderer::load_objects()
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
 }
 
-void Wanderer::build_scene_objects()
+void Wanderer::load_scene_objects_vertices()
 {
+	// traverse all scene objects, starting from the roots
+
+	SceneMgr & sceneMgr = rtg.configuration.sceneMgr;
+	typedef SceneMgr::NodeObject NodeObject;
+	
+	if (sceneMgr.sceneObject == nullptr)
+		return;
+
+	std::queue<NodeObject*> nodeQueue;
+	for (std::string & nodeName : sceneMgr.sceneObject->rootName)
+		nodeQueue.push(sceneMgr.nodeObjectMap[nodeName]);
+
+	while (!nodeQueue.empty())
+	{
+		// get the top node
+		NodeObject *node = nodeQueue.front();
+		nodeQueue.pop();
+
+		std::cout << node->name << std::endl;
+
+		// build the node
+		load_node_object_vertices(node);
+
+		// push children to queue
+		for (std::string & nodeName : node->childName)
+			nodeQueue.push(sceneMgr.nodeObjectMap[nodeName]);
+	}
+}
+
+void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject)
+{
+
+	
 
 }
 
