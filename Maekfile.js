@@ -44,26 +44,33 @@ const main_objs = [
 //maek.GLSLC(...) builds a glsl source file:
 // it returns the path to the output .inl file
 
-//uncomment to build background shaders and pipeline:
+// build background shaders and pipeline:
 const background_shaders = [
 	maek.GLSLC('Source/Shader/Wanderer/background.vert'),
 	maek.GLSLC('Source/Shader/Wanderer/background.frag'),
 ];
 main_objs.push(maek.CPP('Source/Pipelines/Wanderer/BackgroundPipeline.cpp', undefined, { depends: [...background_shaders] }));
 
-//uncomment to build lines shaders and pipeline:
+// build lines shaders and pipeline:
 const lines_shaders = [
 	maek.GLSLC('Source/Shader/Wanderer/lines.vert'),
 	maek.GLSLC('Source/Shader/Wanderer/lines.frag'),
 ];
 main_objs.push(maek.CPP('Source/Pipelines/Wanderer/LinesPipeline.cpp', undefined, { depends: [...lines_shaders] }));
 
-//uncomment to build objects shaders and pipeline:
+// build objects shaders and pipeline:
 const objects_shaders = [
 	maek.GLSLC('Source/Shader/Wanderer/objects.vert'),
 	maek.GLSLC('Source/Shader/Wanderer/objects.frag'),
 ];
 main_objs.push(maek.CPP('Source/Pipelines/Wanderer/ObjectsPipeline.cpp', undefined, { depends: [...objects_shaders] }));
+
+// build scene objects shaders and pipeline:
+const scene_objects_shaders = [
+	maek.GLSLC('Source/Shader/Wanderer/sceneobjects.vert'),
+	maek.GLSLC('Source/Shader/Wanderer/sceneobjects.frag'),
+];
+main_objs.push(maek.CPP('Source/Pipelines/Wanderer/SceneObjectsPipeline.cpp', undefined, { depends: [...scene_objects_shaders] }));
 
 const main_exe = maek.LINK([...main_objs], 'bin/main');
 

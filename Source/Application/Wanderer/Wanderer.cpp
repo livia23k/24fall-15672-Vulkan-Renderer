@@ -25,14 +25,33 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_diy_textures();
 	create_textures_descriptor();
 
+	// open performance log, trunc existing file and open for appending
+	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc);
+	if (!render_performance_log.is_open())
+		std::cerr << "Failed to open performance log file." << std::endl;
+	else
+		render_performance_log.close();
+	render_performance_log.open("performance(render).txt", std::ios::app);
+	
+
 	// [TEST]
-	SceneMgr sceneMgr;
-	const std::string s72path = "Assets/SceneGraphs/lights-Mix.s72";
-	LoadMgr::load_objects_from_s72(s72path, sceneMgr);
+	// LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
+	// std::cout << "[Scene Graph] Path: " << rtg.configuration.scene_graph_name << std::endl;
+	// rtg.configuration.sceneMgr.print_node_object_map();
+	// rtg.configuration.sceneMgr.print_mesh_object_map();
+	// rtg.configuration.sceneMgr.print_camera_object_map();
+	// rtg.configuration.sceneMgr.print_driver_object_map();
+	// rtg.configuration.sceneMgr.print_material_object_map();
+	// rtg.configuration.sceneMgr.print_environment_object_map();
+	// rtg.configuration.sceneMgr.print_light_object_map();
 }
 
 Wanderer::~Wanderer()
 {
+	// close performance log
+	if (render_performance_log.is_open())
+		render_performance_log.close();
+
 	// just in case rendering is still in flight, don't destroy resources:
 	//(not using VK macro to avoid throw-ing in destructor)
 	if (VkResult result = vkDeviceWaitIdle(rtg.device); result != VK_SUCCESS)
@@ -140,6 +159,7 @@ Wanderer::~Wanderer()
 	background_pipeline.destroy(rtg);
 	lines_pipeline.destroy(rtg);
 	objects_pipeline.destroy(rtg);
+	scene_objects_pipeline.destroy(rtg);
 
 	if (render_pass != VK_NULL_HANDLE)
 	{
@@ -228,6 +248,9 @@ void Wanderer::destroy_framebuffers()
 
 void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 {
+	
+	timespot_before_record = std::chrono::high_resolution_clock::now();
+
 	// assert that parameters are valid:
 	assert(&rtg == &rtg_);
 	assert(render_params.workspace_index < workspaces.size());
@@ -624,6 +647,14 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 
 		VK(vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, render_params.workspace_available));
 	}
+
+	timespot_after_record = std::chrono::high_resolution_clock::now();
+
+	float dt = float(std::chrono::duration_cast<std::chrono::milliseconds>(timespot_after_record - timespot_before_record).count());
+	// std::cout << "[Render] Render time: " << dt << " ms" << std::endl;
+
+	if (render_performance_log.is_open())
+		render_performance_log << dt << std::endl;
 }
 
 void Wanderer::update(float dt)
@@ -870,6 +901,7 @@ void Wanderer::create_pipelines()
 	background_pipeline.create(rtg, render_pass, 0);
 	lines_pipeline.create(rtg, render_pass, 0);
 	objects_pipeline.create(rtg, render_pass, 0);
+	scene_objects_pipeline.create(rtg, render_pass, 0);
 }
 
 void Wanderer::create_description_pool()
@@ -1121,6 +1153,11 @@ void Wanderer::load_objects()
 	// copy data to buffer ----------------------------------------------------------------------
 
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
+}
+
+void Wanderer::load_scene()
+{
+
 }
 
 void Wanderer::create_diy_textures()

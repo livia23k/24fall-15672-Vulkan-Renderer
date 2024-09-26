@@ -6,3 +6,4 @@ bin/main.exe
 bin/main.pdb
 .vscode/settings.json
 .vscode/tasks.json
+performance(render).txt
