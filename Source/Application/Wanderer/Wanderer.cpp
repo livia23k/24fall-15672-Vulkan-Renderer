@@ -14,25 +14,32 @@
 
 Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 {
+	// 1. set up application prerequisites
 	init_depth_format();
 	create_render_pass();
 	create_command_pool();
 	create_pipelines();
 	create_description_pool();
 	setup_workspaces();
+
+	// 2. load resources
 	load_lines();
 	load_objects();
 	create_diy_textures();
 	create_textures_descriptor();
 
-	// open performance log, trunc existing file and open for appending
-	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc);
+	LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
+	build_scene_objects();
+	
+	// 3. prepare for performance logging
+	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
 	if (!render_performance_log.is_open())
 		std::cerr << "Failed to open performance log file." << std::endl;
 	else
 		render_performance_log.close();
-	render_performance_log.open("performance(render).txt", std::ios::app);
+	render_performance_log.open("performance(render).txt", std::ios::app); // re-open for appending
 	
+
 
 	// [TEST]
 	// LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
@@ -159,7 +166,6 @@ Wanderer::~Wanderer()
 	background_pipeline.destroy(rtg);
 	lines_pipeline.destroy(rtg);
 	objects_pipeline.destroy(rtg);
-	scene_objects_pipeline.destroy(rtg);
 
 	if (render_pass != VK_NULL_HANDLE)
 	{
@@ -901,7 +907,6 @@ void Wanderer::create_pipelines()
 	background_pipeline.create(rtg, render_pass, 0);
 	lines_pipeline.create(rtg, render_pass, 0);
 	objects_pipeline.create(rtg, render_pass, 0);
-	scene_objects_pipeline.create(rtg, render_pass, 0);
 }
 
 void Wanderer::create_description_pool()
@@ -1155,7 +1160,7 @@ void Wanderer::load_objects()
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
 }
 
-void Wanderer::load_scene()
+void Wanderer::build_scene_objects()
 {
 
 }

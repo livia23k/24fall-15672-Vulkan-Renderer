@@ -132,62 +132,6 @@ struct Wanderer : RTG::Application
 		void destroy(RTG &);
 	} objects_pipeline;
 
-	struct SceneObjectsPipeline
-	{
-		// descriptot set layouts:
-		// VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
-		VkDescriptorSetLayout set0_World = VK_NULL_HANDLE;
-		VkDescriptorSetLayout set1_Transforms = VK_NULL_HANDLE;
-		VkDescriptorSetLayout set2_TEXTURE = VK_NULL_HANDLE;
-
-		// types for descriptors:
-		//  using Camera = LinesPipeline::Camera;
-
-		struct World
-		{
-			struct
-			{
-				float x, y, z, padding_;
-			} SKY_DIRECTION;
-			struct
-			{
-				float r, g, b, padding_;
-			} SKY_ENERGY;
-			struct
-			{
-				float x, y, z, padding_;
-			} SUN_DIRECTION;
-			struct
-			{
-				float r, g, b, padding_;
-			} SUN_ENERGY;
-		};
-		static_assert(sizeof(World) == 4 * 4 + 4 * 4 + 4 * 4 + 4 * 4, "World is the expected size.");
-
-		struct Transform
-		{
-			mat4 CLIP_FROM_LOCAL;
-			mat4 WORLD_FROM_LOCAL;
-			mat4 WORLD_FROM_LOCAL_NORMAL;
-		};
-		static_assert(sizeof(Transform) == (16 * 4) * 3, "Transform is the expected size.");
-
-		// push constants (none yet)
-		// struct Push // <= 128B
-		// {
-		// };
-		// static_assert(sizeof(Push) == 0, "Push constant is the expected size.");
-
-		VkPipelineLayout layout = VK_NULL_HANDLE;
-
-		using Vertex = MeshAttribute;
-
-		VkPipeline handle = VK_NULL_HANDLE;
-
-		void create(RTG &, VkRenderPass render_pass, uint32_t subpass);
-		void destroy(RTG &);
-	} scene_objects_pipeline;
-
 	// pools from which per-workspace things are allocated:
 	VkCommandPool command_pool = VK_NULL_HANDLE;
 	// STEPX: Add descriptor pool here.
@@ -287,7 +231,7 @@ struct Wanderer : RTG::Application
 
 	void load_lines();
 	void load_objects();
-	void load_scene();
+	void build_scene_objects();
 	void create_diy_textures();
 	void create_textures_descriptor();
 

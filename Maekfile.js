@@ -65,13 +65,6 @@ const objects_shaders = [
 ];
 main_objs.push(maek.CPP('Source/Pipelines/Wanderer/ObjectsPipeline.cpp', undefined, { depends: [...objects_shaders] }));
 
-// build scene objects shaders and pipeline:
-const scene_objects_shaders = [
-	maek.GLSLC('Source/Shader/Wanderer/sceneobjects.vert'),
-	maek.GLSLC('Source/Shader/Wanderer/sceneobjects.frag'),
-];
-main_objs.push(maek.CPP('Source/Pipelines/Wanderer/SceneObjectsPipeline.cpp', undefined, { depends: [...scene_objects_shaders] }));
-
 const main_exe = maek.LINK([...main_objs], 'bin/main');
 
 //default targets:
