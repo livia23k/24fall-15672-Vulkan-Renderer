@@ -62,7 +62,8 @@ struct RTG
 
 		// if set, render a specific scene graph:
 		//  `--scene <filename>` command-line flag
-		std::string scene_graph_name = "";
+		std::string scece_graph_folder = "Assets/SceneGraphs/";
+		std::string scene_graph_path = "";
 		SceneMgr sceneMgr;
 
 		// if set, use a specific camera:

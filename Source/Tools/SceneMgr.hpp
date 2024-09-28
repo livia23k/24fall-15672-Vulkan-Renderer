@@ -228,7 +228,7 @@ struct SceneMgr
     void clean_all();
 
     glm::mat4 calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
-
+    
     void print_single_node_object(NodeObject* nodeObject);
     void print_single_mesh_object(MeshObject* meshObject);
     void print_single_camera_object(CameraObject* cameraObject);

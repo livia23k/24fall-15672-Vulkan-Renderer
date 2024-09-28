@@ -176,6 +176,7 @@ struct Wanderer : RTG::Application
 	ObjectVertices torus_vertices;
 	ObjectVertices boat_vertices;
 	ObjectVertices sea_vertices;
+	std::vector<ObjectVertices> scene_nodes_vertices;
 
 	std::vector<Helpers::AllocatedImage> textures;			   // holds handles of actual image data
 	std::vector<VkImageView> texture_views;					   // references to portions of of whole textures
@@ -230,10 +231,11 @@ struct Wanderer : RTG::Application
 
 	void load_lines();
 	void load_objects();
-	void load_scene_objects_vertices();
-	void load_node_object_vertices(SceneMgr::NodeObject *nodeObject);
 	void create_diy_textures();
 	void create_textures_descriptor();
+
+	void load_scene_objects_vertices();
+	void load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices);
 
 	//--------------------------------------------------------------------
 	// Rendering function, uses all the resources above to queue work to draw a frame:

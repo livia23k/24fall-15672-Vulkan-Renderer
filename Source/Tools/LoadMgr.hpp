@@ -22,12 +22,16 @@ struct LoadMgr {
     using PropertyMap = std::map<std::string, sejp::value>;
     using OptionalPropertyMap = std::optional<std::map<std::string, sejp::value>>;
 
-    // .OBJ
+    // ===============================
+    // .OBJ 
     static void load_line_from_OBJ(const std::string& path, std::vector<PosColVertex>& mesh_vertices);
     static void load_object_from_OBJ(const std::string& path, std::vector<MeshAttribute>& mesh_vertices);
 
+    // ===============================
     // .s72
+
     static void load_objects_from_s72(const std::string& path, SceneMgr &targetSceneMgr);
+
     static void parse_scene_graph_info(const sejp::value &sceneGraphInfo, SceneMgr &targetSceneMgr);
     static void parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_node_object_info(OptionalPropertyMap &nodeObjectInfo, SceneMgr &targetSceneMgr);
@@ -38,6 +42,9 @@ struct LoadMgr {
     static void parse_environment_object_info(OptionalPropertyMap &environmentObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, SceneMgr::AttributeStream &attrStream);
+
+    template <typename T>
+    static void read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream);
 
 
 };

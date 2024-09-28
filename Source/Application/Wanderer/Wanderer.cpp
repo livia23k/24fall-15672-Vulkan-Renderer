@@ -24,11 +24,11 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 
 	// 2. load resources
 	load_lines();
-	load_objects();
+	// load_objects();
 	create_diy_textures();
 	create_textures_descriptor();
 
-	LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
+	LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_path, rtg.configuration.sceneMgr);
 	load_scene_objects_vertices();
 	
 	// 3. prepare for performance logging
@@ -753,43 +753,43 @@ void Wanderer::update(float dt)
 		// 	});
 		// }
 
-		{ // transform for the boat
-			mat4 WORLD_FROM_LOCAL{
-				1.0f, 0.0f, 0.0f, 0.0f,
-				0.0f, 1.0f, 0.0f, 0.0f,
-				0.0f, 0.0f, 1.0f, 0.0f,
-				0.0f, 0.0f, 0.0f, 1.0f};
+		// { // transform for the boat
+		// 	mat4 WORLD_FROM_LOCAL{
+		// 		1.0f, 0.0f, 0.0f, 0.0f,
+		// 		0.0f, 1.0f, 0.0f, 0.0f,
+		// 		0.0f, 0.0f, 1.0f, 0.0f,
+		// 		0.0f, 0.0f, 0.0f, 1.0f};
 
-			object_instances.emplace_back(ObjectInstance{
-				.vertices = boat_vertices,
-				.transform{
-					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-					// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-				},
-				.texture = 0,
-			});
-		};
+		// 	object_instances.emplace_back(ObjectInstance{
+		// 		.vertices = boat_vertices,
+		// 		.transform{
+		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 		},
+		// 		.texture = 0,
+		// 	});
+		// };
 
-		{ // transform for the sea
-			mat4 WORLD_FROM_LOCAL{
-				1.0f + cos(time * 2.f) * 0.1f, cos(time * 2.f) * 0.1f, sin(time * 2.f) * 0.05f, 0.0f,
-				0.0f, 1.0f, 0.0f, 0.0f,
-				0.0f, 0.0f, 1.0f, 0.0f,
-				0.0f, 0.0f, 0.0f, 1.0f};
+		// { // transform for the sea
+		// 	mat4 WORLD_FROM_LOCAL{
+		// 		1.0f + cos(time * 2.f) * 0.1f, cos(time * 2.f) * 0.1f, sin(time * 2.f) * 0.05f, 0.0f,
+		// 		0.0f, 1.0f, 0.0f, 0.0f,
+		// 		0.0f, 0.0f, 1.0f, 0.0f,
+		// 		0.0f, 0.0f, 0.0f, 1.0f};
 
-			object_instances.emplace_back(ObjectInstance{
-				.vertices = sea_vertices,
-				.transform{
-					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-					// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-				},
-				.texture = 2,
-			});
-		};
+		// 	object_instances.emplace_back(ObjectInstance{
+		// 		.vertices = sea_vertices,
+		// 		.transform{
+		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 		},
+		// 		.texture = 2,
+		// 	});
+		// };
 	};
 }
 
@@ -1172,7 +1172,17 @@ void Wanderer::load_scene_objects_vertices()
 
 	std::queue<NodeObject*> nodeQueue;
 	for (std::string & nodeName : sceneMgr.sceneObject->rootName)
-		nodeQueue.push(sceneMgr.nodeObjectMap[nodeName]);
+	{
+		auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
+		if (findNodeResult == sceneMgr.nodeObjectMap.end())
+			continue;
+
+		nodeQueue.push(findNodeResult->second);
+	}
+
+
+	std::vector<ObjectsPipeline::Vertex> tmp_object_vertices;
+	tmp_object_vertices.reserve(sceneMgr.sceneObject->rootName.size() + sceneMgr.nodeObjectMap.size());
 
 	while (!nodeQueue.empty())
 	{
@@ -1183,18 +1193,98 @@ void Wanderer::load_scene_objects_vertices()
 		std::cout << node->name << std::endl;
 
 		// build the node
-		load_node_object_vertices(node);
+		load_node_object_vertices(node, tmp_object_vertices);
 
 		// push children to queue
 		for (std::string & nodeName : node->childName)
-			nodeQueue.push(sceneMgr.nodeObjectMap[nodeName]);
+		{
+			auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
+			if (findNodeResult == sceneMgr.nodeObjectMap.end())
+				continue;
+
+			nodeQueue.push(findNodeResult->second);
+		}
 	}
+
+	// transfer attributes data to buffer
+	size_t bytes = tmp_object_vertices.size() * sizeof(tmp_object_vertices[0]);
+
+	object_vertices = rtg.helpers.create_buffer(
+		bytes,
+		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // use as a vertex buffer, and a target of a memory copy
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		Helpers::Unmapped);
+
+	// copy data to buffer ----------------------------------------------------------------------
+
+	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
+
 }
 
-void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject)
+void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices)
 {
+	SceneMgr & sceneMgr = rtg.configuration.sceneMgr;
 
-	
+	std::vector<glm::vec3> positionList;
+	std::vector<glm::vec3> normalList;
+	std::vector<glm::vec4> tangentList;
+	std::vector<glm::vec2> texcoordList;
+
+	auto findMeshResult = sceneMgr.meshObjectMap.find(nodeObject->refMeshName);
+	if (findMeshResult == sceneMgr.meshObjectMap.end())
+		return;
+
+	SceneMgr::MeshObject *refMesh = findMeshResult->second;
+
+	// format check
+	if (refMesh->attrPosition.format != VK_FORMAT_R32G32B32_SFLOAT 
+		|| refMesh->attrNormal.format != VK_FORMAT_R32G32B32_SFLOAT
+		  || refMesh->attrTangent.format != VK_FORMAT_R32G32B32A32_SFLOAT
+		    || refMesh->attrTexcoord.format != VK_FORMAT_R32G32_SFLOAT)
+	{
+		std::cerr << "[load_node_object_vertices] Node name '" << nodeObject->name << "' attribute format invalid.";
+		return;
+	}
+
+	// load attributes from .b72
+	LoadMgr::read_s72_mesh_attribute_to_list(positionList, refMesh->attrPosition);
+	LoadMgr::read_s72_mesh_attribute_to_list(normalList, refMesh->attrNormal);
+	LoadMgr::read_s72_mesh_attribute_to_list(tangentList, refMesh->attrTangent);
+	LoadMgr::read_s72_mesh_attribute_to_list(texcoordList, refMesh->attrTexcoord);
+	assert(positionList.size() == normalList.size() && normalList.size() == tangentList.size() && tangentList.size() == texcoordList.size());
+
+	// assembly attributes into scene data structure
+
+	ObjectVertices node_vertices;
+	node_vertices.first = uint32_t(tmp_object_vertices.size());
+
+	uint32_t vertexCount = positionList.size();
+	for (uint32_t i = 0; i < vertexCount; ++ i)
+	{
+		ObjectsPipeline::Vertex node_vertex;
+		node_vertex.Position.x = positionList[i].x;
+		node_vertex.Position.y = positionList[i].y;
+		node_vertex.Position.z = positionList[i].z;
+
+		node_vertex.Normal.x = normalList[i].x;
+		node_vertex.Normal.y = normalList[i].y;
+		node_vertex.Normal.z = normalList[i].z;
+		
+		node_vertex.Tangent.x = tangentList[i].x;
+		node_vertex.Tangent.y = tangentList[i].y;
+		node_vertex.Tangent.z = tangentList[i].z;
+		node_vertex.Tangent.w = tangentList[i].w;
+
+		node_vertex.TexCoord.s = texcoordList[i].x;
+		node_vertex.TexCoord.t = texcoordList[i].y;
+
+		tmp_object_vertices.push_back(node_vertex);
+	}
+
+	node_vertices.count = uint32_t(tmp_object_vertices.size()) - node_vertices.first;
+	scene_nodes_vertices.push_back(node_vertices);
+
+	// [TODO] link scene_nodes_vertices[idx] <=> node.name
 
 }
 

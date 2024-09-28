@@ -1378,6 +1378,72 @@ void LoadMgr::parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, Sc
     }
 }
 
+
+template <typename T>
+void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream)
+{
+    // safety check
+    size_t size_format;
+    if (attrStream.format == VK_FORMAT_R32G32B32_SFLOAT)
+        size_format = 12;
+    else if (attrStream.format == VK_FORMAT_R32G32B32A32_SFLOAT)
+        size_format = 16;
+    else if (attrStream.format == VK_FORMAT_R32G32_SFLOAT)
+        size_format = 8;
+    else
+        size_format = 0;
+    assert(size_format == sizeof(T));
+
+    // get input file
+
+    const std::string folder = "Assets/SceneGraphs/";
+    std::string path = folder + attrStream.src;
+
+    std::ifstream file(path, std::ios::binary);
+    if (!file)
+    {
+        std::cerr << "Failed to open file: " << path << std::endl;
+        return;
+    }
+
+    // parse specific attribute
+
+    // find the size of file
+    //  cr. learnt from https://coniferproductions.com/posts/2022/10/25/reading-binary-files-cpp/
+    file.seekg(0, std::ios_base::end);
+    uint32_t size_file = file.tellg();
+
+    file.seekg(0, std::ios_base::beg);
+
+    for (uint32_t i = attrStream.offset; i < size_file; i += attrStream.stride)
+    {
+        T targetAttribute;
+
+        // read the data
+        //  cr. learnt from https://cplusplus.com/forum/beginner/224309/
+        file.seekg(i, std::ios_base::beg);
+        file.read(reinterpret_cast<char*>(&targetAttribute), sizeof(T));
+
+        // [TOCHECK] [INITIAL PASS]
+        // if constexpr (std::is_same<T, glm::vec3>::value) {
+        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << ", " << targetAttribute.z << std::endl;
+        // }
+        // if constexpr (std::is_same<T, glm::vec4>::value) {
+        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << ", " << targetAttribute.z << ", " << targetAttribute.w << std::endl;
+        // }
+        // if constexpr (std::is_same<T, glm::vec2>::value) {
+        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << std::endl;
+        // }
+
+        targetList.push_back(targetAttribute);
+    }
+}
+
+// Explicit instantiations
+template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec2>(std::vector<glm::vec2> &, SceneMgr::AttributeStream &);
+template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec3>(std::vector<glm::vec3> &, SceneMgr::AttributeStream &);
+template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec4>(std::vector<glm::vec4> &, SceneMgr::AttributeStream &);
+
 // OBJ Loader functions ================================================================================================
 
 void LoadMgr::load_line_from_OBJ(const std::string &path, std::vector<PosColVertex> &mesh_vertices)
