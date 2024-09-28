@@ -710,105 +710,72 @@ void Wanderer::update(float dt)
 	{ // set objects transformation:
 		object_instances.clear();
 
-		// { //transform for the plane (+x by one unit)
-		// 	mat4 WORLD_FROM_LOCAL{
-		// 		1.0f, 0.0f, 0.0f, 0.0f,
-		// 		0.0f, 1.0f, 0.0f, 0.0f,
-		// 		0.0f, 0.0f, 1.0f, 0.0f,
-		// 		0.0f, 0.0f, 0.0f, 1.0f
+		// instances for load_objects() =================================================================================
+		// { 
+		// 	{ // transform for the boat1
+		// 		mat4 WORLD_FROM_LOCAL{
+		// 			1.0f, 0.0f, 0.0f, 0.0f,
+		// 			0.0f, 1.0f, 0.0f, 0.0f,
+		// 			0.0f, 0.0f, 1.0f, 0.0f,
+		// 			0.0f, 0.0f, 0.0f, 1.0f};
+
+		// 		object_instances.emplace_back(ObjectInstance{
+		// 			.vertices = boat_vertices,
+		// 			.transform{
+		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 			},
+		// 			.texture = 0,
+		// 		});
 		// 	};
 
-		// 	object_instances.emplace_back(ObjectInstance{
-		// 		.vertices = plane_vertices,
-		// 		.transform{
-		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 			//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 		},
-		// 		.texture = 1,
-		// 	});
-		// };
+		// 	{ // transform for the boat2
+		// 		mat4 WORLD_FROM_LOCAL2{
+		// 			1.0f, 0.0f, 0.0f, 0.0f,
+		// 			0.0f, 3.0f, 0.0f, 0.0f,
+		// 			0.0f, 0.0f, 3.0f, 0.0f,
+		// 			0.0f, 0.0f, 0.0f, 1.0f};
 
-		// { //transform for the torus (-x by one unit and rotated CCW around +y)
-		// 	float ang = time / 60.0f * 2.0f * float(M_PI) * 10.0f;
-		// 	float ca = std::cos(ang);
-		// 	float sa = std::sin(ang);
-		// 	mat4 WORLD_FROM_LOCAL{
-		// 		ca, 	0.0f, 	-sa, 	0.0f,
-		// 		0.0f, 	1.0f, 	0.0f, 	0.0f,
-		// 		-sa, 	0.0f, 	ca, 	0.0f,
-		// 		-1.0f, 	0.0f, 	0.0f, 	1.0f
+		// 		object_instances.emplace_back(ObjectInstance{
+		// 			.vertices = boat_vertices,
+		// 			.transform{
+		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL2,
+		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL2,
+		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL2
+		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 			},
+		// 			.texture = 0,
+		// 		});
 		// 	};
 
-		// 	object_instances.emplace_back(ObjectInstance{
-		// 		.vertices = torus_vertices,
-		// 		.transform{
-		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 			//NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 		},
-		// 		.texture = 1,
-		// 	});
-		// }
+		// 	{ // transform for the sea
+		// 		mat4 WORLD_FROM_LOCAL{
+		// 			1.0f + cos(time * 2.f) * 0.1f, cos(time * 2.f) * 0.1f, sin(time * 2.f) * 0.05f, 0.0f,
+		// 			0.0f, 1.0f, 0.0f, 0.0f,
+		// 			0.0f, 0.0f, 1.0f, 0.0f,
+		// 			0.0f, 0.0f, 0.0f, 1.0f};
 
-		// { // transform for the boat1
-		// 	mat4 WORLD_FROM_LOCAL{
-		// 		1.0f, 0.0f, 0.0f, 0.0f,
-		// 		0.0f, 1.0f, 0.0f, 0.0f,
-		// 		0.0f, 0.0f, 1.0f, 0.0f,
-		// 		0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 	object_instances.emplace_back(ObjectInstance{
-		// 		.vertices = boat_vertices,
-		// 		.transform{
-		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 		},
-		// 		.texture = 0,
-		// 	});
+		// 		object_instances.emplace_back(ObjectInstance{
+		// 			.vertices = sea_vertices,
+		// 			.transform{
+		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 			},
+		// 			.texture = 2,
+		// 		});
+		// 	};
 		// };
 
-		// { // transform for the boat2
-		// 	mat4 WORLD_FROM_LOCAL2{
-		// 		1.0f, 0.0f, 0.0f, 0.0f,
-		// 		0.0f, 3.0f, 0.0f, 0.0f,
-		// 		0.0f, 0.0f, 3.0f, 0.0f,
-		// 		0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 	object_instances.emplace_back(ObjectInstance{
-		// 		.vertices = boat_vertices,
-		// 		.transform{
-		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL2,
-		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL2,
-		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL2
-		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 		},
-		// 		.texture = 0,
-		// 	});
-		// };
-
-		// { // transform for the sea
-		// 	mat4 WORLD_FROM_LOCAL{
-		// 		1.0f + cos(time * 2.f) * 0.1f, cos(time * 2.f) * 0.1f, sin(time * 2.f) * 0.05f, 0.0f,
-		// 		0.0f, 1.0f, 0.0f, 0.0f,
-		// 		0.0f, 0.0f, 1.0f, 0.0f,
-		// 		0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 	object_instances.emplace_back(ObjectInstance{
-		// 		.vertices = sea_vertices,
-		// 		.transform{
-		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 		},
-		// 		.texture = 2,
-		// 	});
-		// };
+		// instances for load_scene_objects_vertices() =================================================================================
+		{ 
+			// [TODO]
+			
+			
+		};
 	};
 }
 
