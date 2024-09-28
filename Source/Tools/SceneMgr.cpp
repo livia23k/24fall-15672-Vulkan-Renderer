@@ -9,6 +9,8 @@ SceneMgr::SceneMgr()
     cameraObjectMap.clear();
     driverObjectMap.clear();
     materialObjectMap.clear();
+
+    meshVerticesIndexMap.clear();
 }
 
 SceneMgr::~SceneMgr()

@@ -235,7 +235,7 @@ struct Wanderer : RTG::Application
 	void create_textures_descriptor();
 
 	void load_scene_objects_vertices();
-	void load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices);
+	void load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices);
 
 	//--------------------------------------------------------------------
 	// Rendering function, uses all the resources above to queue work to draw a frame:

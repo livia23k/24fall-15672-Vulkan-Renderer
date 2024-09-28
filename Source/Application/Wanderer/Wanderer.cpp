@@ -753,7 +753,7 @@ void Wanderer::update(float dt)
 		// 	});
 		// }
 
-		// { // transform for the boat
+		// { // transform for the boat1
 		// 	mat4 WORLD_FROM_LOCAL{
 		// 		1.0f, 0.0f, 0.0f, 0.0f,
 		// 		0.0f, 1.0f, 0.0f, 0.0f,
@@ -766,6 +766,25 @@ void Wanderer::update(float dt)
 		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
 		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
 		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 		},
+		// 		.texture = 0,
+		// 	});
+		// };
+
+		// { // transform for the boat2
+		// 	mat4 WORLD_FROM_LOCAL2{
+		// 		1.0f, 0.0f, 0.0f, 0.0f,
+		// 		0.0f, 3.0f, 0.0f, 0.0f,
+		// 		0.0f, 0.0f, 3.0f, 0.0f,
+		// 		0.0f, 0.0f, 0.0f, 1.0f};
+
+		// 	object_instances.emplace_back(ObjectInstance{
+		// 		.vertices = boat_vertices,
+		// 		.transform{
+		// 			.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL2,
+		// 			.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL2,
+		// 			.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL2
 		// 			// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
 		// 		},
 		// 		.texture = 0,
@@ -1192,8 +1211,20 @@ void Wanderer::load_scene_objects_vertices()
 
 		std::cout << node->name << std::endl;
 
-		// build the node
-		load_node_object_vertices(node, tmp_object_vertices);
+		// load vertices of node if not exist (based on attributes of reference mesh object)
+		if (sceneMgr.meshVerticesIndexMap.find(node->refMeshName) == sceneMgr.meshVerticesIndexMap.end())
+		{
+			auto findMeshResult = sceneMgr.meshObjectMap.find(node->refMeshName);
+			if (findMeshResult != sceneMgr.meshObjectMap.end()) {
+				load_mesh_object_vertices(findMeshResult->second, tmp_object_vertices);
+
+				// std::cout << "Mesh vertices " << sceneMgr.meshVerticesIndexMap.find(node->refMeshName)->first << " newly built." << std::endl; // [PASS]
+			}
+		}
+		// else
+		// {
+		// 	std::cout << "Mesh vertices " << sceneMgr.meshVerticesIndexMap.find(node->refMeshName)->first << " already built." << std::endl; // [PASS]
+		// }
 
 		// push children to queue
 		for (std::string & nodeName : node->childName)
@@ -1221,7 +1252,7 @@ void Wanderer::load_scene_objects_vertices()
 
 }
 
-void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices)
+void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices)
 {
 	SceneMgr & sceneMgr = rtg.configuration.sceneMgr;
 
@@ -1230,7 +1261,7 @@ void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::
 	std::vector<glm::vec4> tangentList;
 	std::vector<glm::vec2> texcoordList;
 
-	auto findMeshResult = sceneMgr.meshObjectMap.find(nodeObject->refMeshName);
+	auto findMeshResult = sceneMgr.meshObjectMap.find(meshObject->name);
 	if (findMeshResult == sceneMgr.meshObjectMap.end())
 		return;
 
@@ -1242,21 +1273,21 @@ void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::
 		  || refMesh->attrTangent.format != VK_FORMAT_R32G32B32A32_SFLOAT
 		    || refMesh->attrTexcoord.format != VK_FORMAT_R32G32_SFLOAT)
 	{
-		std::cerr << "[load_node_object_vertices] Node name '" << nodeObject->name << "' attribute format invalid.";
+		std::cerr << "[load_mesh_object_vertices] Mesh name '" << meshObject->name << "' attribute format invalid.";
 		return;
 	}
 
-	// load attributes from .b72
+	// load each attribute to each attribute list
 	LoadMgr::read_s72_mesh_attribute_to_list(positionList, refMesh->attrPosition);
 	LoadMgr::read_s72_mesh_attribute_to_list(normalList, refMesh->attrNormal);
 	LoadMgr::read_s72_mesh_attribute_to_list(tangentList, refMesh->attrTangent);
 	LoadMgr::read_s72_mesh_attribute_to_list(texcoordList, refMesh->attrTexcoord);
 	assert(positionList.size() == normalList.size() && normalList.size() == tangentList.size() && tangentList.size() == texcoordList.size());
 
-	// assembly attributes into scene data structure
+	// assembly attributes into scene object vertex
 
-	ObjectVertices node_vertices;
-	node_vertices.first = uint32_t(tmp_object_vertices.size());
+	ObjectVertices mesh_vertices;
+	mesh_vertices.first = uint32_t(tmp_object_vertices.size());
 
 	uint32_t vertexCount = positionList.size();
 	for (uint32_t i = 0; i < vertexCount; ++ i)
@@ -1281,11 +1312,10 @@ void Wanderer::load_node_object_vertices(SceneMgr::NodeObject *nodeObject, std::
 		tmp_object_vertices.push_back(node_vertex);
 	}
 
-	node_vertices.count = uint32_t(tmp_object_vertices.size()) - node_vertices.first;
-	scene_nodes_vertices.push_back(node_vertices);
+	mesh_vertices.count = uint32_t(tmp_object_vertices.size()) - mesh_vertices.first;
 
-	// [TODO] link scene_nodes_vertices[idx] <=> node.name
-
+	sceneMgr.meshVerticesIndexMap[meshObject->name] = scene_nodes_vertices.size();
+	scene_nodes_vertices.push_back(mesh_vertices);
 }
 
 void Wanderer::create_diy_textures()

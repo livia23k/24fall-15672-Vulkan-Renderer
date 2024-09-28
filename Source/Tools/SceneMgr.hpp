@@ -213,6 +213,7 @@ struct SceneMgr
         uint32_t shadow;
     };
 
+    // object map
     SceneObject* sceneObject;
     std::unordered_map<std::string, NodeObject*> nodeObjectMap;
     std::unordered_map<std::string, MeshObject*> meshObjectMap;
@@ -222,13 +223,16 @@ struct SceneMgr
     std::unordered_map<std::string, EnvironmentObject*> environmentObjectMap;
     std::unordered_map<std::string, LightObject*> lightObjectMap;
 
+    // object - application buffer map
+    std::unordered_map<std::string, uint32_t> meshVerticesIndexMap;
+
 
     // methods
 
     void clean_all();
 
     glm::mat4 calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
-    
+
     void print_single_node_object(NodeObject* nodeObject);
     void print_single_mesh_object(MeshObject* meshObject);
     void print_single_camera_object(CameraObject* cameraObject);
