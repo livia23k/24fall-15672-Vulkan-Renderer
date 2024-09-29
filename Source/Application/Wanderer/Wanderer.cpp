@@ -43,19 +43,6 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	else
 		render_performance_log.close();
 	render_performance_log.open("performance(render).txt", std::ios::app); // re-open for appending
-	
-
-
-	// [TEST]
-	// LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
-	// std::cout << "[Scene Graph] Path: " << rtg.configuration.scene_graph_name << std::endl;
-	// rtg.configuration.sceneMgr.print_node_object_map();
-	// rtg.configuration.sceneMgr.print_mesh_object_map();
-	// rtg.configuration.sceneMgr.print_camera_object_map();
-	// rtg.configuration.sceneMgr.print_driver_object_map();
-	// rtg.configuration.sceneMgr.print_material_object_map();
-	// rtg.configuration.sceneMgr.print_environment_object_map();
-	// rtg.configuration.sceneMgr.print_light_object_map();
 }
 
 Wanderer::~Wanderer()
@@ -674,18 +661,20 @@ void Wanderer::update(float dt)
 	// update time
 	time = std::fmod(time + dt, 60.0f); // avoid precision issues by keeping time in a reasonable range
 
+	// [TODO] make camera setting controllable
+
 	{ // set camera matrix (orbiting the origin):
 		float rotate_speed = 5.0f;
 		float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
-		float fov = 60.0f;
+		// float fov = 60.0f;
 
-		float lookat_distance = 4.f;
+		float lookat_distance = 20.f;
 
 		CLIP_FROM_WORLD = perspective(
-							  fov * float(M_PI) / 180.0f,											  // fov in radians
-							  float(rtg.swapchain_extent.width) / float(rtg.swapchain_extent.height), // aspect
-							  0.1f,																	  // near
-							  1000.0f																  // far
+							  rtg.configuration.camera_attributes.vfov,		  						  // fov in radians
+							  rtg.configuration.camera_attributes.aspect, 							  // aspect
+							  rtg.configuration.camera_attributes.near,								  // near
+							  rtg.configuration.camera_attributes.far								  // far
 							  ) *
 						  look_at(
 							  lookat_distance * std::cos(ang), 2.f, lookat_distance * std::sin(ang), // eye
@@ -801,9 +790,7 @@ void Wanderer::update(float dt)
 		// };
 
 		// instances for all scene graph nodes ====================================================================================================
-		{
-			construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
-		};
+		construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
 	};
 }
 

@@ -68,7 +68,7 @@ void RTG::Configuration::parse(int argc, char **argv)
 			if (argi + 1 >= argc)
 				throw std::runtime_error("--camera requires a parameter (a camera name).");
 			argi += 1;
-			active_camera_name = argv[argi];
+			specified_default_camera = argv[argi];
 		}
 		else
 		{

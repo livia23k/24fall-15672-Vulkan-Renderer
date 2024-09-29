@@ -48,6 +48,31 @@ int main(int argc, char **argv)
 		// initializes global (whole-life-of-application) resources:
 		Wanderer application(rtg);
 
+		// set up camera
+		const std::string &target_scene_camera =  rtg.configuration.specified_default_camera;
+		if (target_scene_camera != "")
+		{
+			auto findCameraResult = rtg.configuration.sceneMgr.cameraObjectMap.find(target_scene_camera);
+			if (findCameraResult != rtg.configuration.sceneMgr.cameraObjectMap.end())
+			{
+				const SceneMgr::CameraObject *camera_info = findCameraResult->second;
+				if (std::holds_alternative<SceneMgr::PerspectiveParameters>(camera_info->projectionParameters))
+				{
+					const SceneMgr::PerspectiveParameters &perspective_info = std::get<SceneMgr::PerspectiveParameters>(camera_info->projectionParameters);
+					rtg.configuration.camera_attributes.aspect = perspective_info.aspect;
+					rtg.configuration.camera_attributes.vfov = perspective_info.vfov;
+					rtg.configuration.camera_attributes.near = perspective_info.nearZ;
+					rtg.configuration.camera_attributes.far = perspective_info.farZ;
+
+					std::cout << "(set up camera) success: " << camera_info->name << std::endl;
+				}
+			}
+			else
+			{
+				throw std::runtime_error("Scene camera named \"" + target_scene_camera + "\" not found. Application exits.");
+			}
+		}
+
 		// main loop -- handles events, renders frames, etc:
 		rtg.run(application);
 	}

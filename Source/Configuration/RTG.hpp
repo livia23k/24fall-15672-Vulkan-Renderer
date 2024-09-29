@@ -67,7 +67,21 @@ struct RTG
 		SceneMgr sceneMgr;
 
 		// if set, use a specific camera:
-		std::string active_camera_name = "";
+		enum Camera_Mode {
+			USER,
+			SCENE,
+			DEBUG
+		};
+
+		struct Camera_Attributes {
+			float aspect = 1.5f;
+			float vfov = 60.0f;
+			float near = 0.1f;
+			float far = 1000.0f;	
+		} camera_attributes;
+
+		Camera_Mode camera_mode = USER;
+		std::string specified_default_camera = "";
 
 		// requested (priority-ranked) formats for output surface: (will use first available)
 		std::vector<VkSurfaceFormatKHR> surface_formats{
