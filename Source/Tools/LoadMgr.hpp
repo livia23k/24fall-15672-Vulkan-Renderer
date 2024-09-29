@@ -30,8 +30,8 @@ struct LoadMgr {
     // ===============================
     // .s72
 
-    static void load_objects_from_s72(const std::string& path, SceneMgr &targetSceneMgr);
-
+    // load scene graph info
+    static void load_scene_graph_info_from_s72(const std::string& path, SceneMgr &targetSceneMgr);
     static void parse_scene_graph_info(const sejp::value &sceneGraphInfo, SceneMgr &targetSceneMgr);
     static void parse_scene_object_info(OptionalPropertyMap &sceneObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_node_object_info(OptionalPropertyMap &nodeObjectInfo, SceneMgr &targetSceneMgr);
@@ -43,8 +43,12 @@ struct LoadMgr {
     static void parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr);
     static void parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, SceneMgr::AttributeStream &attrStream);
 
+    // load mesh
     template <typename T>
     static void read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream);
+
+    // load matrices
+    static void load_s72_node_matrices(SceneMgr &targetSceneMgr);
 
 
 };

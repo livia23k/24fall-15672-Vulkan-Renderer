@@ -225,13 +225,16 @@ struct SceneMgr
 
     // object - application buffer map
     std::unordered_map<std::string, uint32_t> meshVerticesIndexMap;
+    std::unordered_map<std::string, glm::mat4> nodeMatrixMap;
 
 
     // methods
 
     void clean_all();
 
-    glm::mat4 calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
+    static glm::mat4 calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
+
+    static void print_glm_mat4(const glm::mat4& matrix);
 
     void print_single_node_object(NodeObject* nodeObject);
     void print_single_mesh_object(MeshObject* meshObject);

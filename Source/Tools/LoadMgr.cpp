@@ -8,7 +8,7 @@
 
 // Scene Graph Loader functions =================================================================================
 
-void LoadMgr::load_objects_from_s72(const std::string &path, SceneMgr &targetSceneMgr)
+void LoadMgr::load_scene_graph_info_from_s72(const std::string &path, SceneMgr &targetSceneMgr)
 {
 
     // Valid Test ----------------------------------------------------------------------------------
@@ -1379,6 +1379,8 @@ void LoadMgr::parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, Sc
 }
 
 
+// load mesh ---------------------------------------------------------------------------------------------------------------------
+
 template <typename T>
 void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream)
 {
@@ -1424,15 +1426,14 @@ void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneM
         file.seekg(i, std::ios_base::beg);
         file.read(reinterpret_cast<char*>(&targetAttribute), sizeof(T));
 
-        // [TOCHECK] [INITIAL PASS]
-        // if constexpr (std::is_same<T, glm::vec3>::value) {
-        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << ", " << targetAttribute.z << std::endl;
+        // if constexpr (std::is_same<T, glm::vec3>::value) { 
+        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << ", " << targetAttribute.z << std::endl; // [PASS]
         // }
         // if constexpr (std::is_same<T, glm::vec4>::value) {
-        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << ", " << targetAttribute.z << ", " << targetAttribute.w << std::endl;
+        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << ", " << targetAttribute.z << ", " << targetAttribute.w << std::endl; // [PASS]
         // }
         // if constexpr (std::is_same<T, glm::vec2>::value) {
-        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << std::endl;
+        //     std::cout << targetAttribute.x << ", " << targetAttribute.y << std::endl; // [PASS]
         // }
 
         targetList.push_back(targetAttribute);
@@ -1444,7 +1445,77 @@ template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec2>(std::vector<gl
 template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec3>(std::vector<glm::vec3> &, SceneMgr::AttributeStream &);
 template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec4>(std::vector<glm::vec4> &, SceneMgr::AttributeStream &);
 
-// OBJ Loader functions ================================================================================================
+
+// load matrices -----------------------------------------------------------------------------------------------------------------
+
+void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
+{
+    using NodeObject = SceneMgr::NodeObject;
+
+    if (targetSceneMgr.sceneObject == nullptr)
+		return;
+    
+    struct NodeMatrix {
+        NodeObject *nodeObject;
+        glm::mat4 modelMatrix;
+    };
+
+	std::queue<NodeMatrix> nodeMatrixQueue;
+	for (std::string & nodeName : targetSceneMgr.sceneObject->rootName)
+	{
+		auto findNodeResult = targetSceneMgr.nodeObjectMap.find(nodeName);
+		if (findNodeResult == targetSceneMgr.nodeObjectMap.end())
+			continue;
+
+        NodeMatrix nodeMatrix;
+        nodeMatrix.nodeObject = findNodeResult->second;
+        nodeMatrix.modelMatrix = SceneMgr::calculate_model_matrix(
+                                    nodeMatrix.nodeObject->translation, 
+                                    nodeMatrix.nodeObject->rotation, 
+                                    nodeMatrix.nodeObject->scale);
+
+		nodeMatrixQueue.push(nodeMatrix);
+	}
+
+	while (!nodeMatrixQueue.empty())
+	{
+		// get the top node
+		NodeMatrix current_nodeMatrix = nodeMatrixQueue.front();
+		nodeMatrixQueue.pop();
+
+        // record the node matrix pair
+        targetSceneMgr.nodeMatrixMap[current_nodeMatrix.nodeObject->name] = current_nodeMatrix.modelMatrix;
+
+        // cauculate the parent matrix for child nodes
+        glm::mat4 &parentMatrix = current_nodeMatrix.modelMatrix;
+
+        // [TOCHECK]
+		// std::cout << current_nodeMatrix.nodeObject->name << std::endl; // [PASS]
+        // SceneMgr::print_glm_mat4(parentMatrix);
+
+		// push children to queue
+		for (std::string & childName : current_nodeMatrix.nodeObject->childName)
+		{
+			auto findNodeResult = targetSceneMgr.nodeObjectMap.find(childName);
+			if (findNodeResult == targetSceneMgr.nodeObjectMap.end())
+				continue;
+
+            NodeMatrix childNodeMatrix;
+            childNodeMatrix.nodeObject = findNodeResult->second;
+            glm::mat4 childLocalMatrix = SceneMgr::calculate_model_matrix(
+                                            childNodeMatrix.nodeObject->translation, 
+                                            childNodeMatrix.nodeObject->rotation, 
+                                            childNodeMatrix.nodeObject->scale);
+            childNodeMatrix.modelMatrix = parentMatrix * childLocalMatrix;
+
+			nodeMatrixQueue.push(childNodeMatrix);
+		}
+	}
+}
+
+
+
+// OBJ Loader functions =============================================================================================================================================
 
 void LoadMgr::load_line_from_OBJ(const std::string &path, std::vector<PosColVertex> &mesh_vertices)
 {

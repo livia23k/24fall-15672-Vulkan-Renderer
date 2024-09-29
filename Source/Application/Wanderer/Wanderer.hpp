@@ -229,13 +229,27 @@ struct Wanderer : RTG::Application
 	//--------------------------------------------------------------------
 	// Load resources:
 
-	void load_lines();
-	void load_objects();
+	// vertices
+	void load_lines_vertices();
+	void load_objects_vertices();
+	void load_scene_objects_vertices();
+
+	// textures
 	void create_diy_textures();
 	void create_textures_descriptor();
 
-	void load_scene_objects_vertices();
+	// object instances
+	void construct_scene_graph_nodes_instances(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD);
+	
+	//--------------------------------------------------------------------
+	// Load resources Helper:
+
+	// vertices helper
 	void load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices);
+
+	// object instances helper
+	mat4 calculate_normal_matrix(const glm::mat4 &worldFromLocal);
+
 
 	//--------------------------------------------------------------------
 	// Rendering function, uses all the resources above to queue work to draw a frame:

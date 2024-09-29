@@ -6,6 +6,7 @@
 #include "Source/Application/Wanderer/Wanderer.hpp"
 #include "Source/Tools/LoadMgr.hpp"
 #include "Source/Tools/SceneMgr.hpp"
+#include "Source/Tools/TypeHelper.hpp"
 #include "Source/Helper/VK.hpp"
 
 #include <vulkan/vk_enum_string_helper.h>
@@ -22,16 +23,20 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_description_pool();
 	setup_workspaces();
 
-	// 2. load resources
-	load_lines();
-	// load_objects();
+	// 2. load scene graph related info
+	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, rtg.configuration.sceneMgr);
+	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
+
+	// 3. load vertices resources
+	load_lines_vertices();
+	// load_objects_vertices();
+	load_scene_objects_vertices();
+
+	// 4. set up textures
 	create_diy_textures();
 	create_textures_descriptor();
 
-	LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_path, rtg.configuration.sceneMgr);
-	load_scene_objects_vertices();
-	
-	// 3. prepare for performance logging
+	// 5. prepare for performance logging
 	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
 	if (!render_performance_log.is_open())
 		std::cerr << "Failed to open performance log file." << std::endl;
@@ -42,7 +47,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 
 
 	// [TEST]
-	// LoadMgr::load_objects_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
+	// LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_name, rtg.configuration.sceneMgr);
 	// std::cout << "[Scene Graph] Path: " << rtg.configuration.scene_graph_name << std::endl;
 	// rtg.configuration.sceneMgr.print_node_object_map();
 	// rtg.configuration.sceneMgr.print_mesh_object_map();
@@ -674,7 +679,7 @@ void Wanderer::update(float dt)
 		float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
 		float fov = 60.0f;
 
-		float lookat_distance = 5.f;
+		float lookat_distance = 4.f;
 
 		CLIP_FROM_WORLD = perspective(
 							  fov * float(M_PI) / 180.0f,											  // fov in radians
@@ -710,7 +715,7 @@ void Wanderer::update(float dt)
 	{ // set objects transformation:
 		object_instances.clear();
 
-		// instances for load_objects() =================================================================================
+		// instances for load_objects_vertices() =================================================================================
 		// { 
 		// 	{ // transform for the boat1
 		// 		mat4 WORLD_FROM_LOCAL{
@@ -770,11 +775,34 @@ void Wanderer::update(float dt)
 		// 	};
 		// };
 
-		// instances for load_scene_objects_vertices() =================================================================================
-		{ 
-			// [TODO]
-			
-			
+		// // instances for single load_scene_objects_vertices() =================================================================================
+		// { 
+		// 	// build matrices [TODO]
+		// 	mat4 WORLD_FROM_LOCAL{
+		// 		1.0f, 0.0f, 0.0f, 0.0f,
+		// 		0.0f, 1.0f, 0.0f, 0.0f,
+		// 		0.0f, 0.0f, 1.0f, 0.0f,
+		// 		0.0f, 0.0f, 0.0f, 1.0f};
+
+		// 	// emplace object instances
+		// 	for (int i = 0; i < scene_nodes_vertices.size(); ++ i)
+		// 	{
+		// 		object_instances.emplace_back(ObjectInstance{
+		// 			.vertices = scene_nodes_vertices[i],
+		// 			.transform{
+		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
+		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+		// 			},
+		// 			.texture = 0,
+		// 		});
+		// 	}
+		// };
+
+		// instances for all scene graph nodes ====================================================================================================
+		{
+			construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
 		};
 	};
 }
@@ -1051,7 +1079,7 @@ void Wanderer::setup_workspaces()
 	}
 }
 
-void Wanderer::load_lines()
+void Wanderer::load_lines_vertices()
 {
 	const float boat_amplification = 5.f;
 	// const float sea_depression = 4.f;
@@ -1088,7 +1116,7 @@ void Wanderer::load_lines()
 	// create buffer for line vertices is done in the render loop --------------------------------
 }
 
-void Wanderer::load_objects()
+void Wanderer::load_objects_vertices()
 {
 	const float boat_amplification = 5.f;
 	const float sea_depression = 4.f;
@@ -1176,7 +1204,7 @@ void Wanderer::load_scene_objects_vertices()
 		NodeObject *node = nodeQueue.front();
 		nodeQueue.pop();
 
-		std::cout << node->name << std::endl;
+		// std::cout << node->name << std::endl; // [PASS]
 
 		// load vertices of node if not exist (based on attributes of reference mesh object)
 		if (sceneMgr.meshVerticesIndexMap.find(node->refMeshName) == sceneMgr.meshVerticesIndexMap.end())
@@ -1503,3 +1531,81 @@ void Wanderer::create_textures_descriptor()
 	vkUpdateDescriptorSets(rtg.device, uint32_t(writes.size()), writes.data(), 0, nullptr);
 }
 
+void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD)
+{
+	typedef SceneMgr::NodeObject NodeObject;
+	
+	if (sceneMgr.sceneObject == nullptr)
+		return;
+
+	std::queue<NodeObject*> nodeQueue;
+	for (std::string & nodeName : sceneMgr.sceneObject->rootName)
+	{
+		auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
+		if (findNodeResult == sceneMgr.nodeObjectMap.end())
+			continue;
+
+		nodeQueue.push(findNodeResult->second);
+	}
+
+	while (!nodeQueue.empty())
+	{
+		// get the top node
+		NodeObject *node = nodeQueue.front();
+		nodeQueue.pop();
+
+		// std::cout << "Constructing node instance:" << node->name << std::endl; // [PASS]
+
+		// construct node instance
+		auto findMatrixResult = sceneMgr.nodeMatrixMap.find(node->name);
+		auto findVertexIdxResult = sceneMgr.meshVerticesIndexMap.find(node->refMeshName);
+		if (findMatrixResult != sceneMgr.nodeMatrixMap.end() && findVertexIdxResult != sceneMgr.meshVerticesIndexMap.end())
+		{
+			mat4 WORLD_FROM_LOCAL = TypeHelper::convert_glm_mat4_to_mat4(findMatrixResult->second);
+			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
+
+			object_instances.emplace_back(ObjectInstance{
+				.vertices = scene_nodes_vertices[findVertexIdxResult->second],
+				.transform{
+					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
+					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL_NORMAL 
+					// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
+				},
+				.texture = 0,
+			});
+		}
+		// else
+		// {
+		// 	if (findMatrixResult == sceneMgr.nodeMatrixMap.end())
+		// 		std::cout << "[ERROR] " << node->name << " not founding matrix" << std::endl; // [PASS]
+		// 	else
+		// 		std::cout << "[ERROR] not founding mesh index count" << std::endl; // [PASS]
+		// }
+
+		// push children to queue
+		for (std::string & nodeName : node->childName)
+		{
+			auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
+			if (findNodeResult == sceneMgr.nodeObjectMap.end())
+				continue;
+
+			nodeQueue.push(findNodeResult->second);
+		}
+	}
+}
+
+mat4 Wanderer::calculate_normal_matrix(const glm::mat4 &worldFromLocal)
+{
+	glm::mat3 normalMatrix = glm::mat3(worldFromLocal);
+	normalMatrix = glm::transpose(glm::inverse(normalMatrix));
+
+	glm::mat4 worldFromLocalNormal{
+		normalMatrix[0][0], normalMatrix[0][1], normalMatrix[0][2], 0.0f,
+		normalMatrix[1][0], normalMatrix[1][1], normalMatrix[1][2], 0.0f,
+		normalMatrix[2][0], normalMatrix[2][1], normalMatrix[2][2], 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+
+	return TypeHelper::convert_glm_mat4_to_mat4(worldFromLocalNormal);
+}

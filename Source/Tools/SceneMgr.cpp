@@ -67,10 +67,25 @@ glm::mat4 SceneMgr::calculate_model_matrix(glm::vec3 translation, glm::quat rota
     glm::mat4 R = glm::mat4_cast(rotation); /* learned from https://stackoverflow.com/questions/38145042/quaternion-to-matrix-using-glm */
     glm::mat4 S = glm::scale(identity, scale);
 
-    return S * R * T;
+    return T * R * S; // S first, R later, T last
 }
 
 // Printer functions (single object) =========================================================================================================
+
+void SceneMgr::print_glm_mat4(const glm::mat4& matrix) 
+{
+    std::cout << "mat4 (" << std::endl;
+    for (int i = 0; i < 4; ++i) {
+        std::cout << "  ";
+        for (int j = 0; j < 4; ++j) {
+            std::cout << matrix[j][i];
+            if (j < 3) std::cout << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << ")" << std::endl;
+}
+
 
 void SceneMgr::print_single_node_object(NodeObject *nodeObject)
 {
