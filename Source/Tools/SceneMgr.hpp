@@ -227,6 +227,10 @@ struct SceneMgr
     std::unordered_map<std::string, uint32_t> meshVerticesIndexMap;
     std::unordered_map<std::string, glm::mat4> nodeMatrixMap;
 
+    // status variables
+    std::unordered_map<std::string, CameraObject*>::iterator currentSceneCameraItr; // [WARNING] the cameraObjectMap should not change after the initialization
+    uint32_t sceneCameraCount = 0;
+
 
     // methods
 

@@ -36,6 +36,7 @@ const main_objs = [
 	maek.CPP('Source/Tools/SceneMgr.cpp'),
 	maek.CPP('Source/Tools/VkTypeHelper.cpp'),
 	maek.CPP('Source/Tools/TypeHelper.cpp'),
+	maek.CPP('Source/Camera/Camera.cpp'),
 	maek.CPP('Source/Configuration/RTG.cpp'),
 	maek.CPP('Source/VkMemory/Helpers.cpp'),
 	maek.CPP('Source/main.cpp'),

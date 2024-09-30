@@ -10,8 +10,7 @@
 #include "Source/Helper/VK.hpp"
 
 #include <vulkan/vk_enum_string_helper.h>
-
-[[maybe_unused]] u_int16_t g_frame = 0;
+#include <GLFW/glfw3.h>
 
 Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 {
@@ -27,16 +26,21 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, rtg.configuration.sceneMgr);
 	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
 
-	// 3. load vertices resources
+	// 3. update scene camera info in sceneMgr
+	rtg.configuration.sceneMgr.sceneCameraCount = rtg.configuration.sceneMgr.cameraObjectMap.size();
+	assert(rtg.configuration.sceneMgr.sceneCameraCount > 0);
+	rtg.configuration.sceneMgr.currentSceneCameraItr = rtg.configuration.sceneMgr.cameraObjectMap.begin();
+
+	// 4. load vertices resources
 	load_lines_vertices();
 	// load_objects_vertices();
 	load_scene_objects_vertices();
 
-	// 4. set up textures
+	// 5. set up textures
 	create_diy_textures();
 	create_textures_descriptor();
 
-	// 5. prepare for performance logging
+	// 6. prepare for performance logging
 	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
 	if (!render_performance_log.is_open())
 		std::cerr << "Failed to open performance log file." << std::endl;
@@ -246,7 +250,7 @@ void Wanderer::destroy_framebuffers()
 
 void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 {
-	
+
 	timespot_before_record = std::chrono::high_resolution_clock::now();
 
 	// assert that parameters are valid:
@@ -462,30 +466,13 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 	// GPU commands here
 	{ // render pass：describes layout, "input from", "output to" of attachments
 
-		// [[maybe_unused]] std::array<VkClearValue, 2> clear_values{
-		// 	VkClearValue{.color{.float32{0.0f, 0.0f, 0.0f, 1.0f}}},
-		// 	VkClearValue{.depthStencil{.depth = 1.0f, .stencil = 0}},
-		// };
-
-		auto interpolate_clear_value = [](float t) -> VkClearValue
-		{
-			float intensity = 0.5f * (1.0f + std::sin(t)); // Generates a value between 0 and 1
-			float colorValue = intensity;				   // Directly use intensity for grayscale value
-
-			VkClearValue clearValue;
-			clearValue.color = {.float32 = {colorValue, colorValue, colorValue, 1.0f}};
-			return clearValue;
+		// set clear value (black)
+		[[maybe_unused]] std::array<VkClearValue, 2> clear_values{
+			VkClearValue{.color{.float32{0.0f, 0.0f, 0.0f, 1.0f}}},
+			VkClearValue{.depthStencil{.depth = 1.0f, .stencil = 0}},
 		};
 
-		float t = g_frame * 0.1f; // Adjust time scaling for effect speed
-
-		VkClearValue clearColor = interpolate_clear_value(t);
-
-		std::array<VkClearValue, 2> clear_values = {
-			clearColor,
-			VkClearValue{.depthStencil = {.depth = 1.0f, .stencil = 0}},
-		};
-
+		// set render pass begin info
 		VkRenderPassBeginInfo begin_info{
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			//.pNext = nullptr,
@@ -500,13 +487,10 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 			.pClearValues = clear_values.data(),
 		};
 
+		// begin render pass
 		vkCmdBeginRenderPass(workspace.command_buffer, &begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-		// TODO: run pipelines here
-
-		{ // frame increased for ClearValue ver.2
-			++g_frame;
-		};
+		// Run pipelines here ==================================================================================================
 
 		{ // configure scissor rectangle
 			VkRect2D scissor{
@@ -528,45 +512,45 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 			vkCmdSetViewport(workspace.command_buffer, 0, 1, &viewport);
 		};
 
-		{ // draw with the background pipeline
-			vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, background_pipeline.handle);
+		// { // draw with the background pipeline
+		// 	vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, background_pipeline.handle);
 
-			{ // push time:
-				BackgroundPipeline::Push push{
-					.time = float(time)};
-				vkCmdPushConstants(workspace.command_buffer, background_pipeline.layout,
-								   VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push), &push);
-			};
+		// 	{ // push time:
+		// 		BackgroundPipeline::Push push{
+		// 			.time = float(time)};
+		// 		vkCmdPushConstants(workspace.command_buffer, background_pipeline.layout,
+		// 						   VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push), &push);
+		// 	};
 
-			vkCmdDraw(workspace.command_buffer, 3, 1, 0, 0);
-		};
+		// 	vkCmdDraw(workspace.command_buffer, 3, 1, 0, 0);
+		// };
 
-		{ // draw with the lines pipeline
-			vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lines_pipeline.handle);
+		// { // draw with the lines pipeline
+		// 	vkCmdBindPipeline(workspace.command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, lines_pipeline.handle);
 
-			{ // use lines_vertices (offset 0) as vertex buffer binding 0:
-				std::array<VkBuffer, 1> vertex_buffers{workspace.lines_vertices.handle};
-				std::array<VkDeviceSize, 1> offsets{0};
-				vkCmdBindVertexBuffers(workspace.command_buffer, 0, uint32_t(vertex_buffers.size()), vertex_buffers.data(), offsets.data());
-			};
+		// 	{ // use lines_vertices (offset 0) as vertex buffer binding 0:
+		// 		std::array<VkBuffer, 1> vertex_buffers{workspace.lines_vertices.handle};
+		// 		std::array<VkDeviceSize, 1> offsets{0};
+		// 		vkCmdBindVertexBuffers(workspace.command_buffer, 0, uint32_t(vertex_buffers.size()), vertex_buffers.data(), offsets.data());
+		// 	};
 
-			{ // bind Camera descriptor set:
-				std::array<VkDescriptorSet, 1> descriptor_sets{
-					workspace.Camera_descriptors, // set0: Camera descriptor set
-				};
-				vkCmdBindDescriptorSets(
-					workspace.command_buffer,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,						  // pipeline bind point
-					lines_pipeline.layout,									  // pipeline layout
-					0,														  // the set number of the first descriptor set to be bound
-					uint32_t(descriptor_sets.size()), descriptor_sets.data(), // descriptor sets count, ptr
-					0, nullptr												  // dynamic offsets count, ptr
-				);
-			};
+		// 	{ // bind Camera descriptor set:
+		// 		std::array<VkDescriptorSet, 1> descriptor_sets{
+		// 			workspace.Camera_descriptors, // set0: Camera descriptor set
+		// 		};
+		// 		vkCmdBindDescriptorSets(
+		// 			workspace.command_buffer,
+		// 			VK_PIPELINE_BIND_POINT_GRAPHICS,						  // pipeline bind point
+		// 			lines_pipeline.layout,									  // pipeline layout
+		// 			0,														  // the set number of the first descriptor set to be bound
+		// 			uint32_t(descriptor_sets.size()), descriptor_sets.data(), // descriptor sets count, ptr
+		// 			0, nullptr												  // dynamic offsets count, ptr
+		// 		);
+		// 	};
 
-			// draw lines vertices:
-			vkCmdDraw(workspace.command_buffer, uint32_t(lines_vertices.size()), 1, 0, 0);
-		};
+		// 	// draw lines vertices:
+		// 	vkCmdDraw(workspace.command_buffer, uint32_t(lines_vertices.size()), 1, 0, 0);
+		// };
 
 		{ // draw with the objects pipeline
 			if (!object_instances.empty())
@@ -658,29 +642,35 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 void Wanderer::update(float dt)
 {
 
-	// update time
+	// update time1
 	time = std::fmod(time + dt, 60.0f); // avoid precision issues by keeping time in a reasonable range
 
 	// [TODO] make camera setting controllable
 
 	{ // set camera matrix (orbiting the origin):
-		float rotate_speed = 5.0f;
-		float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
-		// float fov = 60.0f;
+		Camera &camera = rtg.configuration.camera;
+		
+		if (rtg.configuration.camera.current_camera_mode == Camera::USER)
+		{
+			float rotate_speed = 5.0f;	
+			float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
+			float lookat_distance = 2.f;
+			camera.camera_position[0] = lookat_distance * std::cos(ang);
+			camera.camera_position[1] = 2.f;
+			camera.camera_position[2] = lookat_distance * std::sin(ang);
 
-		float lookat_distance = 20.f;
-
-		CLIP_FROM_WORLD = perspective(
-							  rtg.configuration.camera_attributes.vfov,		  						  // fov in radians
-							  rtg.configuration.camera_attributes.aspect, 							  // aspect
-							  rtg.configuration.camera_attributes.near,								  // near
-							  rtg.configuration.camera_attributes.far								  // far
+			CLIP_FROM_WORLD = perspective(
+							  camera.camera_attributes.vfov,	// fov in radians
+							  camera.camera_attributes.aspect,  // aspect
+							  camera.camera_attributes.near,	// near
+							  camera.camera_attributes.far	    // far
 							  ) *
 						  look_at(
-							  lookat_distance * std::cos(ang), 2.f, lookat_distance * std::sin(ang), // eye
-							  0.0f, 1.f, 0.0f,														 // target
-							  0.0f, 1.0f, 0.0f														 // up
+							  camera.camera_position[0], camera.camera_position[1], camera.camera_position[2], // eye
+							  camera.target_position[0], camera.target_position[1], camera.target_position[2], // target
+							  camera.camera_up[0], camera.camera_up[1], camera.camera_up[2]					   // up
 						  );
+		}
 	};
 
 	{ // set world data (sun and sky):
@@ -705,7 +695,7 @@ void Wanderer::update(float dt)
 		object_instances.clear();
 
 		// instances for load_objects_vertices() =================================================================================
-		// { 
+		// {
 		// 	{ // transform for the boat1
 		// 		mat4 WORLD_FROM_LOCAL{
 		// 			1.0f, 0.0f, 0.0f, 0.0f,
@@ -765,7 +755,7 @@ void Wanderer::update(float dt)
 		// };
 
 		// // instances for single load_scene_objects_vertices() =================================================================================
-		// { 
+		// {
 		// 	// build matrices [TODO]
 		// 	mat4 WORLD_FROM_LOCAL{
 		// 		1.0f, 0.0f, 0.0f, 0.0f,
@@ -794,10 +784,29 @@ void Wanderer::update(float dt)
 	};
 }
 
-void Wanderer::on_input(InputEvent const &)
+void Wanderer::on_input(InputEvent const &event)
 {
-}
+	if (event.type == InputEvent::KeyDown)
+	{
+		if (event.key.key == GLFW_KEY_C) // change camera mode in order
+		{
+			rtg.configuration.camera.current_camera_mode = 
+				static_cast<Camera::Camera_Mode>((rtg.configuration.camera.current_camera_mode + 1) 
+													% rtg.configuration.camera.camera_mode_cnt);
 
+			// [TODO]
+		}
+		// else if (event.key.key == GLFW_KEY_V)
+		// {
+		// 	if (rtg.configuration.camera.current_camera_mode = Camera::Camera_Mode::SCENE)
+		// 	{
+		// 		rtg.configuration.sceneMgr.sceneCameraIdx = (rtg.configuration.sceneMgr.sceneCameraIdx + 1) % rtg.configuration.sceneMgr.sceneCameraCount;
+
+		// 		// update[TODO]
+		// 	}
+		// }
+	}
+}
 
 // Constructor modules functions Impl =========================================================================================================
 
@@ -896,7 +905,7 @@ void Wanderer::create_command_pool()
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = rtg.graphics_queue_family.value()};
-	
+
 	// create command pool ======================================================================
 	VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &command_pool));
 }
@@ -1028,8 +1037,7 @@ void Wanderer::setup_workspaces()
 					.dstArrayElement = 0,
 					.descriptorCount = 1,
 					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					.pBufferInfo = &Camera_info
-				},
+					.pBufferInfo = &Camera_info},
 
 				VkWriteDescriptorSet{
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -1038,9 +1046,7 @@ void Wanderer::setup_workspaces()
 					.dstArrayElement = 0,
 					.descriptorCount = 1,
 					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					.pBufferInfo = &World_info
-				}
-			};
+					.pBufferInfo = &World_info}};
 
 			vkUpdateDescriptorSets(
 				rtg.device,
@@ -1052,7 +1058,7 @@ void Wanderer::setup_workspaces()
 		};
 
 		// allocate descriptor sets for set1 descriptor ==========================================
-		{ 
+		{
 			VkDescriptorSetAllocateInfo alloc_info{
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				.descriptorPool = descriptor_pool,
@@ -1165,14 +1171,14 @@ void Wanderer::load_scene_objects_vertices()
 {
 	// traverse all scene objects, starting from the roots
 
-	SceneMgr & sceneMgr = rtg.configuration.sceneMgr;
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
 	typedef SceneMgr::NodeObject NodeObject;
-	
+
 	if (sceneMgr.sceneObject == nullptr)
 		return;
 
-	std::queue<NodeObject*> nodeQueue;
-	for (std::string & nodeName : sceneMgr.sceneObject->rootName)
+	std::queue<NodeObject *> nodeQueue;
+	for (std::string &nodeName : sceneMgr.sceneObject->rootName)
 	{
 		auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
 		if (findNodeResult == sceneMgr.nodeObjectMap.end())
@@ -1180,7 +1186,6 @@ void Wanderer::load_scene_objects_vertices()
 
 		nodeQueue.push(findNodeResult->second);
 	}
-
 
 	std::vector<ObjectsPipeline::Vertex> tmp_object_vertices;
 	tmp_object_vertices.reserve(sceneMgr.sceneObject->rootName.size() + sceneMgr.nodeObjectMap.size());
@@ -1197,7 +1202,8 @@ void Wanderer::load_scene_objects_vertices()
 		if (sceneMgr.meshVerticesIndexMap.find(node->refMeshName) == sceneMgr.meshVerticesIndexMap.end())
 		{
 			auto findMeshResult = sceneMgr.meshObjectMap.find(node->refMeshName);
-			if (findMeshResult != sceneMgr.meshObjectMap.end()) {
+			if (findMeshResult != sceneMgr.meshObjectMap.end())
+			{
 				load_mesh_object_vertices(findMeshResult->second, tmp_object_vertices);
 
 				// std::cout << "Mesh vertices " << sceneMgr.meshVerticesIndexMap.find(node->refMeshName)->first << " newly built." << std::endl; // [PASS]
@@ -1209,7 +1215,7 @@ void Wanderer::load_scene_objects_vertices()
 		// }
 
 		// push children to queue
-		for (std::string & nodeName : node->childName)
+		for (std::string &nodeName : node->childName)
 		{
 			auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
 			if (findNodeResult == sceneMgr.nodeObjectMap.end())
@@ -1231,12 +1237,11 @@ void Wanderer::load_scene_objects_vertices()
 	// copy data to buffer ----------------------------------------------------------------------
 
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
-
 }
 
 void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices)
 {
-	SceneMgr & sceneMgr = rtg.configuration.sceneMgr;
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
 
 	std::vector<glm::vec3> positionList;
 	std::vector<glm::vec3> normalList;
@@ -1250,10 +1255,7 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	SceneMgr::MeshObject *refMesh = findMeshResult->second;
 
 	// format check
-	if (refMesh->attrPosition.format != VK_FORMAT_R32G32B32_SFLOAT 
-		|| refMesh->attrNormal.format != VK_FORMAT_R32G32B32_SFLOAT
-		  || refMesh->attrTangent.format != VK_FORMAT_R32G32B32A32_SFLOAT
-		    || refMesh->attrTexcoord.format != VK_FORMAT_R32G32_SFLOAT)
+	if (refMesh->attrPosition.format != VK_FORMAT_R32G32B32_SFLOAT || refMesh->attrNormal.format != VK_FORMAT_R32G32B32_SFLOAT || refMesh->attrTangent.format != VK_FORMAT_R32G32B32A32_SFLOAT || refMesh->attrTexcoord.format != VK_FORMAT_R32G32_SFLOAT)
 	{
 		std::cerr << "[load_mesh_object_vertices] Mesh name '" << meshObject->name << "' attribute format invalid.";
 		return;
@@ -1272,7 +1274,7 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	mesh_vertices.first = uint32_t(tmp_object_vertices.size());
 
 	uint32_t vertexCount = positionList.size();
-	for (uint32_t i = 0; i < vertexCount; ++ i)
+	for (uint32_t i = 0; i < vertexCount; ++i)
 	{
 		ObjectsPipeline::Vertex node_vertex;
 		node_vertex.Position.x = positionList[i].x;
@@ -1282,7 +1284,7 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 		node_vertex.Normal.x = normalList[i].x;
 		node_vertex.Normal.y = normalList[i].y;
 		node_vertex.Normal.z = normalList[i].z;
-		
+
 		node_vertex.Tangent.x = tangentList[i].x;
 		node_vertex.Tangent.y = tangentList[i].y;
 		node_vertex.Tangent.z = tangentList[i].z;
@@ -1335,12 +1337,11 @@ void Wanderer::create_diy_textures()
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
-		Helpers::Unmapped)
-	);
+		Helpers::Unmapped));
 
 	// transfer data
 	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
-	
+
 	// create texture 1: 'xor' texture ============================================================
 
 	// actually make the texture:
@@ -1368,8 +1369,7 @@ void Wanderer::create_diy_textures()
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
-		Helpers::Unmapped)
-	);
+		Helpers::Unmapped));
 
 	// transfer data:
 	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
@@ -1398,8 +1398,7 @@ void Wanderer::create_diy_textures()
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
 		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
-		Helpers::Unmapped)
-	);
+		Helpers::Unmapped));
 
 	// transfer data:
 	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
@@ -1521,12 +1520,12 @@ void Wanderer::create_textures_descriptor()
 void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD)
 {
 	typedef SceneMgr::NodeObject NodeObject;
-	
+
 	if (sceneMgr.sceneObject == nullptr)
 		return;
 
-	std::queue<NodeObject*> nodeQueue;
-	for (std::string & nodeName : sceneMgr.sceneObject->rootName)
+	std::queue<NodeObject *> nodeQueue;
+	for (std::string &nodeName : sceneMgr.sceneObject->rootName)
 	{
 		auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
 		if (findNodeResult == sceneMgr.nodeObjectMap.end())
@@ -1556,7 +1555,7 @@ void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance>
 				.transform{
 					.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
 					.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL_NORMAL 
+					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL_NORMAL
 					// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
 				},
 				.texture = 0,
@@ -1571,7 +1570,7 @@ void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance>
 		// }
 
 		// push children to queue
-		for (std::string & nodeName : node->childName)
+		for (std::string &nodeName : node->childName)
 		{
 			auto findNodeResult = sceneMgr.nodeObjectMap.find(nodeName);
 			if (findNodeResult == sceneMgr.nodeObjectMap.end())
@@ -1591,8 +1590,7 @@ mat4 Wanderer::calculate_normal_matrix(const glm::mat4 &worldFromLocal)
 		normalMatrix[0][0], normalMatrix[0][1], normalMatrix[0][2], 0.0f,
 		normalMatrix[1][0], normalMatrix[1][1], normalMatrix[1][2], 0.0f,
 		normalMatrix[2][0], normalMatrix[2][1], normalMatrix[2][2], 0.0f,
-		0.0f, 0.0f, 0.0f, 1.0f
-	};
+		0.0f, 0.0f, 0.0f, 1.0f};
 
 	return TypeHelper::convert_glm_mat4_to_mat4(worldFromLocalNormal);
 }

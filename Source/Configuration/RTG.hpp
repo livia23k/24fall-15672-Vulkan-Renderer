@@ -3,6 +3,7 @@
 #include "Source/VkMemory/Helpers.hpp"
 #include "Source/DataType/InputEvent.hpp"
 #include "Source/Tools/SceneMgr.hpp"
+#include "Source/Camera/Camera.hpp"
 
 #include <vulkan/vulkan_core.h>
 
@@ -67,21 +68,8 @@ struct RTG
 		SceneMgr sceneMgr;
 
 		// if set, use a specific camera:
-		enum Camera_Mode {
-			USER,
-			SCENE,
-			DEBUG
-		};
-
-		struct Camera_Attributes {
-			float aspect = 1.5f;
-			float vfov = 60.0f;
-			float near = 0.1f;
-			float far = 1000.0f;	
-		} camera_attributes;
-
-		Camera_Mode camera_mode = USER;
 		std::string specified_default_camera = "";
+		Camera camera;
 
 		// requested (priority-ranked) formats for output surface: (will use first available)
 		std::vector<VkSurfaceFormatKHR> surface_formats{
