@@ -47,7 +47,24 @@ struct Camera
         bool down;
         bool forward;
         bool backward;
-    } camera_movements;
+    } movements;
+
+    struct Camera_Posture {
+        bool yaw_left;
+        bool yaw_right;
+        bool pitch_up;
+        bool pitch_down;
+    } postures;
+
+    struct Camera_Sensitivity {
+        float kb_forward;
+        float kb_upward;
+        float kb_rightward;
+        float kb_yaw;
+        float kb_pitch;
+        float mouse_yaw;
+        float mouse_pitch;
+    } sensitivity;
 
     /* cr. camera parameters learned from Learn OpenGL 
            https://learnopengl.com/Getting-started/Camera#:~:text=The%20pitch%20is%20the%20angle,used%20in%20space%2Dflight%20cameras.
@@ -64,13 +81,7 @@ struct Camera
     float pitch;
     float roll;
 
-    struct Camera_Sensitivity {
-        float kb_forward;
-        float kb_upward;
-        float kb_rightward;
-        float mouse_yaw;
-        float mouse_pitch;
-    } sensitivity;
+    float unit_angle;
 
     // =============================================
     // Helper Functions

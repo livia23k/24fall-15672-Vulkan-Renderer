@@ -658,23 +658,37 @@ void Wanderer::update(float dt)
 		{
 
 			// keyboard & camera movement
-			if (camera.camera_movements.up && !camera.camera_movements.down) {
+			if (camera.movements.up && !camera.movements.down) {
 				camera.position += camera.sensitivity.kb_upward * camera.up;
-			} else if (camera.camera_movements.down && !camera.camera_movements.up) {
+			} else if (camera.movements.down && !camera.movements.up) {
 				camera.position -= camera.sensitivity.kb_upward * camera.up;
 			} 
-			
-			if (camera.camera_movements.left && !camera.camera_movements.right) {
+
+			if (camera.movements.left && !camera.movements.right) {
 				camera.position -= camera.sensitivity.kb_rightward * camera.right;
-			} else if (camera.camera_movements.right && !camera.camera_movements.left) {
+			} else if (camera.movements.right && !camera.movements.left) {
 				camera.position += camera.sensitivity.kb_rightward * camera.right;
 			}
 
-			if (camera.camera_movements.forward && !camera.camera_movements.backward) {
+			if (camera.movements.forward && !camera.movements.backward) {
 				camera.position += camera.sensitivity.kb_forward * camera.front;
-			} else if (camera.camera_movements.backward && !camera.camera_movements.forward) {
+			} else if (camera.movements.backward && !camera.movements.forward) {
 				camera.position -= camera.sensitivity.kb_forward * camera.front;
 			}
+
+			if (camera.postures.yaw_left && !camera.postures.yaw_right) {
+				camera.yaw -= camera.sensitivity.kb_yaw * camera.unit_angle;
+			} else if (camera.postures.yaw_right && !camera.postures.yaw_left) {
+				camera.yaw += camera.sensitivity.kb_yaw * camera.unit_angle;
+			}
+
+			if (camera.postures.pitch_up && !camera.postures.pitch_down) {
+				camera.pitch += camera.sensitivity.kb_pitch * camera.unit_angle;
+			} else if (camera.postures.pitch_down && !camera.postures.pitch_up) {
+				camera.pitch -= camera.sensitivity.kb_pitch * camera.unit_angle;
+			}
+
+			camera.update_camera_vectors();
 
 			// mouse & rotation
 			// [TODO]
@@ -854,27 +868,43 @@ void Wanderer::on_input(InputEvent const &event)
 		{
 			if (event.key.key == GLFW_KEY_W)
 			{
-				camera.camera_movements.forward = true;
+				camera.movements.forward = true;
 			}
 			else if (event.key.key == GLFW_KEY_S)
 			{
-				camera.camera_movements.backward = true;
+				camera.movements.backward = true;
 			}
 			else if (event.key.key == GLFW_KEY_A)
 			{
-				camera.camera_movements.left = true;
+				camera.movements.left = true;
 			}
 			else if (event.key.key == GLFW_KEY_D)
 			{
-				camera.camera_movements.right = true;
+				camera.movements.right = true;
 			}
 			else if (event.key.key == GLFW_KEY_Q)
 			{
-				camera.camera_movements.up = true;
+				camera.movements.up = true;
 			}
 			else if (event.key.key == GLFW_KEY_E)
 			{
-				camera.camera_movements.down = true;
+				camera.movements.down = true;
+			}
+			else if (event.key.key == GLFW_KEY_UP)
+			{
+				camera.postures.pitch_up = true;
+			}
+			else if (event.key.key == GLFW_KEY_DOWN)
+			{
+				camera.postures.pitch_down = true;
+			}
+			else if (event.key.key == GLFW_KEY_LEFT)
+			{
+				camera.postures.yaw_left = true;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT)
+			{
+				camera.postures.yaw_right = true;
 			}
 		}
 
@@ -889,27 +919,43 @@ void Wanderer::on_input(InputEvent const &event)
 		{
 			if (event.key.key == GLFW_KEY_W)
 			{
-				camera.camera_movements.forward = false;
+				camera.movements.forward = false;
 			}
 			else if (event.key.key == GLFW_KEY_S)
 			{
-				camera.camera_movements.backward = false;
+				camera.movements.backward = false;
 			}
 			else if (event.key.key == GLFW_KEY_A)
 			{
-				camera.camera_movements.left = false;
+				camera.movements.left = false;
 			}
 			else if (event.key.key == GLFW_KEY_D)
 			{
-				camera.camera_movements.right = false;
+				camera.movements.right = false;
 			}
 			else if (event.key.key == GLFW_KEY_Q)
 			{
-				camera.camera_movements.up = false;
+				camera.movements.up = false;
 			}
 			else if (event.key.key == GLFW_KEY_E)
 			{
-				camera.camera_movements.down = false;
+				camera.movements.down = false;
+			}
+			else if (event.key.key == GLFW_KEY_UP)
+			{
+				camera.postures.pitch_up = false;
+			}
+			else if (event.key.key == GLFW_KEY_DOWN)
+			{
+				camera.postures.pitch_down = false;
+			}
+			else if (event.key.key == GLFW_KEY_LEFT)
+			{
+				camera.postures.yaw_left = false;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT)
+			{
+				camera.postures.yaw_right = false;
 			}
 		}
 	}

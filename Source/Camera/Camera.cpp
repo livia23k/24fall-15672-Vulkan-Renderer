@@ -2,6 +2,7 @@
 
 Camera::Camera()
 {
+    // camera modes related
     camera_attributes.aspect = 1.5f;
     camera_attributes.vfov = 60.0f;
     camera_attributes.near = 0.1f;
@@ -10,16 +11,37 @@ Camera::Camera()
     camera_mode_cnt = 3;
     current_camera_mode = USER;
 
+    // camera status
+    movements.up = false;
+    movements.down = false;
+    movements.left = false;
+    movements.right = false;
+    movements.forward = false;
+    movements.backward = false;
+
+    postures.yaw_left = false;
+    postures.yaw_right = false;
+    postures.pitch_up = false;
+    postures.pitch_down = false;
+
+    // camera settings
+    sensitivity.kb_forward = 0.15f;
+    sensitivity.kb_rightward = 0.1f;
+    sensitivity.kb_upward = 0.08f;
+    sensitivity.kb_yaw = 0.5f;
+    sensitivity.kb_pitch = 0.25f;
+    sensitivity.mouse_yaw = 0.1f;
+    sensitivity.mouse_pitch = 0.1f;
+    
+    unit_angle = 1.f;
+
+    // camera initial posture
     position = glm::vec3{13.0f, -5.0f, 5.0f};
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};
 
     front = glm::normalize(target_position - position);
     up = glm::vec3{0.0f, -1.0f, 0.0f};
     right = glm::cross(front, up);
-
-    sensitivity.kb_forward = 0.15f;
-    sensitivity.kb_rightward = 0.1f;
-    sensitivity.kb_upward = 0.08f;
 
     yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
     pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
@@ -32,7 +54,6 @@ Camera::~Camera()
 {
 }
 
-// [TOFIX]
 void Camera::update_camera_vectors()
 {
     /* cr. https://learnopengl.com/Getting-started/Camera based on OpenGL coordinates (+Y up, -Z forward, +X right),
