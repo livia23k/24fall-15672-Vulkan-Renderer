@@ -1,7 +1,13 @@
 #pragma once
 
+#include "Source/Tools/SceneMgr.hpp"
+#include "Source/Tools/TypeHelper.hpp"
+#include "Source/DataType/Mat4.hpp"
+
 #include <glm/glm.hpp>
 #include <stdint.h>
+#include <string>
+#include <cassert>
 
 struct Camera
 {
@@ -30,6 +36,6 @@ struct Camera
     glm::vec3 target_position;
     glm::vec3 camera_up;
 
-    // void apply_scene_mode_camera();
+    mat4 apply_scene_mode_camera(SceneMgr &sceneMgr);
 
 };

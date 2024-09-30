@@ -229,7 +229,7 @@ struct SceneMgr
 
     // status variables
     std::unordered_map<std::string, CameraObject*>::iterator currentSceneCameraItr; // [WARNING] the cameraObjectMap should not change after the initialization
-    uint32_t sceneCameraCount = 0;
+    uint32_t sceneCameraCount;
 
 
     // methods
