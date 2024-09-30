@@ -1467,9 +1467,15 @@ void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
 		if (findNodeResult == targetSceneMgr.nodeObjectMap.end())
 			continue;
 
+        glm::mat4 zUpToYDownMatrix = glm::mat4(1.0f); // convert Z Up s72 coords to Vulkan -Y Up coords
+        zUpToYDownMatrix[1][1] = 0.0f;
+        zUpToYDownMatrix[1][2] = 1.0f;
+        zUpToYDownMatrix[2][1] = -1.0f;
+        zUpToYDownMatrix[2][2] = 0.0f;
+
         NodeMatrix nodeMatrix;
         nodeMatrix.nodeObject = findNodeResult->second;
-        nodeMatrix.modelMatrix = SceneMgr::calculate_model_matrix(
+        nodeMatrix.modelMatrix = zUpToYDownMatrix * SceneMgr::calculate_model_matrix(
                                     nodeMatrix.nodeObject->translation, 
                                     nodeMatrix.nodeObject->rotation, 
                                     nodeMatrix.nodeObject->scale);

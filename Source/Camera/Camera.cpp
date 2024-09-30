@@ -5,19 +5,63 @@ Camera::Camera()
     camera_attributes.aspect = 1.5f;
     camera_attributes.vfov = 60.0f;
     camera_attributes.near = 0.1f;
-    camera_attributes.far = 1000.0f;	
+    camera_attributes.far = 1000.0f;
 
     camera_mode_cnt = 3;
     current_camera_mode = USER;
 
-    // USER mode attributes
-    camera_position = glm::vec3{0.0f, 0.0f, 0.0f};
+    position = glm::vec3{13.0f, -5.0f, 5.0f};
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};
-    camera_up = glm::vec3{0.0f, 1.0f, 0.0f};
+
+    front = glm::normalize(target_position - position);
+    up = glm::vec3{0.0f, -1.0f, 0.0f};
+    right = glm::cross(front, up);
+
+    sensitivity = 0.1f;
+
+    yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
+    pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
+    roll = 0.0f;
+
+    update_camera_vectors();
 }
 
 Camera::~Camera()
 {
+}
+
+// [TOFIX]
+void Camera::update_camera_vectors()
+{
+    /* cr. https://learnopengl.com/Getting-started/Camera based on OpenGL coordinates (+Y up, -Z forward, +X right),
+           correct the formulas based on Vulkan coordinates (-Y up, +Z forward, +X right)  */
+
+    if (pitch > 89.f)
+        pitch = 89.f;
+    if (pitch < -89.f)
+        pitch = -89.f;
+    
+    if (yaw > 180.f)
+        yaw -= 360.f;
+    if (yaw < 180.f)
+        yaw += 360.f;
+
+    const float yawRad = glm::radians(yaw);
+    const float pitchRad = glm::radians(pitch);
+
+    const float sy = sin(yawRad);
+    const float cy = cos(yawRad);
+    const float sp = sin(pitchRad);
+    const float cp = cos(pitchRad);
+
+    front.x = sy * cp;  // +X right
+    front.y = -sp;      // -Y up
+    front.z = cy * cp;  // +Z forward
+
+    front = glm::normalize(front);
+
+    up = glm::vec3(0.0f, -1.0f, 0.0f);
+    right = glm::normalize(glm::cross(front, up));
 }
 
 mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
@@ -30,13 +74,13 @@ mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
 
     if (std::holds_alternative<SceneMgr::PerspectiveParameters>(camera->projectionParameters))
     {
-        this->current_camera_mode = Camera::SCENE;
+        current_camera_mode = Camera::SCENE;
 
         const SceneMgr::PerspectiveParameters &perspective_info = std::get<SceneMgr::PerspectiveParameters>(camera->projectionParameters);
-        this->camera_attributes.aspect = perspective_info.aspect;
-        this->camera_attributes.vfov = perspective_info.vfov;
-        this->camera_attributes.near = perspective_info.nearZ;
-        this->camera_attributes.far = perspective_info.farZ;
+        camera_attributes.aspect = perspective_info.aspect;
+        camera_attributes.vfov = perspective_info.vfov;
+        camera_attributes.near = perspective_info.nearZ;
+        camera_attributes.far = perspective_info.farZ;
 
         auto findCameraNodeResult = sceneMgr.nodeObjectMap.find(camera->name); // [WARNING] the camera CAMERA and NODE Object should always have the same name!
         if (findCameraNodeResult != sceneMgr.nodeObjectMap.end())

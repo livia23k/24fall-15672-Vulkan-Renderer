@@ -23,13 +23,17 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	setup_workspaces();
 
 	// 2. load scene graph related info
-	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, rtg.configuration.sceneMgr);
-	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, sceneMgr);
+	LoadMgr::load_s72_node_matrices(sceneMgr);
 
 	// 3. update scene camera info in sceneMgr
-	rtg.configuration.sceneMgr.sceneCameraCount = rtg.configuration.sceneMgr.cameraObjectMap.size();
-	assert(rtg.configuration.sceneMgr.sceneCameraCount > 0);
-	rtg.configuration.sceneMgr.currentSceneCameraItr = rtg.configuration.sceneMgr.cameraObjectMap.begin();
+	sceneMgr.sceneCameraCount = sceneMgr.cameraObjectMap.size();
+	assert(sceneMgr.sceneCameraCount > 0);
+	sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
+
+	rtg.configuration.camera.current_camera_mode = Camera::SCENE;
+	CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
 
 	// 4. load vertices resources
 	load_lines_vertices();
@@ -652,12 +656,27 @@ void Wanderer::update(float dt)
 		
 		if (rtg.configuration.camera.current_camera_mode == Camera::USER)
 		{
-			float rotate_speed = 5.0f;	
-			float ang = (float(M_PI) * 2.0f * rotate_speed) * (time / 60.0f);
-			float lookat_distance = 2.f;
-			camera.camera_position[0] = lookat_distance * std::cos(ang);
-			camera.camera_position[1] = 2.f;
-			camera.camera_position[2] = lookat_distance * std::sin(ang);
+
+			// keyboard & camera movement
+			if (camera.camera_movements.up && !camera.camera_movements.down) {
+				camera.position += camera.sensitivity * camera.up;
+			} else if (camera.camera_movements.down && !camera.camera_movements.up) {
+				camera.position -= camera.sensitivity * camera.up;
+			} else if (camera.camera_movements.left && !camera.camera_movements.right) {
+				camera.position -= camera.sensitivity * camera.right;
+			} else if (camera.camera_movements.right && !camera.camera_movements.left) {
+				camera.position += camera.sensitivity * camera.right;
+			} else if (camera.camera_movements.forward && !camera.camera_movements.backward) {
+				camera.position += camera.sensitivity * camera.front;
+			} else if (camera.camera_movements.backward && !camera.camera_movements.forward) {
+				camera.position -= camera.sensitivity * camera.front;
+			}
+
+			// mouse & rotation
+			// [TODO]
+
+			
+			glm::vec3 target_direction = camera.position + camera.front;
 
 			CLIP_FROM_WORLD = perspective(
 							  camera.camera_attributes.vfov,	// fov in radians
@@ -666,9 +685,9 @@ void Wanderer::update(float dt)
 							  camera.camera_attributes.far	    // far
 							  ) *
 						  look_at(
-							  camera.camera_position[0], camera.camera_position[1], camera.camera_position[2], // eye
-							  camera.target_position[0], camera.target_position[1], camera.target_position[2], // target
-							  camera.camera_up[0], camera.camera_up[1], camera.camera_up[2]					   // up
+							  camera.position[0], camera.position[1], camera.position[2], 	 // eye
+							  target_direction[0], target_direction[1], target_direction[2], // target
+							  camera.up[0], camera.up[1], camera.up[2]					   	 // up
 						  );
 		}
 	};
@@ -791,6 +810,8 @@ void Wanderer::on_input(InputEvent const &event)
 
 	if (event.type == InputEvent::KeyDown)
 	{
+		// Camera Mode ---------------------------------------------------------------------------------------------------------------------
+
 		if (event.key.key == GLFW_KEY_C) // change camera mode in order
 		{
 			camera.current_camera_mode = 
@@ -819,6 +840,80 @@ void Wanderer::on_input(InputEvent const &event)
 
 				std::cout << "[Camera] (Mode) SCENE mode: switched to " << sceneMgr.currentSceneCameraItr->second->name << " perspective." << std::endl;
 			}
+		}
+
+		// Camera Movement -----------------------------------------------------------------------------------------------------------------
+			/* cr. learned from CMU 15666 Computer Game Programming code base
+				https://github.com/15-466/15-466-f24-base2/blob/b7584e87b2498e4491e6438770f4b4a8d593bbde/PlayMode.cpp#L70 */
+
+		if (camera.current_camera_mode == Camera::USER)
+		{
+			if (event.key.key == GLFW_KEY_W)
+			{
+				camera.camera_movements.forward = true;
+			}
+			else if (event.key.key == GLFW_KEY_S)
+			{
+				camera.camera_movements.backward = true;
+			}
+			else if (event.key.key == GLFW_KEY_A)
+			{
+				camera.camera_movements.left = true;
+			}
+			else if (event.key.key == GLFW_KEY_D)
+			{
+				camera.camera_movements.right = true;
+			}
+			else if (event.key.key == GLFW_KEY_Q)
+			{
+				camera.camera_movements.up = true;
+			}
+			else if (event.key.key == GLFW_KEY_E)
+			{
+				camera.camera_movements.down = true;
+			}
+		}
+
+	}
+	else if (event.type == InputEvent::KeyUp)
+	{
+		// Camera Movement -----------------------------------------------------------------------------------------------------------------
+		    /* cr. learned from CMU 15666 Computer Game Programming code base
+           		https://github.com/15-466/15-466-f24-base2/blob/b7584e87b2498e4491e6438770f4b4a8d593bbde/PlayMode.cpp#L70 */
+		
+		if (camera.current_camera_mode == Camera::USER)
+		{
+			if (event.key.key == GLFW_KEY_W)
+			{
+				camera.camera_movements.forward = false;
+			}
+			else if (event.key.key == GLFW_KEY_S)
+			{
+				camera.camera_movements.backward = false;
+			}
+			else if (event.key.key == GLFW_KEY_A)
+			{
+				camera.camera_movements.left = false;
+			}
+			else if (event.key.key == GLFW_KEY_D)
+			{
+				camera.camera_movements.right = false;
+			}
+			else if (event.key.key == GLFW_KEY_Q)
+			{
+				camera.camera_movements.up = false;
+			}
+			else if (event.key.key == GLFW_KEY_E)
+			{
+				camera.camera_movements.down = false;
+			}
+		}
+	}
+	else if (event.type == InputEvent::MouseMotion)
+	{
+		if (camera.current_camera_mode == Camera::USER)
+		{
+			// [TODO]
 		}
 	}
 }
