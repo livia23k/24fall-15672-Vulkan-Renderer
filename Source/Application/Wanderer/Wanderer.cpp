@@ -659,17 +659,21 @@ void Wanderer::update(float dt)
 
 			// keyboard & camera movement
 			if (camera.camera_movements.up && !camera.camera_movements.down) {
-				camera.position += camera.sensitivity * camera.up;
+				camera.position += camera.sensitivity.kb_upward * camera.up;
 			} else if (camera.camera_movements.down && !camera.camera_movements.up) {
-				camera.position -= camera.sensitivity * camera.up;
-			} else if (camera.camera_movements.left && !camera.camera_movements.right) {
-				camera.position -= camera.sensitivity * camera.right;
+				camera.position -= camera.sensitivity.kb_upward * camera.up;
+			} 
+			
+			if (camera.camera_movements.left && !camera.camera_movements.right) {
+				camera.position -= camera.sensitivity.kb_rightward * camera.right;
 			} else if (camera.camera_movements.right && !camera.camera_movements.left) {
-				camera.position += camera.sensitivity * camera.right;
-			} else if (camera.camera_movements.forward && !camera.camera_movements.backward) {
-				camera.position += camera.sensitivity * camera.front;
+				camera.position += camera.sensitivity.kb_rightward * camera.right;
+			}
+
+			if (camera.camera_movements.forward && !camera.camera_movements.backward) {
+				camera.position += camera.sensitivity.kb_forward * camera.front;
 			} else if (camera.camera_movements.backward && !camera.camera_movements.forward) {
-				camera.position -= camera.sensitivity * camera.front;
+				camera.position -= camera.sensitivity.kb_forward * camera.front;
 			}
 
 			// mouse & rotation

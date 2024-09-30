@@ -64,15 +64,13 @@ struct Camera
     float pitch;
     float roll;
 
-    float sensitivity;
-
-    // struct Camera_Sensitivity {
-    //     float kb_forward;
-    //     float kb_upward;
-    //     float kb_rightward;
-    //     float mouse_yaw;
-    //     float mouse_pitch;
-    };
+    struct Camera_Sensitivity {
+        float kb_forward;
+        float kb_upward;
+        float kb_rightward;
+        float mouse_yaw;
+        float mouse_pitch;
+    } sensitivity;
 
     // =============================================
     // Helper Functions

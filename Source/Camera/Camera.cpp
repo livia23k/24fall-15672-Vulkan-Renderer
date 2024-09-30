@@ -17,7 +17,9 @@ Camera::Camera()
     up = glm::vec3{0.0f, -1.0f, 0.0f};
     right = glm::cross(front, up);
 
-    sensitivity = 0.1f;
+    sensitivity.kb_forward = 0.15f;
+    sensitivity.kb_rightward = 0.1f;
+    sensitivity.kb_upward = 0.08f;
 
     yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
     pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
