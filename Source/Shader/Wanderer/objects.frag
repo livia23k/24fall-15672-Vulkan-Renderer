@@ -17,7 +17,7 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
     vec3 n = normalize(inNormal);
-    vec3 albedo = texture(TEXTURE, inTexCoord).rgb;
+    vec3 albedo = texture(TEXTURE, inTexCoord).rgb / 3.1415926;
 
     //hemisphere sky + directional sun:
     vec3 e = SKY_ENERGY * (0.5 * dot(n, SKY_DIRECTION) + 0.5) + SUN_ENERGY * max(0.0, dot(n, SUN_DIRECTION));
