@@ -786,25 +786,40 @@ void Wanderer::update(float dt)
 
 void Wanderer::on_input(InputEvent const &event)
 {
+	Camera &camera = rtg.configuration.camera;
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+
 	if (event.type == InputEvent::KeyDown)
 	{
 		if (event.key.key == GLFW_KEY_C) // change camera mode in order
 		{
-			rtg.configuration.camera.current_camera_mode = 
-				static_cast<Camera::Camera_Mode>((rtg.configuration.camera.current_camera_mode + 1) 
-													% rtg.configuration.camera.camera_mode_cnt);
+			camera.current_camera_mode = 
+				static_cast<Camera::Camera_Mode>((camera.current_camera_mode + 1) % camera.camera_mode_cnt);
 
-			// [TODO]
+			if (camera.current_camera_mode == Camera::SCENE)
+			{
+				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr);
+			}
+
+			std::cout << "[Camera] (Mode) switched to " 
+						<< ( (camera.current_camera_mode == Camera::USER) ? 
+							"USER" : ((camera.current_camera_mode == Camera::SCENE) ? "SCENE" : "DEBUG") ) 
+							<< " mode." << std::endl;
 		}
-		// else if (event.key.key == GLFW_KEY_V)
-		// {
-		// 	if (rtg.configuration.camera.current_camera_mode = Camera::Camera_Mode::SCENE)
-		// 	{
-		// 		rtg.configuration.sceneMgr.sceneCameraIdx = (rtg.configuration.sceneMgr.sceneCameraIdx + 1) % rtg.configuration.sceneMgr.sceneCameraCount;
+		else if (event.key.key == GLFW_KEY_V)
+		{
+			if (rtg.configuration.camera.current_camera_mode == Camera::Camera_Mode::SCENE)
+			{
+				++ sceneMgr.currentSceneCameraItr;
 
-		// 		// update[TODO]
-		// 	}
-		// }
+				if (sceneMgr.currentSceneCameraItr == sceneMgr.cameraObjectMap.end())
+					sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
+				
+				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr);
+
+				std::cout << "[Camera] (Mode) SCENE mode: switched to " << sceneMgr.currentSceneCameraItr->second->name << " perspective." << std::endl;
+			}
+		}
 	}
 }
 
