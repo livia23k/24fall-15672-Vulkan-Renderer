@@ -24,25 +24,58 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 
 	// 2. load scene graph related info
 	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+	Camera &camera = rtg.configuration.camera;
+
 	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, sceneMgr);
 	LoadMgr::load_s72_node_matrices(sceneMgr);
 
 	// 3. update scene camera info in sceneMgr
 	sceneMgr.sceneCameraCount = sceneMgr.cameraObjectMap.size();
-	assert(sceneMgr.sceneCameraCount > 0);
-	sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
 
-	// 4. application camera initialzation
-	//   (main camera)
-	//     set the main camera to be in the scene mode, and update the info from the first scene mode camera
-	rtg.configuration.camera.current_camera_mode = Camera::Camera_Mode::SCENE;
-	CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
-	//   (user camera)
-	rtg.configuration.user_camera.current_camera_mode = Camera::Camera_Mode::USER;
-	rtg.configuration.user_camera.update_info_from_another_camera(rtg.configuration.camera);
-	//   (debug camera)
-	rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
-	rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
+	// if given scene camera
+	if (sceneMgr.sceneCameraCount > 0)
+	{
+		// (main camera) to be the first scene camera, will be overwritten if set "--camera" flag in the command line
+		camera.current_camera_mode = Camera::Camera_Mode::SCENE;
+		sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
+		CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
+
+		// (user camera) initialize using the main camera setting
+		rtg.configuration.user_camera.current_camera_mode = Camera::Camera_Mode::USER;
+		rtg.configuration.user_camera.update_info_from_another_camera(rtg.configuration.camera);
+
+		// (debug camera) initialize using the main camera setting
+		rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
+		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
+	}
+	// if not given scene camera
+	else
+	{
+		// (main camera) to be in the user mode
+		camera.current_camera_mode = Camera::Camera_Mode::USER;
+
+		// [TOFIX] (coordinates issue) make the camera initially looking toward a root node
+		// std::string &rootNodeName = sceneMgr.sceneObject->rootName[0];
+		// SceneMgr::NodeObject *rootNode = sceneMgr.nodeObjectMap.find(rootNodeName)->second;
+		// glm::mat4 root_matrix = sceneMgr.nodeMatrixMap.find(rootNode->name)->second;
+
+		// glm::vec3 root_translation = glm::vec3(root_matrix[3]);
+		// camera.position = root_translation + glm::vec3(0.0f, 0.0f, 2.0f);
+		// camera.target_position = glm::vec3(0.f, 0.f, 0.f);
+		// camera.front = glm::normalize(camera.target_position - camera.position);
+
+		// const glm::vec3 &front = camera.front;
+		// camera.yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
+		// camera.pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
+
+		// camera.update_camera_vectors_from_eular_angles();
+
+		// (user camera) skip; no need to set because no user camera setting backup is needed
+
+		// (debug camera) initialize using the main camera setting
+		rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
+		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
+	}
 
 	// 5. load vertices resources
 	load_lines_vertices();
@@ -837,6 +870,11 @@ void Wanderer::on_input(InputEvent const &event)
 
 		if (event.key.key == GLFW_KEY_1) // change to camera mode: SCENE
 		{
+			if (sceneMgr.sceneCameraCount == 0) {
+				std::cout << "[Camera] (Mode) SCENE mode: no camera available." << std::endl;
+				return;
+			}
+
 			// if changed from USER camera, save user camera setting
 			if (camera.current_camera_mode == Camera::Camera_Mode::USER) 
 				user_camera.update_info_from_another_camera(camera);
@@ -1846,14 +1884,14 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
 
 			// culling
-			Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
-			auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
-			if (nodeMeshIt == sceneMgr.meshObjectMap.end())
-				continue;
-			if (!camera_frustum.isBBoxInFrustum(nodeMeshIt->second->bbox)) {
-				// std::cout << "Culling node " << node->name << std::endl;
-				continue;
-			}
+			// Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
+			// auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
+			// if (nodeMeshIt == sceneMgr.meshObjectMap.end())
+			// 	continue;
+			// if (!camera_frustum.isBBoxInFrustum(nodeMeshIt->second->bbox)) {
+			// 	// std::cout << "Culling node " << node->name << std::endl;
+			// 	continue;
+			// }
 
 			object_instances.emplace_back(ObjectInstance{
 				.vertices = scene_nodes_vertices[findVertexIdxResult->second],

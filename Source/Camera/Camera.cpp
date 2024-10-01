@@ -35,13 +35,15 @@ Camera::Camera()
     
     unit_angle = 1.f;
 
-    // camera initial posture
-    position = glm::vec3{13.0f, -5.0f, 5.0f};
+    // [TOFIX] (coordinates issue)
+    // camera initial posture 
+    // (will be overwritten by settings in the application initialization)
+    position = glm::vec3{2.0f, -2.0f, 2.0f};
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};
 
-    front = glm::normalize(target_position - position);
     up = glm::vec3{0.0f, -1.0f, 0.0f};
-    right = glm::cross(front, up);
+    right = glm::vec3{1.0f, 0.f, 0.f};
+    front = glm::vec3{0.0f, 0.0f, -1.0f};
 
     roll = 0.f;
     update_camera_eular_angles_from_vectors();
@@ -125,6 +127,35 @@ void Camera::update_info_from_another_camera(const Camera &updateFrom)
     reset_camera_control_status();
 }
 
+void Camera::update_camera_from_local_to_world(glm::mat4 &localToWorld)
+{
+    front = -glm::normalize(glm::vec3(localToWorld[2][0], localToWorld[2][1], localToWorld[2][2])); // make camera look toward -Z
+    up = glm::vec3{0.0f, -1.0f, 0.0f};
+    // right = glm::normalize(glm::vec3(localToWorld[0][0], localToWorld[0][1], localToWorld[0][2]));
+    right = glm::normalize(glm::cross(front, up));
+    position = glm::vec3(localToWorld[3][0], localToWorld[3][1], localToWorld[3][2]);
+
+    update_camera_eular_angles_from_vectors();
+
+    reset_camera_control_status();
+}
+
+
+mat4 Camera::calculate_clip_from_world(Camera_Attributes &camera_attributes, const glm::mat4& local_to_world)
+{
+    glm::mat4 camera_perspective = glm::perspective (
+        camera_attributes.vfov,
+        camera_attributes.aspect,
+        camera_attributes.near,
+        camera_attributes.far
+    );
+
+    glm::mat4 world_to_local = glm::inverse(local_to_world);
+    glm::mat4 flip_y_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f));    // vulkan -Y up
+    glm::mat4 clip_from_world = camera_perspective * flip_y_matrix * world_to_local;
+    return TypeHelper::convert_glm_mat4_to_mat4(clip_from_world);
+}
+
 
 mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
 {
@@ -149,39 +180,18 @@ mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
         if (findCameraNodeResult != sceneMgr.nodeObjectMap.end())
         {
             SceneMgr::NodeObject *cameraNode = findCameraNodeResult->second;
-            
-
-            // update the main camera info (perspective)
-            glm::mat4 camera_perspective = glm::perspective (
-                perspective_info.vfov,
-                perspective_info.aspect,
-                perspective_info.nearZ,
-                perspective_info.farZ
-            );
 
             glm::mat4 LOCAL_TO_WORLD;
             auto findCameraMatrixResult = sceneMgr.nodeMatrixMap.find(cameraNode->name); 
             if (findCameraMatrixResult != sceneMgr.nodeMatrixMap.end())
             {
                 // update CLIP_FROM_WORLD matrix based on current scene camera
-
-                LOCAL_TO_WORLD = findCameraMatrixResult->second;                                        // camera local to world
-                glm::mat4 WORLD_TO_LOCAL = glm::inverse(LOCAL_TO_WORLD);                                // world (the scene) to camera local 
-                glm::mat4 flip_y_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f));    // Vulkan has a y pointing down the screen
-
                 /* Thanks to Leon Li for helping me to correct my understanding of the CLIP_FROM_WORLD calculation formula (= perspective * WORLD_TO_LOCAL) for SCENE mode. */
-                CLIP_FROM_WORLD = TypeHelper::convert_glm_mat4_to_mat4(camera_perspective * flip_y_matrix  * WORLD_TO_LOCAL); // clip happens in camera local
+                LOCAL_TO_WORLD = findCameraMatrixResult->second;                                        // camera local to world
+                CLIP_FROM_WORLD = calculate_clip_from_world(camera_attributes, LOCAL_TO_WORLD);         // camera world to clip
 
                 // update the main camera info (vectors, eular angles, control status)
-                
-                right = glm::normalize(glm::vec3(LOCAL_TO_WORLD[0][0], LOCAL_TO_WORLD[0][1], LOCAL_TO_WORLD[0][2]));
-                up = -glm::normalize(glm::vec3(LOCAL_TO_WORLD[1][0], LOCAL_TO_WORLD[1][1], LOCAL_TO_WORLD[1][2]));
-                front = -glm::normalize(glm::vec3(LOCAL_TO_WORLD[2][0], LOCAL_TO_WORLD[2][1], LOCAL_TO_WORLD[2][2])); // camera look toward -Z
-                position = glm::vec3(LOCAL_TO_WORLD[3][0], LOCAL_TO_WORLD[3][1], LOCAL_TO_WORLD[3][2]);
-
-                update_camera_eular_angles_from_vectors();
-
-                reset_camera_control_status();
+                update_camera_from_local_to_world(LOCAL_TO_WORLD);
             }
             else
             {
