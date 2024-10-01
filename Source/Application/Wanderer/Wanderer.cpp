@@ -661,6 +661,7 @@ void Wanderer::update(float dt)
 	Camera &camera = rtg.configuration.camera;
 	Camera &debug_camera = rtg.configuration.debug_camera;
 
+	// ===============================================
 	// set camera matrix
 	{ 
 		// ------------------------------------------------------------------------------
@@ -802,6 +803,7 @@ void Wanderer::update(float dt)
 		}
 	};
 
+	// ===============================================
 	// set world data (sun and sky)
 	{ 
 		world.SKY_DIRECTION.x = 0.0f;
@@ -821,97 +823,13 @@ void Wanderer::update(float dt)
 		world.SUN_ENERGY.b = 0.9f;
 	};
 
+	// ===============================================
 	// set objects transformation
 	{ 
 		object_instances.clear();
 
-		// instances for all scene graph nodes ===================================================================================
+		// instances for all scene graph nodes
 		construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
-
-		// instances for load_objects_vertices() =================================================================================
-		// {
-		// 	{ // transform for the boat1
-		// 		mat4 WORLD_FROM_LOCAL{
-		// 			1.0f, 0.0f, 0.0f, 0.0f,
-		// 			0.0f, 1.0f, 0.0f, 0.0f,
-		// 			0.0f, 0.0f, 1.0f, 0.0f,
-		// 			0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 		object_instances.emplace_back(ObjectInstance{
-		// 			.vertices = boat_vertices,
-		// 			.transform{
-		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 			},
-		// 			.texture = 0,
-		// 		});
-		// 	};
-
-		// 	{ // transform for the boat2
-		// 		mat4 WORLD_FROM_LOCAL2{
-		// 			1.0f, 0.0f, 0.0f, 0.0f,
-		// 			0.0f, 3.0f, 0.0f, 0.0f,
-		// 			0.0f, 0.0f, 3.0f, 0.0f,
-		// 			0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 		object_instances.emplace_back(ObjectInstance{
-		// 			.vertices = boat_vertices,
-		// 			.transform{
-		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL2,
-		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL2,
-		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL2
-		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 			},
-		// 			.texture = 0,
-		// 		});
-		// 	};
-
-		// 	{ // transform for the sea
-		// 		mat4 WORLD_FROM_LOCAL{
-		// 			1.0f + cos(time * 2.f) * 0.1f, cos(time * 2.f) * 0.1f, sin(time * 2.f) * 0.05f, 0.0f,
-		// 			0.0f, 1.0f, 0.0f, 0.0f,
-		// 			0.0f, 0.0f, 1.0f, 0.0f,
-		// 			0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 		object_instances.emplace_back(ObjectInstance{
-		// 			.vertices = sea_vertices,
-		// 			.transform{
-		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 			},
-		// 			.texture = 2,
-		// 		});
-		// 	};
-		// };
-
-		// // instances for single load_scene_objects_vertices() =================================================================================
-		// {
-		// 	// build matrices [TODO]
-		// 	mat4 WORLD_FROM_LOCAL{
-		// 		1.0f, 0.0f, 0.0f, 0.0f,
-		// 		0.0f, 1.0f, 0.0f, 0.0f,
-		// 		0.0f, 0.0f, 1.0f, 0.0f,
-		// 		0.0f, 0.0f, 0.0f, 1.0f};
-
-		// 	// emplace object instances
-		// 	for (int i = 0; i < scene_nodes_vertices.size(); ++ i)
-		// 	{
-		// 		object_instances.emplace_back(ObjectInstance{
-		// 			.vertices = scene_nodes_vertices[i],
-		// 			.transform{
-		// 				.CLIP_FROM_LOCAL = CLIP_FROM_WORLD * WORLD_FROM_LOCAL,
-		// 				.WORLD_FROM_LOCAL = WORLD_FROM_LOCAL,
-		// 				.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL
-		// 				// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
-		// 			},
-		// 			.texture = 0,
-		// 		});
-		// 	}
-		// };
 	};
 }
 
