@@ -1,4 +1,4 @@
-#include "bbox.hpp"
+#include "BBox.hpp"
 #include <algorithm>
 #include <cfloat>
 
@@ -43,4 +43,18 @@ inline glm::vec3 BBox::hmin(glm::vec3 l, glm::vec3 r)
 inline glm::vec3 BBox::hmax(glm::vec3 l, glm::vec3 r) 
 {
     return glm::vec3(glm::max(l.r, r.r), glm::max(l.g, r.g), glm::max(l.b, r.b));
+}
+
+std::vector<glm::vec3> BBox::get_corners() 
+{
+    std::vector<glm::vec3> corners(8);
+    corners[0] = glm::vec3(min.x, min.y, min.z);
+    corners[1] = glm::vec3(min.x, min.y, max.z);
+    corners[2] = glm::vec3(min.x, max.y, min.z);
+    corners[3] = glm::vec3(min.x, max.y, max.z);
+    corners[4] = glm::vec3(max.x, min.y, min.z);
+    corners[5] = glm::vec3(max.x, min.y, max.z);
+    corners[6] = glm::vec3(max.x, max.y, min.z);
+    corners[7] = glm::vec3(max.x, max.y, max.z);
+    return corners;
 }

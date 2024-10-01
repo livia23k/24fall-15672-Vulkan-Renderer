@@ -4,6 +4,8 @@
 #include "Source/DataType/PosNorTexVertex.hpp"
 #include "Source/DataType/MeshAttribute.hpp"
 #include "Source/DataType/Mat4.hpp"
+// #include "Source/DataType/BBox.hpp"
+#include "Source/DataType/Frustum.hpp"
 
 #include "Source/Configuration/RTG.hpp"
 
@@ -239,7 +241,7 @@ struct Wanderer : RTG::Application
 	void create_textures_descriptor();
 
 	// object instances
-	void construct_scene_graph_nodes_instances(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD);
+	void construct_scene_graph_vertices_with_culling(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD);
 	
 	//--------------------------------------------------------------------
 	// Load resources Helper:

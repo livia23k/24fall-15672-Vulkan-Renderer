@@ -771,15 +771,6 @@ void Wanderer::update(float dt)
 							  camera.up[0], camera.up[1], camera.up[2]					   	 // up
 						  );
 		}
-		
-
-		// ------------------------------------------------------------------------------
-		// do clipping based on main camera settings
-
-
-		// [TODO] clipping based on main_camera
-
-
 
 		// ------------------------------------------------------------------------------
 		// if in DEBUG mode, 
@@ -829,7 +820,7 @@ void Wanderer::update(float dt)
 		object_instances.clear();
 
 		// instances for all scene graph nodes
-		construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
+		construct_scene_graph_vertices_with_culling(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD); 
 	};
 }
 
@@ -1562,12 +1553,22 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	LoadMgr::read_s72_mesh_attribute_to_list(texcoordList, refMesh->attrTexcoord);
 	assert(positionList.size() == normalList.size() && normalList.size() == tangentList.size() && tangentList.size() == texcoordList.size());
 
-	// assembly attributes into scene object vertex
 
 	ObjectVertices mesh_vertices;
 	mesh_vertices.first = uint32_t(tmp_object_vertices.size());
 
 	uint32_t vertexCount = positionList.size();
+
+	// calculate BBox for the mesh object [TOCHECK]
+
+	for (uint32_t i = 0; i < vertexCount; ++ i)
+	{
+		refMesh->bbox.enclose(positionList[i]);
+	}
+
+
+	// assembly attributes into scene object vertex
+
 	for (uint32_t i = 0; i < vertexCount; ++i)
 	{
 		ObjectsPipeline::Vertex node_vertex;
@@ -1811,7 +1812,7 @@ void Wanderer::create_textures_descriptor()
 	vkUpdateDescriptorSets(rtg.device, uint32_t(writes.size()), writes.data(), 0, nullptr);
 }
 
-void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD)
+void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD)
 {
 	typedef SceneMgr::NodeObject NodeObject;
 
@@ -1844,7 +1845,15 @@ void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance>
 			mat4 WORLD_FROM_LOCAL = TypeHelper::convert_glm_mat4_to_mat4(findMatrixResult->second);
 			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
 
-			// [TODO] culling
+			// culling
+			Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
+			auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
+			if (nodeMeshIt == sceneMgr.meshObjectMap.end())
+				continue;
+			if (!camera_frustum.isBBoxInFrustum(nodeMeshIt->second->bbox)) {
+				// std::cout << "Culling node " << node->name << std::endl;
+				continue;
+			}
 
 			object_instances.emplace_back(ObjectInstance{
 				.vertices = scene_nodes_vertices[findVertexIdxResult->second],

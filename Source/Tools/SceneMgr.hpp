@@ -10,6 +10,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "Source/DataType/Mat4.hpp"
+#include "Source/DataType/BBox.hpp"
 
 struct SceneMgr
 {
@@ -170,6 +171,8 @@ struct SceneMgr
         AttributeStream attrTexcoord;
 
         std::string refMaterialName;   
+
+        BBox bbox;
     };
 
     struct CameraObject
