@@ -69,7 +69,11 @@ struct RTG
 
 		// if set, use a specific camera:
 		std::string specified_default_camera = "";
+
+		// a scene have two camera, the main is for USER / SCENE mode, another is for DEBUG mode
 		Camera camera;
+		Camera user_camera;
+		Camera debug_camera;
 
 		// requested (priority-ranked) formats for output surface: (will use first available)
 		std::vector<VkSurfaceFormatKHR> surface_formats{

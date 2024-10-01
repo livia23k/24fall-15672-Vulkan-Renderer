@@ -504,7 +504,12 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this)
 
 	// run any resource creation required by Helpers structure:
 	helpers.create();
+
+	// camera
+	configuration.camera = std::move(configuration_.camera);
+	configuration.debug_camera = std::move(configuration_.debug_camera);
 }
+
 RTG::~RTG()
 {
 	// don't destroy until device is idle:

@@ -8,7 +8,7 @@ Camera::Camera()
     camera_attributes.near = 0.1f;
     camera_attributes.far = 1000.0f;
 
-    camera_mode_cnt = 3;
+    camera_mode_cnt = 2;
     current_camera_mode = USER;
 
     // camera status
@@ -43,18 +43,38 @@ Camera::Camera()
     up = glm::vec3{0.0f, -1.0f, 0.0f};
     right = glm::cross(front, up);
 
-    yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
-    pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
-    roll = 0.0f;
-
-    update_camera_vectors();
+    roll = 0.f;
+    update_camera_eular_angles_from_vectors();
 }
 
 Camera::~Camera()
 {
 }
 
-void Camera::update_camera_vectors()
+void Camera::reset_camera_control_status()
+{
+    movements.up = false;
+    movements.down = false;
+    movements.left = false;
+    movements.right = false;
+    movements.forward = false;
+    movements.backward = false;
+
+    postures.yaw_left = false;
+    postures.yaw_right = false;
+    postures.pitch_up = false;
+    postures.pitch_down = false;
+}
+
+void Camera::update_camera_eular_angles_from_vectors()
+{
+    yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
+    pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
+
+    update_camera_vectors_from_eular_angles();
+}
+
+void Camera::update_camera_vectors_from_eular_angles()
 {
     /* cr. https://learnopengl.com/Getting-started/Camera based on OpenGL coordinates (+Y up, -Z forward, +X right),
            correct the formulas based on Vulkan coordinates (-Y up, +Z forward, +X right)  */
@@ -66,7 +86,7 @@ void Camera::update_camera_vectors()
     
     if (yaw > 180.f)
         yaw -= 360.f;
-    if (yaw < 180.f)
+    if (yaw < -180.f)
         yaw += 360.f;
 
     const float yawRad = glm::radians(yaw);
@@ -87,6 +107,25 @@ void Camera::update_camera_vectors()
     right = glm::normalize(glm::cross(front, up));
 }
 
+
+void Camera::update_info_from_another_camera(const Camera &updateFrom)
+{
+    camera_attributes.vfov = updateFrom.camera_attributes.vfov;
+    camera_attributes.aspect = updateFrom.camera_attributes.aspect;
+    camera_attributes.near = updateFrom.camera_attributes.near;
+    camera_attributes.far = updateFrom.camera_attributes.far;
+
+    position = updateFrom.position;
+    front = updateFrom.front;
+    up = updateFrom.up;
+    yaw = updateFrom.yaw;
+    pitch = updateFrom.pitch;
+    roll = updateFrom.roll;
+
+    reset_camera_control_status();
+}
+
+
 mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
 {
     assert(sceneMgr.currentSceneCameraItr != sceneMgr.cameraObjectMap.end());
@@ -99,6 +138,7 @@ mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
     {
         current_camera_mode = Camera::SCENE;
 
+        // update camera parameters (partial)
         const SceneMgr::PerspectiveParameters &perspective_info = std::get<SceneMgr::PerspectiveParameters>(camera->projectionParameters);
         camera_attributes.aspect = perspective_info.aspect;
         camera_attributes.vfov = perspective_info.vfov;
@@ -110,8 +150,8 @@ mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
         {
             SceneMgr::NodeObject *cameraNode = findCameraNodeResult->second;
             
-            /* Thanks to Leon Li for helping me to correct my understanding of the CLIP_FROM_WORLD calculation formula for SCENE mode. */
 
+            // update the main camera info (perspective)
             glm::mat4 camera_perspective = glm::perspective (
                 perspective_info.vfov,
                 perspective_info.aspect,
@@ -123,11 +163,25 @@ mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
             auto findCameraMatrixResult = sceneMgr.nodeMatrixMap.find(cameraNode->name); 
             if (findCameraMatrixResult != sceneMgr.nodeMatrixMap.end())
             {
+                // update CLIP_FROM_WORLD matrix based on current scene camera
+
                 LOCAL_TO_WORLD = findCameraMatrixResult->second;                                        // camera local to world
                 glm::mat4 WORLD_TO_LOCAL = glm::inverse(LOCAL_TO_WORLD);                                // world (the scene) to camera local 
                 glm::mat4 flip_y_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f));    // Vulkan has a y pointing down the screen
 
+                /* Thanks to Leon Li for helping me to correct my understanding of the CLIP_FROM_WORLD calculation formula (= perspective * WORLD_TO_LOCAL) for SCENE mode. */
                 CLIP_FROM_WORLD = TypeHelper::convert_glm_mat4_to_mat4(camera_perspective * flip_y_matrix  * WORLD_TO_LOCAL); // clip happens in camera local
+
+                // update the main camera info (vectors, eular angles, control status)
+                
+                right = glm::normalize(glm::vec3(LOCAL_TO_WORLD[0][0], LOCAL_TO_WORLD[0][1], LOCAL_TO_WORLD[0][2]));
+                up = -glm::normalize(glm::vec3(LOCAL_TO_WORLD[1][0], LOCAL_TO_WORLD[1][1], LOCAL_TO_WORLD[1][2]));
+                front = -glm::normalize(glm::vec3(LOCAL_TO_WORLD[2][0], LOCAL_TO_WORLD[2][1], LOCAL_TO_WORLD[2][2])); // camera look toward -Z
+                position = glm::vec3(LOCAL_TO_WORLD[3][0], LOCAL_TO_WORLD[3][1], LOCAL_TO_WORLD[3][2]);
+
+                update_camera_eular_angles_from_vectors();
+
+                reset_camera_control_status();
             }
             else
             {

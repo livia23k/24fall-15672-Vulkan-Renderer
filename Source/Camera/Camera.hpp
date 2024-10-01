@@ -86,7 +86,11 @@ struct Camera
     // =============================================
     // Helper Functions
 
-    void update_camera_vectors();
+    void reset_camera_control_status();
+
+    void update_camera_eular_angles_from_vectors();
+    void update_camera_vectors_from_eular_angles();
+    void update_info_from_another_camera(const Camera &updateFrom);
 
     mat4 apply_scene_mode_camera(SceneMgr &sceneMgr);
 

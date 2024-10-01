@@ -32,19 +32,28 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	assert(sceneMgr.sceneCameraCount > 0);
 	sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
 
-	rtg.configuration.camera.current_camera_mode = Camera::SCENE;
+	// 4. application camera initialzation
+	//   (main camera)
+	//     set the main camera to be in the scene mode, and update the info from the first scene mode camera
+	rtg.configuration.camera.current_camera_mode = Camera::Camera_Mode::SCENE;
 	CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
+	//   (user camera)
+	rtg.configuration.user_camera.current_camera_mode = Camera::Camera_Mode::USER;
+	rtg.configuration.user_camera.update_info_from_another_camera(rtg.configuration.camera);
+	//   (debug camera)
+	rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
+	rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
 
-	// 4. load vertices resources
+	// 5. load vertices resources
 	load_lines_vertices();
 	// load_objects_vertices();
 	load_scene_objects_vertices();
 
-	// 5. set up textures
+	// 6. set up textures
 	create_diy_textures();
 	create_textures_descriptor();
 
-	// 6. prepare for performance logging
+	// 7. prepare for performance logging
 	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
 	if (!render_performance_log.is_open())
 		std::cerr << "Failed to open performance log file." << std::endl;
@@ -649,14 +658,17 @@ void Wanderer::update(float dt)
 	// update time1
 	time = std::fmod(time + dt, 60.0f); // avoid precision issues by keeping time in a reasonable range
 
-	// [TODO] make camera setting controllable
+	Camera &camera = rtg.configuration.camera;
+	Camera &debug_camera = rtg.configuration.debug_camera;
 
-	{ // set camera matrix (orbiting the origin):
-		Camera &camera = rtg.configuration.camera;
-		
-		if (rtg.configuration.camera.current_camera_mode == Camera::USER)
+	// set camera matrix
+	{ 
+		// ------------------------------------------------------------------------------
+		// camera control
+
+		// USER mode, main camera control
+		if (camera.current_camera_mode == Camera::USER)
 		{
-
 			// keyboard & camera movement
 			if (camera.movements.up && !camera.movements.down) {
 				camera.position += camera.sensitivity.kb_upward * camera.up;
@@ -688,12 +700,62 @@ void Wanderer::update(float dt)
 				camera.pitch -= camera.sensitivity.kb_pitch * camera.unit_angle;
 			}
 
-			camera.update_camera_vectors();
+			camera.update_camera_vectors_from_eular_angles();
 
 			// mouse & rotation
 			// [TODO]
 
-			
+		}
+
+		// SCENE mode, no need to adjust the CLIP_FROM_WORLD matrix;
+
+		// DEBUG mode, debug camera control
+		if (debug_camera.current_camera_mode == Camera::DEBUG)
+		{
+			// keyboard & camera movement
+			if (debug_camera.movements.up && !debug_camera.movements.down) {
+				debug_camera.position += debug_camera.sensitivity.kb_upward * debug_camera.up;
+			} else if (debug_camera.movements.down && !debug_camera.movements.up) {
+				debug_camera.position -= debug_camera.sensitivity.kb_upward * debug_camera.up;
+			} 
+
+			if (debug_camera.movements.left && !debug_camera.movements.right) {
+				debug_camera.position -= debug_camera.sensitivity.kb_rightward * debug_camera.right;
+			} else if (debug_camera.movements.right && !debug_camera.movements.left) {
+				debug_camera.position += debug_camera.sensitivity.kb_rightward * debug_camera.right;
+			}
+
+			if (debug_camera.movements.forward && !debug_camera.movements.backward) {
+				debug_camera.position += debug_camera.sensitivity.kb_forward * debug_camera.front;
+			} else if (debug_camera.movements.backward && !debug_camera.movements.forward) {
+				debug_camera.position -= debug_camera.sensitivity.kb_forward * debug_camera.front;
+			}
+
+			if (debug_camera.postures.yaw_left && !debug_camera.postures.yaw_right) {
+				debug_camera.yaw -= debug_camera.sensitivity.kb_yaw * debug_camera.unit_angle;
+			} else if (debug_camera.postures.yaw_right && !debug_camera.postures.yaw_left) {
+				debug_camera.yaw += debug_camera.sensitivity.kb_yaw * debug_camera.unit_angle;
+			}
+
+			if (debug_camera.postures.pitch_up && !debug_camera.postures.pitch_down) {
+				debug_camera.pitch += debug_camera.sensitivity.kb_pitch * debug_camera.unit_angle;
+			} else if (debug_camera.postures.pitch_down && !debug_camera.postures.pitch_up) {
+				debug_camera.pitch -= debug_camera.sensitivity.kb_pitch * debug_camera.unit_angle;
+			}
+
+			debug_camera.update_camera_vectors_from_eular_angles();
+
+			// mouse & rotation
+			// [TODO]
+
+		}
+
+		
+		// ------------------------------------------------------------------------------
+		// apply main camera changes
+
+		if (camera.current_camera_mode == Camera::Camera_Mode::USER) {
+
 			glm::vec3 target_direction = camera.position + camera.front;
 
 			CLIP_FROM_WORLD = perspective(
@@ -708,9 +770,40 @@ void Wanderer::update(float dt)
 							  camera.up[0], camera.up[1], camera.up[2]					   	 // up
 						  );
 		}
+		
+
+		// ------------------------------------------------------------------------------
+		// do clipping based on main camera settings
+
+
+		// [TODO] clipping based on main_camera
+
+
+
+		// ------------------------------------------------------------------------------
+		// if in DEBUG mode, 
+		// apply debug camera changes to CLIP_FROM_WORLD
+
+		if (camera.current_camera_mode == Camera::Camera_Mode::DEBUG) {
+
+			glm::vec3 target_direction = debug_camera.position + debug_camera.front;
+
+			CLIP_FROM_WORLD = perspective(
+							  debug_camera.camera_attributes.vfov,	  // fov in radians
+							  debug_camera.camera_attributes.aspect,  // aspect
+							  debug_camera.camera_attributes.near,	  // near
+							  debug_camera.camera_attributes.far	  // far
+							  ) *
+						  look_at(
+							  debug_camera.position[0], debug_camera.position[1], debug_camera.position[2], 	 // eye
+							  target_direction[0], target_direction[1], target_direction[2],					 // target
+							  debug_camera.up[0], debug_camera.up[1], debug_camera.up[2]					   	 // up
+						  );
+		}
 	};
 
-	{ // set world data (sun and sky):
+	// set world data (sun and sky)
+	{ 
 		world.SKY_DIRECTION.x = 0.0f;
 		world.SKY_DIRECTION.y = 0.0f;
 		world.SKY_DIRECTION.z = 1.0f;
@@ -728,8 +821,12 @@ void Wanderer::update(float dt)
 		world.SUN_ENERGY.b = 0.9f;
 	};
 
-	{ // set objects transformation:
+	// set objects transformation
+	{ 
 		object_instances.clear();
+
+		// instances for all scene graph nodes ===================================================================================
+		construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
 
 		// instances for load_objects_vertices() =================================================================================
 		// {
@@ -815,37 +912,50 @@ void Wanderer::update(float dt)
 		// 		});
 		// 	}
 		// };
-
-		// instances for all scene graph nodes ====================================================================================================
-		construct_scene_graph_nodes_instances(object_instances, rtg.configuration.sceneMgr, CLIP_FROM_WORLD);
 	};
 }
 
 void Wanderer::on_input(InputEvent const &event)
 {
 	Camera &camera = rtg.configuration.camera;
+	Camera &user_camera = rtg.configuration.user_camera;
+	Camera &debug_camera = rtg.configuration.debug_camera;
 	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
 
 	if (event.type == InputEvent::KeyDown)
 	{
 		// Camera Mode ---------------------------------------------------------------------------------------------------------------------
 
-		if (event.key.key == GLFW_KEY_C) // change camera mode in order
+		if (event.key.key == GLFW_KEY_1) // change camera modes (except DEBUG) in order
 		{
+			// if changed from USER camera, save user camera setting
+			if (camera.current_camera_mode == Camera::Camera_Mode::USER) 
+				user_camera.update_info_from_another_camera(camera);
+
+			// switch camera mode
 			camera.current_camera_mode = 
 				static_cast<Camera::Camera_Mode>((camera.current_camera_mode + 1) % camera.camera_mode_cnt);
 
+			// if changed to SCENE camera, get scene camera settings from node
 			if (camera.current_camera_mode == Camera::SCENE)
-			{
-				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr);
-			}
+				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr); 
+
+			// if changed to USER camera, recover user camera settings
+			else if (camera.current_camera_mode == Camera::Camera_Mode::USER)
+				camera.update_info_from_another_camera(user_camera);
 
 			std::cout << "[Camera] (Mode) switched to " 
 						<< ( (camera.current_camera_mode == Camera::USER) ? 
-							"USER" : ((camera.current_camera_mode == Camera::SCENE) ? "SCENE" : "DEBUG") ) 
+							"USER" : "SCENE" ) 
 							<< " mode." << std::endl;
 		}
-		else if (event.key.key == GLFW_KEY_V)
+		else if (event.key.key == GLFW_KEY_2) // change to camera mode: DEBUG
+		{
+			camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
+
+			std::cout << "[Camera] (Mode) switched to DEBUG mode." << std::endl;
+		}
+		else if (event.key.key == GLFW_KEY_V) // change cameras in SCENE mode in order
 		{
 			if (rtg.configuration.camera.current_camera_mode == Camera::Camera_Mode::SCENE)
 			{
@@ -864,8 +974,10 @@ void Wanderer::on_input(InputEvent const &event)
 			/* cr. learned from CMU 15666 Computer Game Programming code base
 				https://github.com/15-466/15-466-f24-base2/blob/b7584e87b2498e4491e6438770f4b4a8d593bbde/PlayMode.cpp#L70 */
 
-		if (camera.current_camera_mode == Camera::USER)
+		// USER mode, camera control
+		if (camera.current_camera_mode == Camera::Camera_Mode::USER)
 		{
+			// camera movements
 			if (event.key.key == GLFW_KEY_W)
 			{
 				camera.movements.forward = true;
@@ -890,6 +1002,7 @@ void Wanderer::on_input(InputEvent const &event)
 			{
 				camera.movements.down = true;
 			}
+			// camera postures
 			else if (event.key.key == GLFW_KEY_UP)
 			{
 				camera.postures.pitch_up = true;
@@ -908,6 +1021,62 @@ void Wanderer::on_input(InputEvent const &event)
 			}
 		}
 
+		// DEBUG mode, camera control
+		if (camera.current_camera_mode == Camera::Camera_Mode::DEBUG)
+		{
+			// camera movements
+			if (event.key.key == GLFW_KEY_W)
+			{
+				debug_camera.movements.forward = true;
+			}
+			else if (event.key.key == GLFW_KEY_S)
+			{
+				debug_camera.movements.backward = true;
+			}
+			else if (event.key.key == GLFW_KEY_A)
+			{
+				debug_camera.movements.left = true;
+			}
+			else if (event.key.key == GLFW_KEY_D)
+			{
+				debug_camera.movements.right = true;
+			}
+			else if (event.key.key == GLFW_KEY_Q)
+			{
+				debug_camera.movements.up = true;
+			}
+			else if (event.key.key == GLFW_KEY_E)
+			{
+				debug_camera.movements.down = true;
+			}
+			// camera postures
+			else if (event.key.key == GLFW_KEY_UP)
+			{
+				debug_camera.postures.pitch_up = true;
+			}
+			else if (event.key.key == GLFW_KEY_DOWN)
+			{
+				debug_camera.postures.pitch_down = true;
+			}
+			else if (event.key.key == GLFW_KEY_LEFT)
+			{
+				debug_camera.postures.yaw_left = true;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT)
+			{
+				debug_camera.postures.yaw_right = true;
+			}
+		}
+
+		// NON-DEBUG mode, update debug_camera to the main camera settings
+		if (camera.current_camera_mode == Camera::Camera_Mode::SCENE || camera.current_camera_mode == Camera::Camera_Mode::USER)
+		{
+			if (event.key.key == GLFW_KEY_Z)
+			{
+				debug_camera.update_info_from_another_camera(camera);
+				debug_camera.reset_camera_control_status();
+			}
+		}
 	}
 	else if (event.type == InputEvent::KeyUp)
 	{
@@ -956,6 +1125,52 @@ void Wanderer::on_input(InputEvent const &event)
 			else if (event.key.key == GLFW_KEY_RIGHT)
 			{
 				camera.postures.yaw_right = false;
+			}
+		}
+
+		if (camera.current_camera_mode == Camera::Camera_Mode::DEBUG)
+		{
+			// camera movements
+			if (event.key.key == GLFW_KEY_W)
+			{
+				debug_camera.movements.forward = false;
+			}
+			else if (event.key.key == GLFW_KEY_S)
+			{
+				debug_camera.movements.backward = false;
+			}
+			else if (event.key.key == GLFW_KEY_A)
+			{
+				debug_camera.movements.left = false;
+			}
+			else if (event.key.key == GLFW_KEY_D)
+			{
+				debug_camera.movements.right = false;
+			}
+			else if (event.key.key == GLFW_KEY_Q)
+			{
+				debug_camera.movements.up = false;
+			}
+			else if (event.key.key == GLFW_KEY_E)
+			{
+				debug_camera.movements.down = false;
+			}
+			// camera postures
+			else if (event.key.key == GLFW_KEY_UP)
+			{
+				debug_camera.postures.pitch_up = false;
+			}
+			else if (event.key.key == GLFW_KEY_DOWN)
+			{
+				debug_camera.postures.pitch_down = false;
+			}
+			else if (event.key.key == GLFW_KEY_LEFT)
+			{
+				debug_camera.postures.yaw_left = false;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT)
+			{
+				debug_camera.postures.yaw_right = false;
 			}
 		}
 	}
@@ -1709,6 +1924,8 @@ void Wanderer::construct_scene_graph_nodes_instances(std::vector<ObjectInstance>
 		{
 			mat4 WORLD_FROM_LOCAL = TypeHelper::convert_glm_mat4_to_mat4(findMatrixResult->second);
 			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
+
+			// [TODO] culling
 
 			object_instances.emplace_back(ObjectInstance{
 				.vertices = scene_nodes_vertices[findVertexIdxResult->second],
