@@ -926,36 +926,37 @@ void Wanderer::on_input(InputEvent const &event)
 	{
 		// Camera Mode ---------------------------------------------------------------------------------------------------------------------
 
-		if (event.key.key == GLFW_KEY_1) // change camera modes (except DEBUG) in order
+		if (event.key.key == GLFW_KEY_1) // change to camera mode: SCENE
 		{
 			// if changed from USER camera, save user camera setting
 			if (camera.current_camera_mode == Camera::Camera_Mode::USER) 
 				user_camera.update_info_from_another_camera(camera);
 
-			// switch camera mode
-			camera.current_camera_mode = 
-				static_cast<Camera::Camera_Mode>((camera.current_camera_mode + 1) % camera.camera_mode_cnt);
+			// change camera mode
+			camera.current_camera_mode = Camera::Camera_Mode::SCENE;
+			this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr); 
 
-			// if changed to SCENE camera, get scene camera settings from node
-			if (camera.current_camera_mode == Camera::SCENE)
-				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr); 
-
-			// if changed to USER camera, recover user camera settings
-			else if (camera.current_camera_mode == Camera::Camera_Mode::USER)
-				camera.update_info_from_another_camera(user_camera);
-
-			std::cout << "[Camera] (Mode) switched to " 
-						<< ( (camera.current_camera_mode == Camera::USER) ? 
-							"USER" : "SCENE" ) 
-							<< " mode." << std::endl;
+			std::cout << "[Camera] (Mode) switched to SCENE mode, camera: " << sceneMgr.currentSceneCameraItr->second->name << std::endl;
 		}
-		else if (event.key.key == GLFW_KEY_2) // change to camera mode: DEBUG
+		else if (event.key.key == GLFW_KEY_2) // change to camera mode: USER
 		{
+			camera.current_camera_mode = Camera::Camera_Mode::USER;
+			camera.update_info_from_another_camera(user_camera); // recover user camera setting
+
+			std::cout << "[Camera] (Mode) switched to USER mode." << std::endl;
+		}
+		else if (event.key.key == GLFW_KEY_3) // change to camera mode: DEBUG
+		{
+			// if changed from USER camera, save user camera setting
+			if (camera.current_camera_mode == Camera::Camera_Mode::USER) 
+				user_camera.update_info_from_another_camera(camera);
+			
+			// change camera mode
 			camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
 
 			std::cout << "[Camera] (Mode) switched to DEBUG mode." << std::endl;
 		}
-		else if (event.key.key == GLFW_KEY_V) // change cameras in SCENE mode in order
+		else if (event.key.key == GLFW_KEY_V) // switch between SCENE cameras
 		{
 			if (rtg.configuration.camera.current_camera_mode == Camera::Camera_Mode::SCENE)
 			{
@@ -1068,7 +1069,7 @@ void Wanderer::on_input(InputEvent const &event)
 			}
 		}
 
-		// NON-DEBUG mode, update debug_camera to the main camera settings
+		// NON-DEBUG mode, set debug_camera info the same as the main camera settings
 		if (camera.current_camera_mode == Camera::Camera_Mode::SCENE || camera.current_camera_mode == Camera::Camera_Mode::USER)
 		{
 			if (event.key.key == GLFW_KEY_Z)
