@@ -70,6 +70,27 @@ void RTG::Configuration::parse(int argc, char **argv)
 			argi += 1;
 			specified_default_camera = argv[argi];
 		}
+		else if (arg == "--culling")
+		{
+			if (argi + 1 >= argc)
+				throw std::runtime_error("--culling requires a parameter (a culling mode name), valid mode: none, frustum.");
+			argi += 1;
+
+			std::string culling_mode_str = argv[argi];
+
+			if (culling_mode_str == "none")
+			{
+				culling_mode = Culling_Mode::NONE;
+			}
+			else if (culling_mode_str == "frustum")
+			{
+				culling_mode = Culling_Mode::FRUSTUM;
+			}
+			else
+			{
+				throw std::runtime_error("--culling mode not valid. Current valid mode: none, frustum.");
+			}
+		}
 		else
 		{
 			throw std::runtime_error("Unrecognized argument '" + arg + "'.");
@@ -82,6 +103,9 @@ void RTG::Configuration::usage(std::function<void(const char *, const char *)> c
 	callback("--debug, --no-debug", "Turn on/off debug and validation layers.");
 	callback("--physical-device <name>", "Run on the named physical device (guesses, otherwise).");
 	callback("--drawing-size <w> <h>", "Set the size of the surface to draw to.");
+	callback("--scene <name>", "Set the path of scene graph to render.");
+	callback("--camera <name>", "Set the name of the scene camera.");
+	callback("--culling <mode>", "Valid mode: none, frustum.");
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(

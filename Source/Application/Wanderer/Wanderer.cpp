@@ -1884,14 +1884,17 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
 
 			// culling
-			// Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
-			// auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
-			// if (nodeMeshIt == sceneMgr.meshObjectMap.end())
-			// 	continue;
-			// if (!camera_frustum.isBBoxInFrustum(nodeMeshIt->second->bbox)) {
-			// 	// std::cout << "Culling node " << node->name << std::endl;
-			// 	continue;
-			// }
+			if (rtg.configuration.culling_mode == RTG::Configuration::Culling_Mode::FRUSTUM)
+			{
+				Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
+				auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
+				if (nodeMeshIt == sceneMgr.meshObjectMap.end())
+					continue;
+				if (!camera_frustum.isBBoxInFrustum(nodeMeshIt->second->bbox)) {
+					// std::cout << "Culling node " << node->name << std::endl;
+					continue;
+				}
+			}
 
 			object_instances.emplace_back(ObjectInstance{
 				.vertices = scene_nodes_vertices[findVertexIdxResult->second],

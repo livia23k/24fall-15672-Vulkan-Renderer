@@ -74,6 +74,13 @@ struct RTG
 		Camera camera; // used for USER / SCENE mode; will look up currentCameraMode in the main camera for current mode;
 		Camera debug_camera; // used for DEBUG mode
 		Camera user_camera; // backup for user camera settings
+		
+		// if set, use a specific culling mode:
+		enum Culling_Mode {
+			NONE,
+			FRUSTUM
+		};
+		Culling_Mode culling_mode;
 
 		// requested (priority-ranked) formats for output surface: (will use first available)
 		std::vector<VkSurfaceFormatKHR> surface_formats{
