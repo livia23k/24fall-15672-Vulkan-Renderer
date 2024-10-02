@@ -14,7 +14,7 @@
 
 Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 {
-	// 1. set up application prerequisites
+	// set up application prerequisites
 	init_depth_format();
 	create_render_pass();
 	create_command_pool();
@@ -22,17 +22,27 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_description_pool();
 	setup_workspaces();
 
-	// 2. load scene graph related info
-	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
-	Camera &camera = rtg.configuration.camera;
+	// prepare for performance logging
+	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
+	if (!render_performance_log.is_open())
+		std::cerr << "Failed to open performance log file." << std::endl;
+	else
+		render_performance_log.close();
+	render_performance_log.open("performance(render).txt", std::ios::app); // re-open for appending
 
+	// load scene graph related info
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
 	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, sceneMgr);
 	LoadMgr::load_s72_node_matrices(sceneMgr);
 
-	// 3. update scene camera info in sceneMgr
+	// update animation time
+	animation_timer.tmax = sceneMgr.get_animation_duration();
+
+	// update scene camera info in sceneMgr
 	sceneMgr.sceneCameraCount = sceneMgr.cameraObjectMap.size();
 
-	// if given scene camera
+	// 	if given scene camera
+	Camera &camera = rtg.configuration.camera;
 	if (sceneMgr.sceneCameraCount > 0)
 	{
 		// (main camera) to be the first scene camera, will be overwritten if set "--camera" flag in the command line
@@ -48,7 +58,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
 		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
 	}
-	// if not given scene camera
+	// 	if not given scene camera
 	else
 	{
 		// (main camera) to be in the user mode
@@ -77,22 +87,14 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
 	}
 
-	// 5. load vertices resources
+	// load vertices resources
 	load_lines_vertices();
 	// load_objects_vertices();
 	load_scene_objects_vertices();
 
-	// 6. set up textures
+	// set up textures
 	create_diy_textures();
 	create_textures_descriptor();
-
-	// 7. prepare for performance logging
-	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
-	if (!render_performance_log.is_open())
-		std::cerr << "Failed to open performance log file." << std::endl;
-	else
-		render_performance_log.close();
-	render_performance_log.open("performance(render).txt", std::ios::app); // re-open for appending
 }
 
 Wanderer::~Wanderer()
@@ -690,6 +692,7 @@ void Wanderer::update(float dt)
 
 	// update time1
 	time = std::fmod(time + dt, 60.0f); // avoid precision issues by keeping time in a reasonable range
+	animation_timer.update(dt);
 
 	Camera &camera = rtg.configuration.camera;
 	Camera &debug_camera = rtg.configuration.debug_camera;
@@ -850,7 +853,7 @@ void Wanderer::update(float dt)
 	// ===============================================
 	// apply drivers to nodes to animate the scene
 	{ 
-		rtg.configuration.sceneMgr.update_nodes_from_animation_drivers(time);
+		rtg.configuration.sceneMgr.update_nodes_from_animation_drivers(animation_timer.t);
     	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
 	};
 
@@ -923,6 +926,14 @@ void Wanderer::on_input(InputEvent const &event)
 
 				std::cout << "[Camera] (Mode) SCENE mode: switched to " << sceneMgr.currentSceneCameraItr->second->name << " perspective." << std::endl;
 			}
+		}
+		else if (event.key.key == GLFW_KEY_P)
+		{
+			animation_timer.pause_or_resume();
+		}
+		else if (event.key.key == GLFW_KEY_R)
+		{
+			animation_timer.reset();
 		}
 
 		// Camera Movement -----------------------------------------------------------------------------------------------------------------
@@ -1032,6 +1043,7 @@ void Wanderer::on_input(InputEvent const &event)
 				debug_camera.reset_camera_control_status();
 			}
 		}
+
 	}
 	else if (event.type == InputEvent::KeyUp)
 	{

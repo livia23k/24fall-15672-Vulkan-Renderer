@@ -60,6 +60,19 @@ void SceneMgr::clean_all()
 
 // Function functions ========================================================================================================================
 
+float SceneMgr::get_animation_duration()
+{
+    float maxDuration = 0.f;
+    for (auto &pair : driverObjectMap) 
+    {
+        DriverObject *driver = pair.second;
+
+        float tmax = driver->times.back();
+        maxDuration = std::max(maxDuration, tmax);
+    }
+    return maxDuration;
+}
+
 void SceneMgr::update_nodes_from_animation_drivers(float targetTime)
 {
     for (auto &pair : driverObjectMap) 

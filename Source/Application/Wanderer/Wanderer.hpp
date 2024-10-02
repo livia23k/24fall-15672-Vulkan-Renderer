@@ -4,8 +4,8 @@
 #include "Source/DataType/PosNorTexVertex.hpp"
 #include "Source/DataType/MeshAttribute.hpp"
 #include "Source/DataType/Mat4.hpp"
-// #include "Source/DataType/BBox.hpp"
 #include "Source/DataType/Frustum.hpp"
+#include "Source/Tools/Timer.hpp"
 
 #include "Source/Configuration/RTG.hpp"
 
@@ -203,6 +203,7 @@ struct Wanderer : RTG::Application
 	virtual void on_input(InputEvent const &) override;
 
 	float time = 0.0f;
+	Timer animation_timer;
 
 	mat4 CLIP_FROM_WORLD;
 

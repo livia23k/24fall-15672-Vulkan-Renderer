@@ -242,6 +242,7 @@ struct SceneMgr
 
     void clean_all();
 
+    float get_animation_duration();
     void update_nodes_from_animation_drivers(float targetTime);
     inline glm::vec3 extract_vec3(const std::vector<float>& values, size_t idx);
     inline glm::quat extract_quat(const std::vector<float>& values, size_t idx);
