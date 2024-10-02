@@ -512,7 +512,7 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 	};
 
 	// GPU commands here
-	{ // render pass：describes layout, "input from", "output to" of attachments
+	 // render pass：describes layout, "input from", "output to" of attachments
 
 		// set clear value (black)
 		[[maybe_unused]] std::array<VkClearValue, 2> clear_values{
@@ -540,20 +540,40 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 
 		// Run pipelines here ==================================================================================================
 
+		// correct the window height and width
+		float swapchain_aspect = rtg.swapchain_extent.width / rtg.swapchain_extent.height;
+		float &camera_aspect = rtg.configuration.camera.camera_attributes.aspect;
+
+		float new_height = rtg.swapchain_extent.height;
+		float new_width = rtg.swapchain_extent.width;
+		float offset_x = 0.f;
+		float offset_y = 0.f;
+
+		if (camera_aspect > swapchain_aspect) // letterbox
+		{
+			new_width = rtg.swapchain_extent.height * camera_aspect;
+			offset_x = (float(rtg.swapchain_extent.width) - new_width) / 2.f;
+		}
+		else  // pillarbox
+		{
+			new_height = rtg.swapchain_extent.width / camera_aspect;
+			offset_y = (float(rtg.swapchain_extent.height) - new_height) / 2.f;
+		}
+
 		{ // configure scissor rectangle
 			VkRect2D scissor{
 				.offset = {.x = 0, .y = 0},
-				.extent = rtg.swapchain_extent,
+				.extent = {.width = static_cast<uint32_t>(new_width), .height = static_cast<uint32_t>(new_height)}
 			};
 			vkCmdSetScissor(workspace.command_buffer, 0, 1, &scissor); //(xxx, index of first scissor, \
 																		//count of scissor affected, address of scissor)
 		};
 		{ // configure viewport transform
 			VkViewport viewport{
-				.x = 0.0f,
-				.y = 0.0f,
-				.width = float(rtg.swapchain_extent.width),
-				.height = float(rtg.swapchain_extent.height),
+				.x = offset_x,
+				.y = offset_y,
+				.width = new_width,
+				.height = new_height,
 				.minDepth = 0.0f,
 				.maxDepth = 1.0f,
 			};
@@ -650,7 +670,7 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 		}
 
 		vkCmdEndRenderPass(workspace.command_buffer);
-	};
+	;
 
 	// end recording command_buffer
 	VK(vkEndCommandBuffer(workspace.command_buffer));

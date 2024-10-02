@@ -17,7 +17,7 @@ Timer::Timer(float tmax)
 void Timer::reset()
 {
     t = 0.f;
-    paused = false;
+    paused = true;
 }
 
 void Timer::pause_or_resume()
