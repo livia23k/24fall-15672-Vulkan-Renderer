@@ -170,7 +170,7 @@ glm::vec3 SceneMgr::extract_vec3(const std::vector<float>& values, size_t idx)
 
 glm::quat SceneMgr::extract_quat(const std::vector<float>& values, size_t idx)
 {
-    return glm::quat(values[4 * idx], values[4 * idx + 1], values[4 * idx + 2], values[4 * idx + 3]);
+    return glm::quat(values[4 * idx + 3], values[4 * idx + 0], values[4 * idx + 1], values[4 * idx + 2]); // w, x, y, z in s72; x, y, z, w in glm::quat
 }
 
 glm::vec3 SceneMgr::linear_interpolation_vec3(const glm::vec3 &prev, const glm::vec3 &next, float w)

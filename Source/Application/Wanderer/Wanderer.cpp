@@ -54,6 +54,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		rtg.configuration.user_camera.current_camera_mode = Camera::Camera_Mode::USER;
 		rtg.configuration.user_camera.update_info_from_another_camera(rtg.configuration.camera);
 
+
 		// (debug camera) initialize using the main camera setting
 		rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
 		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
@@ -64,21 +65,16 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		// (main camera) to be in the user mode
 		camera.current_camera_mode = Camera::Camera_Mode::USER;
 
-		// [TOFIX] (coordinates issue) make the camera initially looking toward a root node
-		// std::string &rootNodeName = sceneMgr.sceneObject->rootName[0];
-		// SceneMgr::NodeObject *rootNode = sceneMgr.nodeObjectMap.find(rootNodeName)->second;
-		// glm::mat4 root_matrix = sceneMgr.nodeMatrixMap.find(rootNode->name)->second;
+		// make the camera initially looking toward a root node
+		std::string &rootNodeName = sceneMgr.sceneObject->rootName[0];
+		SceneMgr::NodeObject *rootNode = sceneMgr.nodeObjectMap.find(rootNodeName)->second;
+		glm::mat4 root_matrix = sceneMgr.nodeMatrixMap.find(rootNode->name)->second;
 
-		// glm::vec3 root_translation = glm::vec3(root_matrix[3]);
-		// camera.position = root_translation + glm::vec3(0.0f, 0.0f, 2.0f);
-		// camera.target_position = glm::vec3(0.f, 0.f, 0.f);
-		// camera.front = glm::normalize(camera.target_position - camera.position);
-
-		// const glm::vec3 &front = camera.front;
-		// camera.yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
-		// camera.pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
-
-		// camera.update_camera_vectors_from_eular_angles();
+		glm::vec3 root_translation = glm::vec3(root_matrix[3]);
+		camera.position = root_translation + glm::vec3(0.0f, 0.0f, 2.0f);
+		camera.target_position = glm::vec3(0.f, 0.f, 0.f);
+		camera.front = glm::normalize(camera.target_position - camera.position); 
+		camera.update_camera_eular_angles_from_vectors();
 
 		// (user camera) skip; no need to set because no user camera setting backup is needed
 

@@ -4,7 +4,7 @@ Camera::Camera()
 {
     // camera modes related
     camera_attributes.aspect = 1.5f;
-    camera_attributes.vfov = 60.0f;
+    camera_attributes.vfov = glm::radians(60.0f);
     camera_attributes.near = 0.1f;
     camera_attributes.far = 1000.0f;
 
@@ -38,6 +38,7 @@ Camera::Camera()
     // [TOFIX] (coordinates issue)
     // camera initial posture 
     // (will be overwritten by settings in the application initialization)
+
     position = glm::vec3{2.0f, -2.0f, 2.0f};
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};
 
