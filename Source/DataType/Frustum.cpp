@@ -47,7 +47,7 @@ bool Frustum::isBBoxInFrustum(BBox &bbox)
                 ++ iInCount;
         }
 
-        if (iInCount >= 6) // pass if greater equal than 6 BBox corner is in front of the plane
+        if (iInCount >= 4) // pass if greater equal than 6 BBox corner is in front of the plane
             ++ iTotalIn;
     }
 
