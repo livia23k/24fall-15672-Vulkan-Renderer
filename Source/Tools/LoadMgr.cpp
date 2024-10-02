@@ -1454,7 +1454,14 @@ void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
 
     if (targetSceneMgr.sceneObject == nullptr)
 		return;
+
+    // clean up
     
+    targetSceneMgr.nodeMatrixMap.clear();
+    targetSceneMgr.nodeMatrixMap.reserve(targetSceneMgr.nodeObjectMap.size());
+    
+    // bfs, get the node matrices
+
     struct NodeMatrix {
         NodeObject *nodeObject;
         glm::mat4 modelMatrix;

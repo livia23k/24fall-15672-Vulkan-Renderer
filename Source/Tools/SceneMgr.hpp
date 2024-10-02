@@ -3,8 +3,11 @@
 #include <cstdint>
 #include <iostream>
 #include <string>
+#include <cmath>
+#include <algorithm>
 #include <vector>
 #include <map>
+#include <iterator>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -238,6 +241,12 @@ struct SceneMgr
     // methods
 
     void clean_all();
+
+    void update_nodes_from_animation_drivers(float targetTime);
+    inline glm::vec3 extract_vec3(const std::vector<float>& values, size_t idx);
+    inline glm::quat extract_quat(const std::vector<float>& values, size_t idx);
+    inline glm::vec3 linear_interpolation_vec3(const glm::vec3 &prev, const glm::vec3 &next, float w);
+    inline glm::quat slerp_interpolation_quat(const glm::quat &prev, const glm::quat &next, float w);
 
     static glm::mat4 calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale);
 

@@ -848,6 +848,13 @@ void Wanderer::update(float dt)
 	};
 
 	// ===============================================
+	// apply drivers to nodes to animate the scene
+	{ 
+		rtg.configuration.sceneMgr.update_nodes_from_animation_drivers(time);
+    	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
+	};
+
+	// ===============================================
 	// set objects transformation
 	{ 
 		object_instances.clear();
@@ -1883,7 +1890,7 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 			mat4 WORLD_FROM_LOCAL = TypeHelper::convert_glm_mat4_to_mat4(findMatrixResult->second);
 			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
 
-			// culling
+			// frustum culling
 			if (rtg.configuration.culling_mode == RTG::Configuration::Culling_Mode::FRUSTUM)
 			{
 				Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling

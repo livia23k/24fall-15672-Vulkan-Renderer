@@ -57,7 +57,119 @@ void SceneMgr::clean_all()
     materialObjectMap.clear();
 }
 
+
 // Function functions ========================================================================================================================
+
+void SceneMgr::update_nodes_from_animation_drivers(float targetTime)
+{
+    for (auto &pair : driverObjectMap) 
+    {
+        DriverObject *driver = pair.second;
+
+        auto it = std::lower_bound(driver->times.begin(), driver->times.end(), targetTime);
+
+        // animation finished, no action needed
+        if (it == driver->times.end()) 
+        {
+            continue;
+        }
+
+        // find target node
+        auto findNodeResult = nodeObjectMap.find(driver->refObjectName);
+        if (findNodeResult == nodeObjectMap.end())
+        {
+            std::cerr << "[SceneMgr] (update_nodes_from_animation_drivers) Node not found: " << driver->refObjectName << std::endl;
+            continue;
+        }
+        NodeObject *nodeObject = findNodeResult->second;
+
+        // executing animation, need to update the node 
+        size_t sizeTimes = driver->times.size();
+
+        size_t prev = std::distance(driver->times.begin(), it);
+        float prevTime = driver->times[prev];
+
+        if (driver->interpolation == DriverInterpolation::STEP)
+        {
+            if (driver->channel == DriverChannleType::TRANSLATION)
+            {
+                glm::vec3 new_translation = extract_vec3(driver->values, prev);
+                nodeObject->translation = new_translation;
+            }
+            else if (driver->channel == DriverChannleType::SCALE)
+            {
+                glm::vec3 new_scale = extract_vec3(driver->values, prev);
+                nodeObject->scale = new_scale;
+            }
+            else if (driver->channel == DriverChannleType::ROTATION)
+            {
+                glm::quat new_rotation = extract_quat(driver->values, prev);
+                nodeObject->rotation = new_rotation;
+            }
+        }
+
+        size_t next = (prev == sizeTimes - 1) ?  prev : prev + 1;
+        float nextTime = driver->times[next];
+
+        float w = (targetTime - prevTime) / (nextTime - prevTime);
+
+        if (driver->interpolation == DriverInterpolation::LINEAR)
+        {
+            if (driver->channel == DriverChannleType::TRANSLATION)
+            {
+                glm::vec3 prev_translation = extract_vec3(driver->values, prev);
+                glm::vec3 next_translation = extract_vec3(driver->values, next);
+                glm::vec3 new_translation = linear_interpolation_vec3(prev_translation, next_translation, w);
+                nodeObject->translation = new_translation;
+            }
+            else if (driver->channel == DriverChannleType::SCALE)
+            {
+                glm::vec3 prev_scale = extract_vec3(driver->values, prev);
+                glm::vec3 next_scale = extract_vec3(driver->values, next);
+                glm::vec3 new_scale = linear_interpolation_vec3(prev_scale, next_scale, w);
+                nodeObject->scale = new_scale;
+            }
+            else if (driver->channel == DriverChannleType::ROTATION)
+            {
+                glm::quat prev_rotation = extract_quat(driver->values, prev);
+                glm::quat next_rotation = extract_quat(driver->values, next);
+                glm::quat new_rotation = slerp_interpolation_quat(prev_rotation, next_rotation, w);
+                nodeObject->rotation = new_rotation;
+            }
+        }
+        else if (driver->interpolation == DriverInterpolation::SLERP)
+        {
+            if (driver->channel == DriverChannleType::ROTATION)
+            {
+                glm::quat prev_rotation = extract_quat(driver->values, prev);
+                glm::quat next_rotation = extract_quat(driver->values, next);
+                glm::quat new_rotation = slerp_interpolation_quat(prev_rotation, next_rotation, w);
+                nodeObject->rotation = new_rotation;
+            }
+        }
+    }
+}
+
+glm::vec3 SceneMgr::extract_vec3(const std::vector<float>& values, size_t idx)
+{
+    return glm::vec3(values[3 * idx], values[3 * idx + 1], values[3 * idx + 2]);
+}
+
+glm::quat SceneMgr::extract_quat(const std::vector<float>& values, size_t idx)
+{
+    return glm::quat(values[4 * idx], values[4 * idx + 1], values[4 * idx + 2], values[4 * idx + 3]);
+}
+
+glm::vec3 SceneMgr::linear_interpolation_vec3(const glm::vec3 &prev, const glm::vec3 &next, float w)
+{
+    return prev * w + next * (1.f - w);
+}
+
+glm::quat SceneMgr::slerp_interpolation_quat(const glm::quat &prev, const glm::quat &next, float w)
+{
+    return glm::slerp(prev, next, w);
+}
+
 
 glm::mat4 SceneMgr::calculate_model_matrix(glm::vec3 translation, glm::quat rotation, glm::vec3 scale)
 {
