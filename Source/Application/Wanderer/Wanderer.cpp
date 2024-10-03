@@ -498,7 +498,7 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 
 		// set clear value (black)
 		[[maybe_unused]] std::array<VkClearValue, 2> clear_values{
-			VkClearValue{.color{.float32{0.0f, 0.0f, 0.0f, 1.0f}}},
+			VkClearValue{.color{.float32{0.6f, 0.6f, 0.6f, 1.0f}}},
 			VkClearValue{.depthStencil{.depth = 1.0f, .stencil = 0}},
 		};
 
