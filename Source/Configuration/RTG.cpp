@@ -15,6 +15,7 @@
 #include <cstring>
 #include <iostream>
 #include <set>
+#include <filesystem>
 
 void RTG::Configuration::parse(int argc, char **argv)
 {
@@ -61,7 +62,10 @@ void RTG::Configuration::parse(int argc, char **argv)
 			if (argi + 1 >= argc)
 				throw std::runtime_error("--scene requires a parameter (a scene graph file name).");
 			argi += 1;
-			scene_graph_path = scece_graph_folder + argv[argi];
+			std::filesystem::path fs_path(argv[argi]);
+			scene_graph_parent_folder = "Assets/SceneGraphs/" + fs_path.parent_path().string() + "/";
+			scene_graph_path = "Assets/SceneGraphs/" + fs_path.string();
+			// std::cout << "file path: " << scene_graph_parent_folder << ", " << scene_graph_path << std::endl; // [PASS]
 		}
 		else if (arg == "--camera")
 		{
@@ -91,9 +95,25 @@ void RTG::Configuration::parse(int argc, char **argv)
 				throw std::runtime_error("--culling mode not valid. Current valid mode: none, frustum.");
 			}
 		}
+		else if (arg == "--headless")
+		{
+			if (argi + 1 >= argc)
+				throw std::runtime_error("--headless requires a parameter (a event file), and need to specify the --drawing-size (default 800x540).");
+			argi += 1;
+			is_headless = true;
+			event_file_name = argv[argi];
+		}
 		else
 		{
 			throw std::runtime_error("Unrecognized argument '" + arg + "'.");
+		}
+	}
+
+	if (is_headless)
+	{
+		if (surface_extent.width == 0 && surface_extent.height == 0)
+		{
+			throw std::runtime_error("--headless requires a parameter (a event file), and need to specify the --drawing-size (default 800x540).");
 		}
 	}
 }
@@ -106,6 +126,7 @@ void RTG::Configuration::usage(std::function<void(const char *, const char *)> c
 	callback("--scene <name>", "Set the path of scene graph to render.");
 	callback("--camera <name>", "Set the name of the scene camera.");
 	callback("--culling <mode>", "Valid mode: none, frustum.");
+	callback("--headless <events>", "Run headless renderer and read frame times and events from the events file.");
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
@@ -877,6 +898,8 @@ void RTG::run(Application &application)
 
 	// setup time handling
 	std::chrono::high_resolution_clock::time_point before = std::chrono::high_resolution_clock::now();
+	// headless_start = std::chrono::high_resolution_clock::now();
+
 	while (!glfwWindowShouldClose(window))
 	{
 		// event handling
@@ -920,7 +943,7 @@ void RTG::run(Application &application)
 			{
 			retry:
 				// Ask the swapchain for the next image index -- note careful return handling:
-				if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, workspaces[workspace_index].image_available, VK_NULL_HANDLE, &image_index);
+				if (VkResult result = vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, workspaces[workspace_index].image_available, VK_NULL_HANDLE, &image_index); // [TODO] headless, AVAILABLE
 					result == VK_ERROR_OUT_OF_DATE_KHR)
 				{ // C++17: if sentence with initializer
 					// if the swapchain is out-of-date, recreate it and run the loop again:
@@ -940,6 +963,11 @@ void RTG::run(Application &application)
 					throw std::runtime_error("Failed to acquire swapchain image (" + std::string(string_VkResult(result)) + ")!");
 				}
 			};
+
+			// image availible
+			// headless_accumulator = std::chrono::high_resolution_clock::now();
+			// headless_accumulated_time = std::chrono::duration<double>(headless_accumulator - headless_start).count();
+			// std::cout << headless_accumulated_time << " AVAILABLE" << std::endl;
 
 			// queue rendering work
 			application.render(*this, RenderParams{
@@ -964,7 +992,7 @@ void RTG::run(Application &application)
 				assert(present_queue);
 
 				// note, again, the careful return handling:
-				if (VkResult result = vkQueuePresentKHR(present_queue, &present_info);
+				if (VkResult result = vkQueuePresentKHR(present_queue, &present_info); // [TODO] headless, SAVE
 					result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
 				{
 					std::cerr << "Recreating swapchain because vkQueuePresentKHR returned " << string_VkResult(result) << "." << std::endl;
@@ -976,6 +1004,13 @@ void RTG::run(Application &application)
 					throw std::runtime_error("failed to queue presentation of image (" + std::string(string_VkResult(result)) + ")!");
 				}
 			}
+
+			// headless_accumulator = std::chrono::high_resolution_clock::now();
+			// headless_accumulated_time = std::chrono::duration<double>(headless_accumulator - headless_start).count();
+			// ++ headless_image_done_cnt;
+			// std::cout << headless_accumulated_time << " SAVE mid-frame-" << headless_image_done_cnt << ".ppm" << std::endl;
+
+			
 		};
 	}
 

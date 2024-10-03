@@ -1620,10 +1620,11 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	}
 
 	// load each attribute to each attribute list
-	LoadMgr::read_s72_mesh_attribute_to_list(positionList, refMesh->attrPosition);
-	LoadMgr::read_s72_mesh_attribute_to_list(normalList, refMesh->attrNormal);
-	LoadMgr::read_s72_mesh_attribute_to_list(tangentList, refMesh->attrTangent);
-	LoadMgr::read_s72_mesh_attribute_to_list(texcoordList, refMesh->attrTexcoord);
+	const std::string srcFolder = rtg.configuration.scene_graph_parent_folder;
+	LoadMgr::read_s72_mesh_attribute_to_list(positionList, refMesh->attrPosition, srcFolder);
+	LoadMgr::read_s72_mesh_attribute_to_list(normalList, refMesh->attrNormal, srcFolder);
+	LoadMgr::read_s72_mesh_attribute_to_list(tangentList, refMesh->attrTangent, srcFolder);
+	LoadMgr::read_s72_mesh_attribute_to_list(texcoordList, refMesh->attrTexcoord, srcFolder);
 	assert(positionList.size() == normalList.size() && normalList.size() == tangentList.size() && tangentList.size() == texcoordList.size());
 
 

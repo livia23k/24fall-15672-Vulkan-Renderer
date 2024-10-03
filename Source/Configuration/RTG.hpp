@@ -63,8 +63,8 @@ struct RTG
 
 		// if set, render a specific scene graph:
 		//  `--scene <filename>` command-line flag
-		std::string scece_graph_folder = "Assets/SceneGraphs/";
-		std::string scene_graph_path = "";
+		std::string scene_graph_parent_folder;
+		std::string scene_graph_path;
 		SceneMgr sceneMgr;
 
 		// if set, use a specific camera:
@@ -81,6 +81,10 @@ struct RTG
 			FRUSTUM
 		};
 		Culling_Mode culling_mode;
+
+		// if set, use the headless mode
+		bool is_headless;
+		std::string event_file_name;
 
 		// requested (priority-ranked) formats for output surface: (will use first available)
 		std::vector<VkSurfaceFormatKHR> surface_formats{
@@ -109,6 +113,17 @@ struct RTG
 	// Helper functions, split off into their own little package:
 	// see Helpers.hpp
 	Helpers helpers;
+
+	//------------------------------------------------
+	// Headless settings
+
+	uint32_t iter_cnt;
+	uint32_t frame_cnt;
+	const uint32_t fps = 60;
+	std::chrono::high_resolution_clock::time_point headless_start;
+	std::chrono::high_resolution_clock::time_point headless_accumulator;
+	double headless_accumulated_time;
+	uint32_t headless_image_done_cnt;
 
 	//------------------------------------------------
 	// Basic vulkan handles:

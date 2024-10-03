@@ -1382,7 +1382,7 @@ void LoadMgr::parse_sub_attribute_info(OptionalPropertyMap &subAttributeInfo, Sc
 // load mesh ---------------------------------------------------------------------------------------------------------------------
 
 template <typename T>
-void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream)
+void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream, std::string srcFolder)
 {
     // safety check
     size_t size_format;
@@ -1398,8 +1398,7 @@ void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneM
 
     // get input file
 
-    const std::string folder = "Assets/SceneGraphs/";
-    std::string path = folder + attrStream.src;
+    std::string path = srcFolder + attrStream.src;
 
     std::ifstream file(path, std::ios::binary);
     if (!file)
@@ -1441,9 +1440,9 @@ void LoadMgr::read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneM
 }
 
 // Explicit instantiations
-template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec2>(std::vector<glm::vec2> &, SceneMgr::AttributeStream &);
-template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec3>(std::vector<glm::vec3> &, SceneMgr::AttributeStream &);
-template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec4>(std::vector<glm::vec4> &, SceneMgr::AttributeStream &);
+template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec2>(std::vector<glm::vec2> &, SceneMgr::AttributeStream &, std::string srcFolder);
+template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec3>(std::vector<glm::vec3> &, SceneMgr::AttributeStream &, std::string srcFolder);
+template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec4>(std::vector<glm::vec4> &, SceneMgr::AttributeStream &, std::string srcFolder);
 
 
 // load matrices -----------------------------------------------------------------------------------------------------------------

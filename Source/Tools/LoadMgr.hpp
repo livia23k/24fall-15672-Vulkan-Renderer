@@ -45,7 +45,7 @@ struct LoadMgr {
 
     // load mesh
     template <typename T>
-    static void read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream);
+    static void read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream, std::string srcFolder);
 
     // load matrices
     static void load_s72_node_matrices(SceneMgr &targetSceneMgr);
