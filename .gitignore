@@ -7,3 +7,5 @@ bin/main.pdb
 .vscode/settings.json
 .vscode/tasks.json
 performance(render).txt
+performance(render)-1.txt
+performance(render)-2.txt

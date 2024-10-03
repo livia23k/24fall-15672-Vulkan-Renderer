@@ -1580,10 +1580,10 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 {
 	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
 
-	std::vector<glm::vec3> positionList;
-	std::vector<glm::vec3> normalList;
-	std::vector<glm::vec4> tangentList;
-	std::vector<glm::vec2> texcoordList;
+	// std::vector<glm::vec3> positionList;
+	// std::vector<glm::vec3> normalList;
+	// std::vector<glm::vec4> tangentList;
+	// std::vector<glm::vec2> texcoordList;
 
 	auto findMeshResult = sceneMgr.meshObjectMap.find(meshObject->name);
 	if (findMeshResult == sceneMgr.meshObjectMap.end())
@@ -1600,23 +1600,23 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 
 	// load each attribute to each attribute list
 	const std::string srcFolder = rtg.configuration.scene_graph_parent_folder;
-	LoadMgr::read_s72_mesh_attribute_to_list(positionList, refMesh->attrPosition, srcFolder);
-	LoadMgr::read_s72_mesh_attribute_to_list(normalList, refMesh->attrNormal, srcFolder);
-	LoadMgr::read_s72_mesh_attribute_to_list(tangentList, refMesh->attrTangent, srcFolder);
-	LoadMgr::read_s72_mesh_attribute_to_list(texcoordList, refMesh->attrTexcoord, srcFolder);
-	assert(positionList.size() == normalList.size() && normalList.size() == tangentList.size() && tangentList.size() == texcoordList.size());
+	LoadMgr::read_s72_mesh_attribute_to_list(refMesh->positionList, refMesh->attrPosition, srcFolder);
+	LoadMgr::read_s72_mesh_attribute_to_list(refMesh->normalList, refMesh->attrNormal, srcFolder);
+	LoadMgr::read_s72_mesh_attribute_to_list(refMesh->tangentList, refMesh->attrTangent, srcFolder);
+	LoadMgr::read_s72_mesh_attribute_to_list(refMesh->texcoordList, refMesh->attrTexcoord, srcFolder);
+	assert(refMesh->positionList.size() == refMesh->normalList.size() && refMesh->normalList.size() == refMesh->tangentList.size() && refMesh->tangentList.size() == refMesh->texcoordList.size());
 
 
 	ObjectVertices mesh_vertices;
 	mesh_vertices.first = uint32_t(tmp_object_vertices.size());
 
-	uint32_t vertexCount = positionList.size();
+	uint32_t vertexCount = refMesh->positionList.size();
 
 	// calculate BBox for the mesh object
 
 	for (uint32_t i = 0; i < vertexCount; ++ i)
 	{
-		refMesh->bbox.enclose(positionList[i]);
+		refMesh->bbox.enclose(refMesh->positionList[i]);
 	}
 
 	// assembly attributes into scene object vertex
@@ -1624,21 +1624,21 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	for (uint32_t i = 0; i < vertexCount; ++i)
 	{
 		ObjectsPipeline::Vertex node_vertex;
-		node_vertex.Position.x = positionList[i].x;
-		node_vertex.Position.y = positionList[i].y;
-		node_vertex.Position.z = positionList[i].z;
+		node_vertex.Position.x = refMesh->positionList[i].x;
+		node_vertex.Position.y = refMesh->positionList[i].y;
+		node_vertex.Position.z = refMesh->positionList[i].z;
 
-		node_vertex.Normal.x = normalList[i].x;
-		node_vertex.Normal.y = normalList[i].y;
-		node_vertex.Normal.z = normalList[i].z;
+		node_vertex.Normal.x = refMesh->normalList[i].x;
+		node_vertex.Normal.y = refMesh->normalList[i].y;
+		node_vertex.Normal.z = refMesh->normalList[i].z;
 
-		node_vertex.Tangent.x = tangentList[i].x;
-		node_vertex.Tangent.y = tangentList[i].y;
-		node_vertex.Tangent.z = tangentList[i].z;
-		node_vertex.Tangent.w = tangentList[i].w;
+		node_vertex.Tangent.x = refMesh->tangentList[i].x;
+		node_vertex.Tangent.y = refMesh->tangentList[i].y;
+		node_vertex.Tangent.z = refMesh->tangentList[i].z;
+		node_vertex.Tangent.w = refMesh->tangentList[i].w;
 
-		node_vertex.TexCoord.s = texcoordList[i].x;
-		node_vertex.TexCoord.t = texcoordList[i].y;
+		node_vertex.TexCoord.s = refMesh->texcoordList[i].x;
+		node_vertex.TexCoord.t = refMesh->texcoordList[i].y;
 
 		tmp_object_vertices.push_back(node_vertex);
 	}
@@ -1901,23 +1901,40 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 			auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
 			if (nodeMeshIt == sceneMgr.meshObjectMap.end())
 				continue;
+
+			SceneMgr::MeshObject *refMesh = nodeMeshIt->second;
 			
-			// update node bbox (by enclosing the corners of the transformed mesh bbox)
-			node->bbox.reset();
-			std::vector<glm::vec3> meshBBoxCorners = nodeMeshIt->second->bbox.get_corners();
-			for (auto & corner : meshBBoxCorners)
-			{
-				glm::vec4 corner_vec4 = glm::vec4(corner, 1);
-				glm::vec4 transformed_corner = WORLD_FROM_LOCAL_GLM * corner_vec4;
-				if (transformed_corner.w != 0.f)
-					transformed_corner /= transformed_corner.w;
-				corner = glm::vec3(transformed_corner[0], transformed_corner[1], transformed_corner[2]);
-				node->bbox.enclose(corner);
-			}
 
 			// frustum culling
 			if (rtg.configuration.culling_mode == RTG::Configuration::Culling_Mode::FRUSTUM)
 			{
+				
+				// update node bbox 
+				node->bbox.reset();
+
+				// method 1: (by enclosing the corners of the transformed mesh bbox)
+				std::vector<glm::vec3> meshBBoxCorners = refMesh->bbox.get_corners();
+				for (auto & corner : meshBBoxCorners)
+				{
+					glm::vec4 corner_vec4 = glm::vec4(corner, 1);
+					glm::vec4 transformed_corner = WORLD_FROM_LOCAL_GLM * corner_vec4;
+					if (transformed_corner.w != 0.f)
+						transformed_corner /= transformed_corner.w;
+					corner = glm::vec3(transformed_corner[0], transformed_corner[1], transformed_corner[2]);
+					node->bbox.enclose(corner);
+				}
+
+				// method 2: (by enclosing all exact transformed vertices)
+				// for (auto & vertex : refMesh->positionList)
+				// {
+				// 	glm::vec4 vertex_vec4 = glm::vec4(vertex, 1);
+				// 	glm::vec4 transformed_vertex_vec4 = WORLD_FROM_LOCAL_GLM * vertex_vec4;
+				// 	if (transformed_vertex_vec4.w != 0.f)
+				// 		transformed_vertex_vec4 /= transformed_vertex_vec4.w;
+				// 	glm::vec3 transformed_vertex_vec3 = glm::vec3(transformed_vertex_vec4.x, transformed_vertex_vec4.y, transformed_vertex_vec4.z);
+				// 	node->bbox.enclose(transformed_vertex_vec3);
+				// }
+
 				Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
 
 				if (!camera_frustum.isBBoxInFrustum(node->bbox)) {

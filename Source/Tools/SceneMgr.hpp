@@ -175,7 +175,12 @@ struct SceneMgr
         AttributeStream attrTangent;
         AttributeStream attrTexcoord;
 
-        std::string refMaterialName;   
+        std::string refMaterialName;
+
+        std::vector<glm::vec3> positionList;
+        std::vector<glm::vec3> normalList;
+        std::vector<glm::vec4> tangentList;
+        std::vector<glm::vec2> texcoordList;   
 
         BBox bbox;
     };
