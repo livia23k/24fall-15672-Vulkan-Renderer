@@ -8,7 +8,7 @@ Frustum Frustum::createFrustumFromCamera(const Camera &camera)
     const float halfHSide = halfVSide * camera.camera_attributes.aspect;
 
     frustum.nearFace.position = camera.position + camera.camera_attributes.near * camera.front;
-    frustum.farFace.normal = camera.front;
+    frustum.nearFace.normal = camera.front;
 
     frustum.farFace.position = camera.position + camera.camera_attributes.far * camera.front;
     frustum.farFace.normal = -camera.front;
@@ -37,7 +37,7 @@ bool Frustum::isBBoxInFrustum(BBox &bbox)
 
     int iTotalIn = 0;
 
-    for (const Plane &plane :{nearFace, farFace, leftFace, rightFace, topFace, rightFace})
+    for (const Plane &plane :{nearFace, farFace, leftFace, rightFace, topFace, bottomFace})
     {
         int iInCount = 0;
 
@@ -47,7 +47,7 @@ bool Frustum::isBBoxInFrustum(BBox &bbox)
                 ++ iInCount;
         }
 
-        if (iInCount >= 4) // pass if greater equal than 6 BBox corner is in front of the plane
+        if (iInCount >= 6) // pass if greater equal than 6 BBox corners are in front of the plane
             ++ iTotalIn;
     }
 

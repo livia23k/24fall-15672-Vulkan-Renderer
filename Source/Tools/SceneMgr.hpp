@@ -160,6 +160,8 @@ struct SceneMgr
         std::string refMeshName;
         std::string refEnvironmentName;
         std::string refLightName;
+
+        BBox bbox;
     };
 
     struct MeshObject

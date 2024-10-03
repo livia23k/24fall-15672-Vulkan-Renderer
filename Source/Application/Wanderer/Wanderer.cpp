@@ -1633,13 +1633,12 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 
 	uint32_t vertexCount = positionList.size();
 
-	// calculate BBox for the mesh object [TOCHECK]
+	// calculate BBox for the mesh object
 
 	for (uint32_t i = 0; i < vertexCount; ++ i)
 	{
 		refMesh->bbox.enclose(positionList[i]);
 	}
-
 
 	// assembly attributes into scene object vertex
 
@@ -1916,17 +1915,33 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 		auto findVertexIdxResult = sceneMgr.meshVerticesIndexMap.find(node->refMeshName);
 		if (findMatrixResult != sceneMgr.nodeMatrixMap.end() && findVertexIdxResult != sceneMgr.meshVerticesIndexMap.end())
 		{
-			mat4 WORLD_FROM_LOCAL = TypeHelper::convert_glm_mat4_to_mat4(findMatrixResult->second);
+			glm::mat4 WORLD_FROM_LOCAL_GLM = findMatrixResult->second;
+			mat4 WORLD_FROM_LOCAL = TypeHelper::convert_glm_mat4_to_mat4(WORLD_FROM_LOCAL_GLM);
 			mat4 WORLD_FROM_LOCAL_NORMAL = calculate_normal_matrix(findMatrixResult->second);
+			
+			auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
+			if (nodeMeshIt == sceneMgr.meshObjectMap.end())
+				continue;
+			
+			// update node bbox (by enclosing the corners of the transformed mesh bbox)
+			node->bbox.reset();
+			std::vector<glm::vec3> meshBBoxCorners = nodeMeshIt->second->bbox.get_corners();
+			for (auto & corner : meshBBoxCorners)
+			{
+				glm::vec4 corner_vec4 = glm::vec4(corner, 1);
+				glm::vec4 transformed_corner = WORLD_FROM_LOCAL_GLM * corner_vec4;
+				if (transformed_corner.w != 0.f)
+					transformed_corner /= transformed_corner.w;
+				corner = glm::vec3(transformed_corner[0], transformed_corner[1], transformed_corner[2]);
+				node->bbox.enclose(corner);
+			}
 
 			// frustum culling
 			if (rtg.configuration.culling_mode == RTG::Configuration::Culling_Mode::FRUSTUM)
 			{
 				Frustum camera_frustum = Frustum::createFrustumFromCamera(rtg.configuration.camera); // always use the main camera for culling
-				auto nodeMeshIt = sceneMgr.meshObjectMap.find(node->refMeshName);
-				if (nodeMeshIt == sceneMgr.meshObjectMap.end())
-					continue;
-				if (!camera_frustum.isBBoxInFrustum(nodeMeshIt->second->bbox)) {
+
+				if (!camera_frustum.isBBoxInFrustum(node->bbox)) {
 					// std::cout << "Culling node " << node->name << std::endl;
 					continue;
 				}
