@@ -258,10 +258,4 @@ struct Wanderer : RTG::Application
 	// Rendering function, uses all the resources above to queue work to draw a frame:
 
 	virtual void render(RTG &, RTG::RenderParams const &) override;
-
-	//--------------------------------------------------------------------
-	// Performance related members:
-	std::ofstream render_performance_log;
-	std::chrono::high_resolution_clock::time_point timespot_before_record;
-	std::chrono::high_resolution_clock::time_point timespot_after_record;
 };

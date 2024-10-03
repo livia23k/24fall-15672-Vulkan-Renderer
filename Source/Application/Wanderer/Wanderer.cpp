@@ -22,14 +22,6 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_description_pool();
 	setup_workspaces();
 
-	// prepare for performance logging
-	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
-	if (!render_performance_log.is_open())
-		std::cerr << "Failed to open performance log file." << std::endl;
-	else
-		render_performance_log.close();
-	render_performance_log.open("performance(render).txt", std::ios::app); // re-open for appending
-
 	// load scene graph related info
 	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
 	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, sceneMgr);
@@ -95,10 +87,6 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 
 Wanderer::~Wanderer()
 {
-	// close performance log
-	if (render_performance_log.is_open())
-		render_performance_log.close();
-
 	// just in case rendering is still in flight, don't destroy resources:
 	//(not using VK macro to avoid throw-ing in destructor)
 	if (VkResult result = vkDeviceWaitIdle(rtg.device); result != VK_SUCCESS)
@@ -294,8 +282,6 @@ void Wanderer::destroy_framebuffers()
 
 void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 {
-
-	timespot_before_record = std::chrono::high_resolution_clock::now();
 
 	// assert that parameters are valid:
 	assert(&rtg == &rtg_);
@@ -694,13 +680,6 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 		VK(vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, render_params.workspace_available));
 	}
 
-	timespot_after_record = std::chrono::high_resolution_clock::now();
-
-	float dt = float(std::chrono::duration_cast<std::chrono::milliseconds>(timespot_after_record - timespot_before_record).count());
-	// std::cout << "[Render] Render time: " << dt << " ms" << std::endl;
-
-	if (render_performance_log.is_open())
-		render_performance_log << dt << std::endl;
 }
 
 void Wanderer::update(float dt)

@@ -158,6 +158,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
 
 RTG::RTG(Configuration const &configuration_) : helpers(*this)
 {
+	// prepare for performance logging
+	render_performance_log.open("performance(render).txt", std::ios::out | std::ios::trunc); // trunc existing file
+	if (!render_performance_log.is_open())
+		std::cerr << "Failed to open performance log file." << std::endl;
+	else
+		render_performance_log.close();
+	render_performance_log.open("performance(render).txt", std::ios::app); // re-open for appending
 
 	// copy input configuration:
 	configuration = configuration_;
@@ -557,6 +564,10 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this)
 
 RTG::~RTG()
 {
+	// close performance log
+	if (render_performance_log.is_open())
+		render_performance_log.close();
+
 	// don't destroy until device is idle:
 	if (device != VK_NULL_HANDLE)
 	{
@@ -902,6 +913,8 @@ void RTG::run(Application &application)
 
 	while (!glfwWindowShouldClose(window))
 	{
+		timespot_before_record = std::chrono::high_resolution_clock::now();
+
 		// event handling
 		glfwPollEvents();
 
@@ -1012,6 +1025,14 @@ void RTG::run(Application &application)
 
 			
 		};
+
+		timespot_after_record = std::chrono::high_resolution_clock::now();
+
+		float dt = float(std::chrono::duration_cast<std::chrono::microseconds>(timespot_after_record - timespot_before_record).count());
+		std::cout << "[Render] Render time: " << dt << " microseconds" << std::endl;
+
+		if (render_performance_log.is_open())
+			render_performance_log << dt << std::endl;
 	}
 
 	// tear down event handling

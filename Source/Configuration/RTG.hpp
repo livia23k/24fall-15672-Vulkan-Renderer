@@ -13,6 +13,8 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <fstream>
+#include <chrono>
 
 struct GLFWwindow;
 
@@ -113,6 +115,12 @@ struct RTG
 	// Helper functions, split off into their own little package:
 	// see Helpers.hpp
 	Helpers helpers;
+
+	//--------------------------------------------------------------------
+	// Performance related members:
+	std::ofstream render_performance_log;
+	std::chrono::high_resolution_clock::time_point timespot_before_record;
+	std::chrono::high_resolution_clock::time_point timespot_after_record;
 
 	//------------------------------------------------
 	// Headless settings
