@@ -1501,10 +1501,6 @@ void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
         // cauculate the parent matrix for child nodes
         glm::mat4 &parentMatrix = current_nodeMatrix.modelMatrix;
 
-        // [TOCHECK]
-		// std::cout << current_nodeMatrix.nodeObject->name << std::endl; // [PASS]
-        // SceneMgr::print_glm_mat4(parentMatrix);
-
 		// push children to queue
 		for (std::string & childName : current_nodeMatrix.nodeObject->childName)
 		{

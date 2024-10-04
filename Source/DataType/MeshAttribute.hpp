@@ -8,25 +8,10 @@
 
 struct MeshAttribute
 {
-    struct
-    {
-        float x, y, z;
-    } Position;
-
-    struct
-    {
-        float x, y, z;
-    } Normal;
-
-    struct
-    {
-        float x, y, z, w;
-    } Tangent;
-
-    struct
-    {
-        float s, t;
-    } TexCoord;
+    struct { float x, y, z; } Position;
+    struct { float x, y, z; } Normal;
+    struct { float x, y, z, w; } Tangent;
+    struct { float s, t; } TexCoord;
 
     static const VkPipelineVertexInputStateCreateInfo array_input_state; // a pipeline vertex input state
                                                                          //  that works with a buffer holding a

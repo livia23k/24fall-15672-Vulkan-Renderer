@@ -67,8 +67,7 @@ struct Camera
     } sensitivity;
 
     /* cr. camera parameters learned from Learn OpenGL 
-           https://learnopengl.com/Getting-started/Camera#:~:text=The%20pitch%20is%20the%20angle,used%20in%20space%2Dflight%20cameras.
-           but euler angles doesn't seems to work, need further work */
+           https://learnopengl.com/Getting-started/Camera# */
 
     glm::vec3 position;
     glm::vec3 target_position;
