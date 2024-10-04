@@ -35,21 +35,21 @@ bool Frustum::isBBoxInFrustum(BBox &bbox)
     std::vector<glm::vec3> bboxCorners = bbox.get_corners();
     int sizeCorners = bboxCorners.size();
 
-    int iTotalIn = 0;
+    int cornerInFrustumCnt = 0;
 
-    for (const Plane &plane :{nearFace, farFace, leftFace, rightFace, topFace, bottomFace})
+    for (int i = 0; i < sizeCorners; ++ i)
     {
-        int iInCount = 0;
+        int cornerInPlanerFrontCnt = 0;
 
-        for (int i = 0; i < sizeCorners; ++ i)
+        for (const Plane &plane :{nearFace, farFace, leftFace, rightFace, topFace, bottomFace})
         {
             if (plane.pointInFront(bboxCorners[i]))
-                ++ iInCount;
+                ++ cornerInPlanerFrontCnt;
         }
 
-        if (iInCount >= 6) // pass if greater equal than 6 BBox corners are in front of the plane
-            ++ iTotalIn;
+        if (cornerInPlanerFrontCnt == 6) // pass if corner is in front of all planes
+            ++ cornerInFrustumCnt;
     }
 
-    return (iTotalIn == 6); // if pass tests for all 6 planes, the BBox is in the frustum
+    return (cornerInFrustumCnt >= 4); // pass if >= 6 corners are in the frustum
 }
