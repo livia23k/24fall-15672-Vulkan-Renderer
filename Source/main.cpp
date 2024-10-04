@@ -48,20 +48,6 @@ int main(int argc, char **argv)
 		// initializes global (whole-life-of-application) resources:
 		Wanderer application(rtg);
 
-		// set up camera
-		const std::string &target_scene_camera =  rtg.configuration.specified_default_camera;
-		if (target_scene_camera != "")
-		{
-			SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
-
-			sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.find(target_scene_camera);
-			if (sceneMgr.currentSceneCameraItr == sceneMgr.cameraObjectMap.end()) {
-				throw std::runtime_error("Scene camera object named \"" + target_scene_camera + "\" not found. Application exits.");
-			}
-
-			application.CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
-		}
-
 		// main loop -- handles events, renders frames, etc:
 		rtg.run(application);
 	}

@@ -37,15 +37,27 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	Camera &camera = rtg.configuration.camera;
 	if (sceneMgr.sceneCameraCount > 0)
 	{
-		// (main camera) to be the first scene camera, will be overwritten if set "--camera" flag in the command line
-		camera.current_camera_mode = Camera::Camera_Mode::SCENE;
-		sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
+		const std::string &target_scene_camera =  rtg.configuration.specified_default_camera;
+		// (main camera)
+		if (target_scene_camera != "")
+		{
+			// use specified scene camera as the default camera
+			sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.find(target_scene_camera);
+			if (sceneMgr.currentSceneCameraItr == sceneMgr.cameraObjectMap.end()) {
+				throw std::runtime_error("Scene camera object named \"" + target_scene_camera + "\" not found. Application exits.");
+			}
+		}
+		else
+		{
+			// use the first scene camera in map as the default camera
+			camera.current_camera_mode = Camera::Camera_Mode::SCENE;
+			sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
+		}
 		CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
 
 		// (user camera) initialize using the main camera setting
 		rtg.configuration.user_camera.current_camera_mode = Camera::Camera_Mode::USER;
 		rtg.configuration.user_camera.update_info_from_another_camera(rtg.configuration.camera);
-
 
 		// (debug camera) initialize using the main camera setting
 		rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
@@ -739,7 +751,7 @@ void Wanderer::update(float dt)
 
 		}
 
-		// SCENE mode, no need to adjust the CLIP_FROM_WORLD matrix;
+		// SCENE mode, no control, skip
 
 		// DEBUG mode, debug camera control
 		if (debug_camera.current_camera_mode == Camera::DEBUG)
@@ -784,7 +796,7 @@ void Wanderer::update(float dt)
 
 		
 		// ------------------------------------------------------------------------------
-		// apply main camera changes
+		// apply main camera changes in USER mode
 
 		if (camera.current_camera_mode == Camera::Camera_Mode::USER) {
 
@@ -802,6 +814,11 @@ void Wanderer::update(float dt)
 							  camera.up[0], camera.up[1], camera.up[2]					   	 // up
 						  );
 		}
+
+
+		// ------------------------------------------------------------------------------
+		// SCENE mode camera changes only happen possibly after the animation driving, so update later, skip for now
+		
 
 		// ------------------------------------------------------------------------------
 		// if in DEBUG mode, 
@@ -850,6 +867,13 @@ void Wanderer::update(float dt)
 	{ 
 		rtg.configuration.sceneMgr.update_nodes_from_animation_drivers(animation_timer.t);
     	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
+
+		
+		// 
+		if (camera.current_camera_mode == Camera::Camera_Mode::SCENE)
+		{
+			CLIP_FROM_WORLD = camera.apply_scene_mode_camera(rtg.configuration.sceneMgr); // make senses when animation driver 
+		}
 	};
 
 	// ===============================================
@@ -1579,12 +1603,7 @@ void Wanderer::load_scene_objects_vertices()
 void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices)
 {
 	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
-
-	// std::vector<glm::vec3> positionList;
-	// std::vector<glm::vec3> normalList;
-	// std::vector<glm::vec4> tangentList;
-	// std::vector<glm::vec2> texcoordList;
-
+	
 	auto findMeshResult = sceneMgr.meshObjectMap.find(meshObject->name);
 	if (findMeshResult == sceneMgr.meshObjectMap.end())
 		return;

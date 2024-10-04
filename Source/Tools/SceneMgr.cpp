@@ -125,6 +125,7 @@ void SceneMgr::update_nodes_from_animation_drivers(float targetTime)
         float nextTime = driver->times[next];
 
         float w = (targetTime - prevTime) / (nextTime - prevTime);
+        w = glm::clamp(w, 0.0f, 1.0f); // avoid jittering issue
 
         if (driver->interpolation == DriverInterpolation::LINEAR)
         {
