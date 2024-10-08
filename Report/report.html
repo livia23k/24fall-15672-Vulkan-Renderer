@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="by Livia Lai (wenxinl)" />
+  <title>\  A1: Scene Viewer Report</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <script
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js"
+  type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title"><span class="math inline">\(\ \)</span><br />
+<strong>A1: Scene Viewer Report</strong></h1>
+<p class="author">by Livia Lai (wenxinl)</p>
+</header>
+<section id="i.-summary" class="unnumbered tcolorbox">
+<h1 class="unnumbered"><strong>I. Summary</strong></h1>
+</section>
+<p><span id="sec:SCIENTIFIC-BACKGROUND"
+label="sec:SCIENTIFIC-BACKGROUND"></span></p>
+<p>For this A1 assignment, I structured the project around a Scene
+Manager and a Load Manager. The Scene Manager acts as a set of maps
+holding information about all the scene objects, while the Load Manager
+is responsible for handling all the loading tasks, such as parsing and
+initializing resources.</p>
+<p>Most of the runtime logic, such as initialization and setup, takes
+place in the Application class, specifically in the "Wanderer"
+application (a renamed and modified version of the previous "Tutorial"
+application). I divided the keyboard input handling between two methods:
+some inputs are processed within Wanderer::on_input(), while others are
+actually handled during the application’s update() function.</p>
+<p>I also restructured the project files for better organization. All
+source code is stored within the Source folder, divided into several key
+components:</p>
+<ul>
+<li><p>Application (containing "Wanderer")</p></li>
+<li><p>Configuration (RTG-related files)</p></li>
+<li><p>DataTypes (which holds custom data structures and
+methods)</p></li>
+<li><p>Tools (where I defined multiple managers, the timer, and a type
+conversion helper)</p></li>
+</ul>
+<p>This reorganization improves the separation of concerns and
+simplifies code maintenance for the project.</p>
+<section id="ii.-my-animation" class="unnumbered tcolorbox">
+<h1 class="unnumbered"><strong>II. My Animation</strong></h1>
+</section>
+<div class="flushleft">
+<p>[Brief]<br />
+</p>
+<div class="tabbing">
+<p>A bird flying above the rotating globe.<br />
+</p>
+</div>
+
+<video width="700" controls>
+  <source src="./video/animation-livia.mp4" type="video/mp4" size=""/>
+</video>
+
+<div class="tabbing">
+<p><a
+href="https://drive.google.com/file/d/1wjam2_mkIwunhG2eDSFMNkV3X1r20XF6/view?usp=drive_link"><u>Screen
+Recording Link (Backup)</u></a><br />
+</p>
+</div>
+<p>[Credit]<br />
+</p>
+<div class="tabbing">
+<p>Model Globe: <a
+href="https://free3d.com/3d-model/isometric-world-951869.html"><u>Isometric
+World by Raphael Frei</u></a><br />
+Model Bird: <a
+href="https://www.turbosquid.com/3d-models/free-obj-mode-bird-quad-triangles/1100939"><u>Low
+poly bird by chantal246</u></a><br />
+Platform: <a href="https://www.blender.org/">Blender 4.2.1</a><br />
+s72 Exporter: <a href="https://github.com/15-472/s72"><u>s72 by Jim
+McCann</u></a><br />
+Animation: Created using keyframing (0-240 frames) in Blender by Livia
+Lai<br />
+</p>
+</div>
+</div>
+<section id="iii.-using-the-scene-viewer" class="unnumbered tcolorbox">
+<h1 class="unnumbered"><strong>III. Using the Scene Viewer</strong></h1>
+</section>
+
+<section>
+  <h2>A. Command-line Arguments</h2>
+  <ul>
+      <li><strong><code>--scene &lt;scene-path&gt;</code></strong><br>
+          (optional) If specified, load "scene-path" (suffix needed) from the "Assets/SceneGraphs/" folder.<br>
+          Example: <code>--scene sg-Articulation.s72</code><br>
+          Example: <code>--scene bird/bird.s72</code><br>
+          <strong>Notes:</strong> If not specified, the default scene graph "Assets/SceneGraphs/sg-Articulation.s72" will be used.<br>
+      </li>
+      <li><strong><code>--camera &lt;camera-name&gt;</code></strong><br>
+          (optional) If specified, use the scene camera with the name "camera-name" as the default camera.<br>
+          Example: <code>--camera Fixed-Camera</code><br>
+          Example: <code>--camera Moving-Camera</code><br>
+          <strong>Notes:</strong> If not specified, a random scene camera (if available) will be used as the default camera. If no scene cameras are provided, the default camera will be set to look at a random root node of the scene.<br>
+      </li>
+      <li><strong><code>--culling &lt;culling-mode&gt;</code></strong><br>
+          (optional) If specified, use the specific culling mode.<br>
+          Current available culling modes: none, frustum.<br>
+          Example: <code>--culling none</code><br>
+          Example: <code>--culling frustum</code><br>
+      </li>
+  </ul>
+</section>
+
+<section>
+  <h2>B. Controls</h2>
+  <h3>Camera Mode control:</h3>
+  <ul>
+      <li><strong>Key <code>1</code></strong>: Switch to SCENE camera mode;</li>
+      <li><strong>Key <code>2</code></strong>: Switch to USER camera mode;</li>
+      <li><strong>Key <code>3</code></strong>: Switch to DEBUG camera mode;</li>
+      <li><strong>Key <code>V</code></strong>: Switching among scene cameras;</li>
+      <li><strong>Key <code>Z</code></strong>: Copy current camera setting to DEBUG camera in SCENE / USER camera mode;</li>
+  </ul>
+
+  <h3>Camera control:</h3>
+  <ul>
+      <li><strong>Key <code>W</code></strong>: Move forward;</li>
+      <li><strong>Key <code>S</code></strong>: Move backward;</li>
+      <li><strong>Key <code>A</code></strong>: Move left;</li>
+      <li><strong>Key <code>D</code></strong>: Move right;</li>
+      <li><strong>Key <code>Q</code></strong>: Move up;</li>
+      <li><strong>Key <code>E</code></strong>: Move down;</li>
+      <li><strong>Key <code>&uarr;</code></strong>: Pitch upward;</li>
+      <li><strong>Key <code>&darr;</code></strong>: Pitch downward;</li>
+      <li><strong>Key <code>&larr;</code></strong>: Yaw to the left;</li>
+      <li><strong>Key <code>&rarr;</code></strong>: Yaw to the right;</li>
+  </ul>
+
+  <h3>Animation control:</h3>
+  <ul>
+      <li><strong>Key <code>P</code></strong>: Pause/resume the animation;</li>
+      <li><strong>Key <code>R</code></strong>: Reset and pause animation;</li>
+  </ul>
+</section>
+
+
+
+<section id="iv.-my-code" class="unnumbered tcolorbox">
+<h1 class="unnumbered"><strong>IV. My Code</strong></h1>
+</section>
+<section id="a.-loading-scenes-mesh-data" class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>A. Loading scenes, Mesh data</strong>
+</h2>
+</section>
+<h3 class="unnumbered" id="brief-intro">0. Brief Intro</h3>
+<p>Parse .s72 by <a
+href="https://github.com/ixchow/sejp"><u>sejp</u></a> and store scene
+graph info in SceneMgr maps.</p>
+<h3 class="unnumbered" id="data-structure">1. Data Structure</h3>
+<p>I designed a SceneMgr struct to organize the scene graph information.
+The scene graph data is stored in several unordered_maps, each
+corresponding to a specific type of object (e.g., nodes, meshes,
+cameras). The information is parsed from the .s72 file and stored in the
+appropriate map using the object’s name as the key.</p>
+<div class="sourceCode" id="cb1" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb1-1"><a href="#cb1-1"></a><span class="co">/* Source/Tools/SceneMgr.hpp */</span></span>
+<span id="cb1-2"><a href="#cb1-2"></a><span class="co">// object maps</span></span>
+<span id="cb1-3"><a href="#cb1-3"></a>SceneObject<span class="op">*</span> sceneObject<span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> NodeObject<span class="op">*&gt;</span> nodeObjectMap<span class="op">;</span></span>
+<span id="cb1-5"><a href="#cb1-5"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> MeshObject<span class="op">*&gt;</span> meshObjectMap<span class="op">;</span></span>
+<span id="cb1-6"><a href="#cb1-6"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> CameraObject<span class="op">*&gt;</span> cameraObjectMap<span class="op">;</span></span>
+<span id="cb1-7"><a href="#cb1-7"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> DriverObject<span class="op">*&gt;</span> driverObjectMap<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> MaterialObject<span class="op">*&gt;</span> materialObjectMap<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> EnvironmentObject<span class="op">*&gt;</span> environmentObjectMap<span class="op">;</span></span>
+<span id="cb1-10"><a href="#cb1-10"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> LightObject<span class="op">*&gt;</span> lightObjectMap<span class="op">;</span></span></code></pre></div>
+<p>For detailed object structures, refer to SceneMgr.hpp. The data in
+SceneMgr is essentially a local copy of the data stored in the .s72
+file, with only a few additional variables added when necessary.</p>
+<p>I used the unordered_map because we need to frequently look up the
+information during runtime. It improves efficiency.</p>
+<h3 class="unnumbered" id="loading-function">2. Loading Function</h3>
+<p>The <code
+class="sourceCode cpp">load_scene_graph_info_from_s72<span class="op">()</span></code>
+function is implemented in LoadMgr and handles the parsing of the .s72
+file. The process is broken down into the following steps:<br />
+a) Verify the scene graph file.<br />
+b) Clean the SceneMgr object.<br />
+c) Parse the scene graph info using <a
+href="https://github.com/ixchow/sejp"><u>sejp</u></a>).<br />
+</p>
+<div class="sourceCode" id="cb2" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb2-1"><a href="#cb2-1"></a><span class="co">/* Source/Tools/LoadMgr.hpp */</span></span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="co">// load scene graph info</span></span>
+<span id="cb2-3"><a href="#cb2-3"></a><span class="at">static</span> <span class="dt">void</span> load_scene_graph_info_from_s72<span class="op">(</span><span class="at">const</span> <span class="bu">std::</span>string<span class="op">&amp;</span> path<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="at">static</span> <span class="dt">void</span> parse_scene_graph_info<span class="op">(</span><span class="at">const</span> sejp<span class="op">::</span>value <span class="op">&amp;</span>sceneGraphInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span></code></pre></div>
+<p>The scene graph parsing is further divided based on the type of scene
+object:</p>
+<div class="sourceCode" id="cb3" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb3-1"><a href="#cb3-1"></a><span class="co">/* Source/Tools/LoadMgr.hpp */</span></span>
+<span id="cb3-2"><a href="#cb3-2"></a><span class="co">// loading breakdowns</span></span>
+<span id="cb3-3"><a href="#cb3-3"></a><span class="at">static</span> <span class="dt">void</span> parse_scene_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>sceneObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-4"><a href="#cb3-4"></a><span class="at">static</span> <span class="dt">void</span> parse_node_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>nodeObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-5"><a href="#cb3-5"></a><span class="at">static</span> <span class="dt">void</span> parse_mesh_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>meshObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-6"><a href="#cb3-6"></a><span class="at">static</span> <span class="dt">void</span> parse_camera_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>cameraObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-7"><a href="#cb3-7"></a><span class="at">static</span> <span class="dt">void</span> parse_driver_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>driverObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-8"><a href="#cb3-8"></a><span class="at">static</span> <span class="dt">void</span> parse_material_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>materialObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-9"><a href="#cb3-9"></a><span class="at">static</span> <span class="dt">void</span> parse_environment_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>environmentObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span>
+<span id="cb3-10"><a href="#cb3-10"></a><span class="at">static</span> <span class="dt">void</span> parse_light_object_info<span class="op">(</span>OptionalPropertyMap <span class="op">&amp;</span>lightObjectInfo<span class="op">,</span> SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">);</span></span></code></pre></div>
+<h3 class="unnumbered" id="when-is-it-called">3. When is it Called</h3>
+<p>The loading function is invoked during the application initialization
+(Wanderer::Wanderer() in Source/Application/Wanderer/Wanderer.cpp)
+before the object vertices data needs to be loaded.</p>
+<section id="b.-drawing-the-scene." class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>B. Drawing the scene.</strong> </h2>
+</section>
+
+
+<div class="center">
+	<p><img src="./image/a1-draw.png" width="600" alt="image" /></p>
+</div>
+
+
+<h3 class="unnumbered" id="brief-intro-1">0. Brief Intro</h3>
+<p>Mesh vertices are stored in the vertex buffer, with a map used to
+track their indices. Node matrices are precomputed, and another map is
+used to record them.</p>
+<h3 class="unnumbered" id="loading-node-vertices">1. Loading Node
+Vertices</h3>
+<p>To prepare for object rendering, we need to load the vertex data of
+the objects and apply the necessary transformations (from model local
+coordinate to world coordinate). This involves two steps:</p>
+<p><strong>a) Loading Mesh Vertices into the Vertex Buffer and Record
+the Indices</strong></p>
+<p>Each mesh in the scene is referenced by different nodes, but their
+vertex information (positions, normals, tangents, and texture
+coordinates) only needs to be stored once.</p>
+<p>To start with, I defined a MeshAttribute struct to hold this
+information:</p>
+<div class="sourceCode" id="cb4" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb4-1"><a href="#cb4-1"></a><span class="co">/* Source/DataType/MeshAttribute.hpp */</span></span>
+<span id="cb4-2"><a href="#cb4-2"></a><span class="kw">struct</span> MeshAttribute</span>
+<span id="cb4-3"><a href="#cb4-3"></a><span class="op">{</span></span>
+<span id="cb4-4"><a href="#cb4-4"></a>    <span class="kw">struct</span> <span class="op">{</span> <span class="dt">float</span> x<span class="op">,</span> y<span class="op">,</span> z<span class="op">;</span> <span class="op">}</span> Position<span class="op">;</span></span>
+<span id="cb4-5"><a href="#cb4-5"></a>    <span class="kw">struct</span> <span class="op">{</span> <span class="dt">float</span> x<span class="op">,</span> y<span class="op">,</span> z<span class="op">;</span> <span class="op">}</span> Normal<span class="op">;</span></span>
+<span id="cb4-6"><a href="#cb4-6"></a>    <span class="kw">struct</span> <span class="op">{</span> <span class="dt">float</span> x<span class="op">,</span> y<span class="op">,</span> z<span class="op">,</span> w<span class="op">;</span> <span class="op">}</span> Tangent<span class="op">;</span></span>
+<span id="cb4-7"><a href="#cb4-7"></a>    <span class="kw">struct</span> <span class="op">{</span> <span class="dt">float</span> s<span class="op">,</span> t<span class="op">;</span> <span class="op">}</span> TexCoord<span class="op">;</span></span>
+<span id="cb4-8"><a href="#cb4-8"></a>    <span class="at">static</span> <span class="at">const</span> VkPipelineVertexInputStateCreateInfo array_input_state<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9"></a><span class="op">};</span></span></code></pre></div>
+<p>Then, in the <code
+class="sourceCode cpp">load_scene_objects_vertices<span class="op">()</span></code>
+function, I use a breadth-first search (BFS) traversal of the scene
+graph to load all the referenced mesh vertices. The vertices are stored
+in a temporary buffer, and their start and size are tracked using the
+<code class="sourceCode cpp">meshVerticesIndexMap</code>.</p>
+<div class="sourceCode" id="cb5" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb5-1"><a href="#cb5-1"></a><span class="co">/* Source/Tools/SceneMgr.hpp */</span></span>
+<span id="cb5-2"><a href="#cb5-2"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> <span class="dt">uint32_t</span><span class="op">&gt;</span> meshVerticesIndexMap<span class="op">;</span></span></code></pre></div>
+<p>Additionally, the ObjectVertices struct keeps track of the first
+index and the number of vertices for each mesh object in the vertex
+buffer:</p>
+<div class="sourceCode" id="cb6" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb6-1"><a href="#cb6-1"></a><span class="co">/* Source/Application/Wanderer/Wanderer.hpp */</span></span>
+<span id="cb6-2"><a href="#cb6-2"></a>Helpers<span class="op">::</span>AllocatedBuffer object_vertices<span class="op">;</span></span>
+<span id="cb6-3"><a href="#cb6-3"></a><span class="kw">struct</span> ObjectVertices</span>
+<span id="cb6-4"><a href="#cb6-4"></a><span class="op">{</span></span>
+<span id="cb6-5"><a href="#cb6-5"></a>    <span class="dt">uint32_t</span> first <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="co">// index of first vertex in object_vertices</span></span>
+<span id="cb6-6"><a href="#cb6-6"></a>    <span class="dt">uint32_t</span> count <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> <span class="co">// number of vertices in object_vertices</span></span>
+<span id="cb6-7"><a href="#cb6-7"></a><span class="op">};</span></span>
+<span id="cb6-8"><a href="#cb6-8"></a><span class="bu">std::</span>vector<span class="op">&lt;</span>ObjectVertices<span class="op">&gt;</span> scene_nodes_vertices<span class="op">;</span></span></code></pre></div>
+<p>The indices of the start and size of the mesh vertices is then stored
+in <code class="sourceCode cpp">meshVerticesIndexMap</code> indexed by
+the mesh object name:</p>
+<div class="sourceCode" id="cb7" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb7-1"><a href="#cb7-1"></a><span class="co">/* Source/Application/Wanderer/Wanderer.cpp */</span></span>
+<span id="cb7-2"><a href="#cb7-2"></a><span class="dt">void</span> Wanderer<span class="op">::</span>load_scene_objects_vertices<span class="op">()</span></span>
+<span id="cb7-3"><a href="#cb7-3"></a><span class="op">{</span></span>
+<span id="cb7-4"><a href="#cb7-4"></a>    <span class="co">// ...</span></span>
+<span id="cb7-5"><a href="#cb7-5"></a>    <span class="cf">for</span> each referenced mesh<span class="op">:</span></span>
+<span id="cb7-6"><a href="#cb7-6"></a>    <span class="op">{</span></span>
+<span id="cb7-7"><a href="#cb7-7"></a>        ObjectVertices mesh_vertices<span class="op">;</span></span>
+<span id="cb7-8"><a href="#cb7-8"></a>        mesh_vertices<span class="op">.</span>first <span class="op">=</span> <span class="dt">uint32_t</span><span class="op">(</span>tmp_object_vertices<span class="op">.</span>size<span class="op">());</span></span>
+<span id="cb7-9"><a href="#cb7-9"></a>        </span>
+<span id="cb7-10"><a href="#cb7-10"></a>        <span class="dt">uint32_t</span> vertexCount <span class="op">=</span> refMesh<span class="op">-&gt;</span>positionList<span class="op">.</span>size<span class="op">();</span></span>
+<span id="cb7-11"><a href="#cb7-11"></a>        </span>
+<span id="cb7-12"><a href="#cb7-12"></a>        <span class="co">// assembly attributes into scene object vertex</span></span>
+<span id="cb7-13"><a href="#cb7-13"></a>        </span>
+<span id="cb7-14"><a href="#cb7-14"></a>        <span class="cf">for</span> <span class="op">(</span><span class="dt">uint32_t</span> i <span class="op">=</span> <span class="dv">0</span><span class="op">;</span> i <span class="op">&lt;</span> vertexCount<span class="op">;</span> <span class="op">++</span>i<span class="op">)</span></span>
+<span id="cb7-15"><a href="#cb7-15"></a>        <span class="op">{</span></span>
+<span id="cb7-16"><a href="#cb7-16"></a>            ObjectsPipeline<span class="op">::</span>Vertex node_vertex<span class="op">;</span></span>
+<span id="cb7-17"><a href="#cb7-17"></a>            node_vertex<span class="op">.</span>Position <span class="op">=</span> <span class="co">//...</span></span>
+<span id="cb7-18"><a href="#cb7-18"></a>            node_vertex<span class="op">.</span>Normal <span class="op">=</span> <span class="co">//...</span></span>
+<span id="cb7-19"><a href="#cb7-19"></a>            node_vertex<span class="op">.</span>Tangent <span class="op">=</span> <span class="co">//...</span></span>
+<span id="cb7-20"><a href="#cb7-20"></a>            node_vertex<span class="op">.</span>TexCoord <span class="op">=</span> <span class="co">//...</span></span>
+<span id="cb7-21"><a href="#cb7-21"></a>        </span>
+<span id="cb7-22"><a href="#cb7-22"></a>            tmp_object_vertices<span class="op">.</span>push_back<span class="op">(</span>node_vertex<span class="op">);</span></span>
+<span id="cb7-23"><a href="#cb7-23"></a>        <span class="op">}</span></span>
+<span id="cb7-24"><a href="#cb7-24"></a>        </span>
+<span id="cb7-25"><a href="#cb7-25"></a>        mesh_vertices<span class="op">.</span>count <span class="op">=</span> <span class="dt">uint32_t</span><span class="op">(</span>tmp_object_vertices<span class="op">.</span>size<span class="op">())</span> <span class="op">-</span> mesh_vertices<span class="op">.</span>first<span class="op">;</span></span>
+<span id="cb7-26"><a href="#cb7-26"></a>        </span>
+<span id="cb7-27"><a href="#cb7-27"></a>        sceneMgr<span class="op">.</span>meshVerticesIndexMap<span class="op">[</span>meshObject<span class="op">-&gt;</span>name<span class="op">]</span> <span class="op">=</span> scene_nodes_vertices<span class="op">.</span>size<span class="op">();</span></span>
+<span id="cb7-28"><a href="#cb7-28"></a>        scene_nodes_vertices<span class="op">.</span>push_back<span class="op">(</span>mesh_vertices<span class="op">);</span></span>
+<span id="cb7-29"><a href="#cb7-29"></a>    <span class="op">}</span></span>
+<span id="cb7-30"><a href="#cb7-30"></a>    <span class="co">// ...</span></span>
+<span id="cb7-31"><a href="#cb7-31"></a>    <span class="co">// when all mesh vertices are handled, copy the vertices to vertex buffer </span><span class="er">\</span></span>
+<span id="cb7-32"><a href="#cb7-32"></a><span class="co">    //  and allocate space for it in GPU</span></span>
+<span id="cb7-33"><a href="#cb7-33"></a><span class="op">}</span></span>
+<span id="cb7-34"><a href="#cb7-34"></a></span>
+<span id="cb7-35"><a href="#cb7-35"></a><span class="co">// For more details, refer to Wanderer::load_scene_objects_vertices() </span><span class="er">\</span></span>
+<span id="cb7-36"><a href="#cb7-36"></a><span class="co">//  in Source/Application/Wanderer/Wanderer.cpp</span></span></code></pre></div>
+<p>Again, I used unordered_map because it allows efficient lookups of
+vertex data, which is essential since these indices are needed every
+frame when updating object instances during rendering.</p>
+<p><strong>2. Pre-calculate the Node Matrices
+(LOCAL_TO_WORLD)</strong></p>
+<p>For each node, we also need to calculate the local-to-world
+transformation matrix. These matrices are used per frame to update the
+objects’ world positions. Instead of recalculating the matrix
+repeatedly, I store them in a nodeMatrixMap, which is updated using BFS
+traversal if any transformation of any node is updated.</p>
+<div class="sourceCode" id="cb8" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb8-1"><a href="#cb8-1"></a><span class="co">/* Source/Tools/SceneMgr.hpp */</span></span>
+<span id="cb8-2"><a href="#cb8-2"></a><span class="bu">std::</span>unordered_map<span class="op">&lt;</span><span class="bu">std::</span>string<span class="op">,</span> glm<span class="op">::</span>mat4<span class="op">&gt;</span> nodeMatrixMap<span class="op">;</span></span></code></pre></div>
+<p>Note that I’m updating the matrices of all nodes in a BFS loop, from
+root to leaves, which reduce the repeated work compared to updating from
+each child to its root parents. What’s more, remember to do some
+coordinates conversion, considering that s72 is in Z up coords but
+Vulkan is using a -Y up coords.</p>
+<div class="sourceCode" id="cb9" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb9-1"><a href="#cb9-1"></a><span class="co">/* Source/Tools/LoadMgr.cpp */</span></span>
+<span id="cb9-2"><a href="#cb9-2"></a><span class="dt">void</span> LoadMgr<span class="op">::</span>load_s72_node_matrices<span class="op">(</span>SceneMgr <span class="op">&amp;</span>targetSceneMgr<span class="op">)</span></span>
+<span id="cb9-3"><a href="#cb9-3"></a><span class="op">{</span></span>
+<span id="cb9-4"><a href="#cb9-4"></a>    targetSceneMgr<span class="op">.</span>nodeMatrixMap<span class="op">.</span>clear<span class="op">();</span></span>
+<span id="cb9-5"><a href="#cb9-5"></a>    targetSceneMgr<span class="op">.</span>nodeMatrixMap<span class="op">.</span>reserve<span class="op">(</span>targetSceneMgr<span class="op">.</span>nodeObjectMap<span class="op">.</span>size<span class="op">());</span></span>
+<span id="cb9-6"><a href="#cb9-6"></a></span>
+<span id="cb9-7"><a href="#cb9-7"></a>    <span class="kw">struct</span> NodeMatrix <span class="op">{</span></span>
+<span id="cb9-8"><a href="#cb9-8"></a>        NodeObject <span class="op">*</span>nodeObject<span class="op">;</span></span>
+<span id="cb9-9"><a href="#cb9-9"></a>        glm<span class="op">::</span>mat4 modelMatrix<span class="op">;</span></span>
+<span id="cb9-10"><a href="#cb9-10"></a>    <span class="op">};</span></span>
+<span id="cb9-11"><a href="#cb9-11"></a></span>
+<span id="cb9-12"><a href="#cb9-12"></a>    <span class="co">// put all root nodes in the BFS queue</span></span>
+<span id="cb9-13"><a href="#cb9-13"></a>    <span class="bu">std::</span>queue<span class="op">&lt;</span>NodeMatrix<span class="op">&gt;</span> nodeMatrixQueue<span class="op">;</span></span>
+<span id="cb9-14"><a href="#cb9-14"></a>    <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>string<span class="op"> &amp;</span>nodeName <span class="op">:</span> targetSceneMgr<span class="op">.</span>sceneObject<span class="op">-&gt;</span>rootName<span class="op">)</span></span>
+<span id="cb9-15"><a href="#cb9-15"></a>    <span class="op">{</span></span>
+<span id="cb9-16"><a href="#cb9-16"></a>        NodeMatrix nodeMatrix<span class="op">;</span></span>
+<span id="cb9-17"><a href="#cb9-17"></a>        nodeMatrix<span class="op">.</span>nodeObject <span class="op">=</span> targetSceneMgr<span class="op">.</span>nodeObjectMap<span class="op">[</span>nodeName<span class="op">];</span></span>
+<span id="cb9-18"><a href="#cb9-18"></a></span>
+<span id="cb9-19"><a href="#cb9-19"></a>        glm<span class="op">::</span>mat4 zUpToYDownMatrix <span class="op">=</span> <span class="co">// ... // [IMPORTANT] s72 is Z up, </span></span>
+<span id="cb9-20"><a href="#cb9-20"></a>                                                        <span class="co">// Vulkan is -Y up </span></span>
+<span id="cb9-21"><a href="#cb9-21"></a>                                                        <span class="co">// (both are right-hand coords)</span></span>
+<span id="cb9-22"><a href="#cb9-22"></a>        </span>
+<span id="cb9-23"><a href="#cb9-23"></a>        nodeMatrix<span class="op">.</span>modelMatrix <span class="op">=</span> zUpToYDownMatrix <span class="op">*</span> </span>
+<span id="cb9-24"><a href="#cb9-24"></a>                                    SceneMgr<span class="op">::</span>calculate_model_matrix<span class="op">(</span></span>
+<span id="cb9-25"><a href="#cb9-25"></a>                                    nodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>translation<span class="op">,</span> </span>
+<span id="cb9-26"><a href="#cb9-26"></a>                                    nodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>rotation<span class="op">,</span> </span>
+<span id="cb9-27"><a href="#cb9-27"></a>                                    nodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>scale<span class="op">);</span></span>
+<span id="cb9-28"><a href="#cb9-28"></a></span>
+<span id="cb9-29"><a href="#cb9-29"></a>        nodeMatrixQueue<span class="op">.</span>push<span class="op">(</span>nodeMatrix<span class="op">);</span></span>
+<span id="cb9-30"><a href="#cb9-30"></a>    <span class="op">}</span></span>
+<span id="cb9-31"><a href="#cb9-31"></a></span>
+<span id="cb9-32"><a href="#cb9-32"></a>    <span class="co">// BFS traversal</span></span>
+<span id="cb9-33"><a href="#cb9-33"></a>    <span class="cf">while</span> <span class="op">(!</span>nodeMatrixQueue<span class="op">.</span>empty<span class="op">())</span></span>
+<span id="cb9-34"><a href="#cb9-34"></a>    <span class="op">{</span></span>
+<span id="cb9-35"><a href="#cb9-35"></a>        NodeMatrix current_nodeMatrix <span class="op">=</span> nodeMatrixQueue<span class="op">.</span>front<span class="op">();</span></span>
+<span id="cb9-36"><a href="#cb9-36"></a>        nodeMatrixQueue<span class="op">.</span>pop<span class="op">();</span></span>
+<span id="cb9-37"><a href="#cb9-37"></a></span>
+<span id="cb9-38"><a href="#cb9-38"></a>        <span class="co">// update matrices</span></span>
+<span id="cb9-39"><a href="#cb9-39"></a>        targetSceneMgr<span class="op">.</span>nodeMatrixMap<span class="op">[</span>current_nodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>name<span class="op">]</span> <span class="op">=</span> current_nodeMatrix<span class="op">.</span>modelMatrix<span class="op">;</span></span>
+<span id="cb9-40"><a href="#cb9-40"></a></span>
+<span id="cb9-41"><a href="#cb9-41"></a>        <span class="cf">for</span> <span class="op">(</span><span class="bu">std::</span>string<span class="op"> &amp;</span>childName <span class="op">:</span> current_nodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>childName<span class="op">)</span></span>
+<span id="cb9-42"><a href="#cb9-42"></a>        <span class="op">{</span></span>
+<span id="cb9-43"><a href="#cb9-43"></a>            <span class="co">// calculate new matrix for each child</span></span>
+<span id="cb9-44"><a href="#cb9-44"></a>            NodeMatrix childNodeMatrix<span class="op">;</span></span>
+<span id="cb9-45"><a href="#cb9-45"></a>            childNodeMatrix<span class="op">.</span>nodeObject <span class="op">=</span> targetSceneMgr<span class="op">.</span>nodeObjectMap<span class="op">[</span>childName<span class="op">];</span></span>
+<span id="cb9-46"><a href="#cb9-46"></a>            childNodeMatrix<span class="op">.</span>modelMatrix <span class="op">=</span> current_nodeMatrix<span class="op">.</span>modelMatrix <span class="op">*</span>  <span class="co">// parent</span></span>
+<span id="cb9-47"><a href="#cb9-47"></a>                 SceneMgr<span class="op">::</span>calculate_model_matrix<span class="op">(</span>childNodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>translation<span class="op">,</span>  </span>
+<span id="cb9-48"><a href="#cb9-48"></a>                                                  childNodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>rotation<span class="op">,</span> </span>
+<span id="cb9-49"><a href="#cb9-49"></a>                                                  childNodeMatrix<span class="op">.</span>nodeObject<span class="op">-&gt;</span>scale<span class="op">);</span> </span>
+<span id="cb9-50"><a href="#cb9-50"></a>                                                  <span class="co">// child matrix</span></span>
+<span id="cb9-51"><a href="#cb9-51"></a>            nodeMatrixQueue<span class="op">.</span>push<span class="op">(</span>childNodeMatrix<span class="op">);</span></span>
+<span id="cb9-52"><a href="#cb9-52"></a>        <span class="op">}</span></span>
+<span id="cb9-53"><a href="#cb9-53"></a>    <span class="op">}</span></span>
+<span id="cb9-54"><a href="#cb9-54"></a><span class="op">}</span></span></code></pre></div>
+<h3 class="unnumbered" id="when-they-are-called">3. When they are
+Called</h3>
+<p><code
+class="sourceCode cpp">Wanderer<span class="op">::</span>load_scene_objects_vertices<span class="op">()</span></code>
+is called once during application initialization, following the loading
+of scene graph information.</p>
+<p><code
+class="sourceCode cpp">LoadMgr<span class="op">::</span>load_s72_node_matrices<span class="op">()</span></code>
+should be called not only during application initialization (after the
+scene graph is loaded), but also whenerver any node’s transformation is
+modified, such as after applying an animation driver).</p>
+<h3 class="unnumbered" id="draw">4. Draw</h3>
+<p>Finally, we retrieve the <code
+class="sourceCode cpp">WORLD_FROM_LOCAL</code> matrix from the <code
+class="sourceCode cpp">nodeMatrixMap</code>, the <code
+class="sourceCode cpp">CLIP_FROM_WORLD</code> from the camera (which
+will be discussed in the next section) and the <code
+class="sourceCode cpp">refMeshVerticesIdx</code> from the <code
+class="sourceCode cpp">meshVerticesIndexMap</code>. With these
+information, we can update the object_instances during the application’s
+update() function.</p>
+<div class="sourceCode" id="cb10" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb10-1"><a href="#cb10-1"></a><span class="co">/* Source/Application/Wanderer/Wanderer.cpp */</span></span>
+<span id="cb10-2"><a href="#cb10-2"></a><span class="co">/* Wanderer::update() */</span></span>
+<span id="cb10-3"><a href="#cb10-3"></a><span class="co">/* Wanderer::construct_scene_graph_vertices_with_culling() */</span></span>
+<span id="cb10-4"><a href="#cb10-4"></a>object_instances<span class="op">.</span>clear<span class="op">();</span></span>
+<span id="cb10-5"><a href="#cb10-5"></a><span class="cf">for</span> each node object<span class="op">:</span></span>
+<span id="cb10-6"><a href="#cb10-6"></a><span class="op">{</span></span>
+<span id="cb10-7"><a href="#cb10-7"></a>    object_instances<span class="op">.</span>emplace_back<span class="op">(</span>ObjectInstance<span class="op">{</span></span>
+<span id="cb10-8"><a href="#cb10-8"></a>        <span class="op">.</span>vertices <span class="op">=</span> scene_nodes_vertices<span class="op">[</span>refMeshVerticesIdx<span class="op">],</span></span>
+<span id="cb10-9"><a href="#cb10-9"></a>        <span class="op">.</span>transform<span class="op">{</span></span>
+<span id="cb10-10"><a href="#cb10-10"></a>            <span class="op">.</span>CLIP_FROM_LOCAL <span class="op">=</span> CLIP_FROM_WORLD <span class="op">*</span> WORLD_FROM_LOCAL<span class="op">,</span></span>
+<span id="cb10-11"><a href="#cb10-11"></a>            <span class="op">.</span>WORLD_FROM_LOCAL <span class="op">=</span> WORLD_FROM_LOCAL<span class="op">,</span></span>
+<span id="cb10-12"><a href="#cb10-12"></a>            <span class="op">.</span>WORLD_FROM_LOCAL_NORMAL <span class="op">=</span> WORLD_FROM_LOCAL_NORMAL</span>
+<span id="cb10-13"><a href="#cb10-13"></a>        <span class="op">},</span></span>
+<span id="cb10-14"><a href="#cb10-14"></a>        <span class="op">.</span>texture <span class="op">=</span> <span class="dv">0</span><span class="op">,</span></span>
+<span id="cb10-15"><a href="#cb10-15"></a>    <span class="op">});</span></span>
+<span id="cb10-16"><a href="#cb10-16"></a><span class="op">}</span></span></code></pre></div>
+<p>After updating the object_instances, the node objects will be sent to
+drawn in the <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>render<span class="op">()</span></code>.</p>
+<section id="c.-handling-interactive-camera-and-debug-camera-movement."
+class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>C. Handling interactive camera and debug
+camera movement.</strong> </h2>
+</section>
+
+
+
+<video width="700" controls>
+	<source src="./video/a1-camera.mp4" type="video/mp4" size=""/>
+</video>
+  
+
+
+<h3 class="unnumbered" id="data-structure-1">1. Data Structure</h3>
+<p>I created a Camera struct to encapsulate all camera-related functions
+and variables. This struct contains the basic camera attributes (aspect,
+vfov, near, far), along with the position, directions, and orientations
+(front, right, up, yaw, pitch, roll), and control status that help
+control the camera movement and posture.</p>
+<div class="sourceCode" id="cb11" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb11-1"><a href="#cb11-1"></a><span class="co">/* Source/Camera/Camera.hpp */</span></span>
+<span id="cb11-2"><a href="#cb11-2"></a><span class="kw">struct</span> Camera</span>
+<span id="cb11-3"><a href="#cb11-3"></a><span class="op">{</span></span>
+<span id="cb11-4"><a href="#cb11-4"></a>    <span class="kw">enum</span> Camera_Mode <span class="op">:</span> <span class="dt">uint8_t</span> <span class="op">{</span></span>
+<span id="cb11-5"><a href="#cb11-5"></a>        USER<span class="op">,</span> SCENE<span class="op">,</span> DEBUG</span>
+<span id="cb11-6"><a href="#cb11-6"></a>    <span class="op">};</span></span>
+<span id="cb11-7"><a href="#cb11-7"></a></span>
+<span id="cb11-8"><a href="#cb11-8"></a>    <span class="kw">struct</span> Camera_Attributes <span class="op">{</span></span>
+<span id="cb11-9"><a href="#cb11-9"></a>        <span class="dt">float</span> aspect<span class="op">,</span> vfov<span class="op">,</span> near<span class="op">,</span> far<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10"></a>    <span class="op">}</span> camera_attributes<span class="op">;</span></span>
+<span id="cb11-11"><a href="#cb11-11"></a>    </span>
+<span id="cb11-12"><a href="#cb11-12"></a>    <span class="dt">uint8_t</span> camera_mode_cnt<span class="op">;</span></span>
+<span id="cb11-13"><a href="#cb11-13"></a>    Camera_Mode current_camera_mode<span class="op">;</span></span>
+<span id="cb11-14"><a href="#cb11-14"></a></span>
+<span id="cb11-15"><a href="#cb11-15"></a>    <span class="co">// =============================================</span></span>
+<span id="cb11-16"><a href="#cb11-16"></a>    <span class="co">// USER mode related variables </span></span>
+<span id="cb11-17"><a href="#cb11-17"></a></span>
+<span id="cb11-18"><a href="#cb11-18"></a>    <span class="co">/* cr. movement related handle learned from CMU 15666 Computer Game Programming code base</span></span>
+<span id="cb11-19"><a href="#cb11-19"></a><span class="co">           https://github.com/15-466/15-466-f24-base2/blob/b7584e87b2498e4491e6438770f4b4a8d593bbde/PlayMode.cpp#L70 */</span></span>
+<span id="cb11-20"><a href="#cb11-20"></a></span>
+<span id="cb11-21"><a href="#cb11-21"></a>    <span class="kw">struct</span> Camera_Movement <span class="op">{</span></span>
+<span id="cb11-22"><a href="#cb11-22"></a>        <span class="dt">bool</span> left<span class="op">,</span> right<span class="op">,</span> up<span class="op">,</span> down<span class="op">,</span> forward<span class="op">,</span> backward<span class="op">;</span></span>
+<span id="cb11-23"><a href="#cb11-23"></a>    <span class="op">}</span> movements<span class="op">;</span></span>
+<span id="cb11-24"><a href="#cb11-24"></a></span>
+<span id="cb11-25"><a href="#cb11-25"></a>    <span class="kw">struct</span> Camera_Posture <span class="op">{</span></span>
+<span id="cb11-26"><a href="#cb11-26"></a>        <span class="dt">bool</span> yaw_left<span class="op">,</span> yaw_right<span class="op">,</span> pitch_up<span class="op">,</span> pitch_down<span class="op">;</span></span>
+<span id="cb11-27"><a href="#cb11-27"></a>    <span class="op">}</span> postures<span class="op">;</span></span>
+<span id="cb11-28"><a href="#cb11-28"></a></span>
+<span id="cb11-29"><a href="#cb11-29"></a>    <span class="kw">struct</span> Camera_Sensitivity <span class="op">{</span></span>
+<span id="cb11-30"><a href="#cb11-30"></a>        <span class="dt">float</span> kb_forward<span class="op">,</span> kb_upward<span class="op">,</span> kb_rightward<span class="op">,</span> kb_yaw<span class="op">,</span> kb_pitch<span class="op">;</span></span>
+<span id="cb11-31"><a href="#cb11-31"></a>        <span class="dt">float</span> mouse_yaw<span class="op">,</span> mouse_pitch<span class="op">;</span> <span class="co">// not used yet</span></span>
+<span id="cb11-32"><a href="#cb11-32"></a>    <span class="op">}</span> sensitivity<span class="op">;</span></span>
+<span id="cb11-33"><a href="#cb11-33"></a></span>
+<span id="cb11-34"><a href="#cb11-34"></a>    <span class="co">/* cr. camera parameters learned from Learn OpenGL </span></span>
+<span id="cb11-35"><a href="#cb11-35"></a><span class="co">           https://learnopengl.com/Getting-started/Camera# */</span></span>
+<span id="cb11-36"><a href="#cb11-36"></a></span>
+<span id="cb11-37"><a href="#cb11-37"></a>    glm<span class="op">::</span>vec3 position<span class="op">,</span> target_position<span class="op">;</span></span>
+<span id="cb11-38"><a href="#cb11-38"></a>    glm<span class="op">::</span>vec3 front<span class="op">,</span> right<span class="op">,</span> up<span class="op">;</span></span>
+<span id="cb11-39"><a href="#cb11-39"></a>    <span class="dt">float</span> yaw<span class="op">,</span> pitch<span class="op">,</span> roll<span class="op">;</span></span>
+<span id="cb11-40"><a href="#cb11-40"></a></span>
+<span id="cb11-41"><a href="#cb11-41"></a>    <span class="dt">float</span> unit_angle<span class="op">;</span></span>
+<span id="cb11-42"><a href="#cb11-42"></a><span class="op">};</span></span></code></pre></div>
+<h3 class="unnumbered" id="global-camera-settings">2. Global Camera
+Settings</h3>
+<p>In the RTG::Configuration, I initialized three cameras, but only two
+are active at a time: camera (for USER/SCENE mode) and debug_camera. The
+user_camera is a backup, used when switching between SCENE and USER
+modes. Additionally, a specified_default_camera stores the name of a
+camera specified via the command line, which will be used to initialize
+the main camera (if provided).</p>
+<div class="sourceCode" id="cb12" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb12-1"><a href="#cb12-1"></a><span class="co">/* Wanderer::RTG::Configuration */</span></span>
+<span id="cb12-2"><a href="#cb12-2"></a><span class="co">// if set, use a specific camera:</span></span>
+<span id="cb12-3"><a href="#cb12-3"></a><span class="bu">std::</span>string<span class="op"> </span>specified_default_camera <span class="op">=</span> <span class="st">&quot;&quot;</span><span class="op">;</span></span>
+<span id="cb12-4"><a href="#cb12-4"></a><span class="co">// a scene have two active camera, </span></span>
+<span id="cb12-5"><a href="#cb12-5"></a><span class="co">// the main is for USER / SCENE mode, another is for DEBUG mode</span></span>
+<span id="cb12-6"><a href="#cb12-6"></a>Camera camera<span class="op">;</span> <span class="co">// an active camera used for USER / SCENE mode;</span></span>
+<span id="cb12-7"><a href="#cb12-7"></a>Camera debug_camera<span class="op">;</span> <span class="co">// an active camera used for DEBUG mode;</span></span>
+<span id="cb12-8"><a href="#cb12-8"></a>Camera user_camera<span class="op">;</span> <span class="co">// a backup camera for user camera settings.</span></span></code></pre></div>
+<h3 class="unnumbered" id="camera-initialization-logic">3. Camera
+Initialization Logic</h3>
+<p>Beyond the initial camera setup in the Camera struct, I perform a
+second "initialization" after loading the scene graph and reading camera
+parameters. The logic follows these rules:</p>
+<p>If there are scene graph cameras, if a camera is specified by the
+command line, the viewer will search for it in the scene camera map. If
+found, it initialize the main camera with its parameters. if not found,
+throw error and exit the application. if no camera is specified, the
+program will select the first scene camera from the map and use its
+settings as the default. If there are none scene cameras, the program
+will look for the first root node of the scene, and let the camera
+looking at it from a small distance.</p>
+<p>This logic is implemented in <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>Wanderer<span class="op">()</span></code>
+function, while command-line camera handling is done in <code
+class="sourceCode cpp">RTG<span class="op">::</span>Configuration<span class="op">::</span>parse<span class="op">()</span></code>.</p>
+<h3 class="unnumbered" id="control-logic">4. Control Logic</h3>
+<p><strong>Mode Switching</strong></p>
+<p>Camera mode control is handled in the <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>on_input<span class="op">()</span></code>
+function of the application. Pressing keys 1, 2, or 3 switches between
+SCENE, USER, and DEBUG modes, respectively. Pressing ’v’ in SCENE mode
+cycles through available scene cameras (if any).</p>
+<p>Importantly, when switching between SCENE and USER modes, the camera
+settings update the main camera’s parameters and backup the user camera
+settings in user_camera. However, in DEBUG mode, only the debug_camera
+settings are updated, isolating it from the main camera’s settings to
+allow auxiliary viewing without affecting the clipping matrix.</p>
+<p><strong>Movement and Postures</strong></p>
+<p>Camera movement and posture are controlled through keypress events in
+<code
+class="sourceCode cpp">Wanderer<span class="op">::</span>on_input<span class="op">()</span></code>.
+The logic is based on the 15666 Computer Game Programming course code:
+pressing a key sets the relevant camera state to true, and releasing it
+sets the state to false. The actual camera movement happens in the <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>update<span class="op">()</span></code>
+function, where it responds based on the current camera state.</p>
+<h3 class="unnumbered" id="clip_from_world-update">5. CLIP_FROM_WORLD
+update</h3>
+<p>Whenever the main camera settings are modified, the CLIP_FROM_WORLD
+matrix is updated. This occurs during camera mode switches and when
+applying animation drivers.</p>
+<section id="d.-frustum-culling." class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>D. Frustum culling.</strong> </h2>
+</section>
+
+
+<div class="center">
+	<p><img src="./image/a1-cull.png" width="600" alt="image" /></p>
+</div>
+
+
+<h3 class="unnumbered" id="data-structure-2">1. Data Structure</h3>
+<p>To handle frustum culling, I defined Plane, Frustum, and BBox
+structures. These were inspired by <a
+href="https://learnopengl.com/Guest-Articles/2021/Scene/Frustum-Culling">Learn
+OpenGL’s Frustum Culling</a> and the BBox class was adapted from <a
+href="https://github.com/CMU-Graphics/Scotty3D/blob/main/src/lib/bbox.h">BBox.h
+of Scotty3D</a> from CMU 15662 Computer Graphics.</p>
+<div class="sourceCode" id="cb13" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb13-1"><a href="#cb13-1"></a><span class="co">/* Source/DataType/Plane.hpp */</span></span>
+<span id="cb13-2"><a href="#cb13-2"></a><span class="kw">struct</span> Plane <span class="op">{</span></span>
+<span id="cb13-3"><a href="#cb13-3"></a>    glm<span class="op">::</span>vec3 position<span class="op">;</span></span>
+<span id="cb13-4"><a href="#cb13-4"></a>    glm<span class="op">::</span>vec3 normal<span class="op">;</span></span>
+<span id="cb13-5"><a href="#cb13-5"></a><span class="op">};</span></span>
+<span id="cb13-6"><a href="#cb13-6"></a><span class="co">/* Source/DataType/Frustum.hpp */</span></span>
+<span id="cb13-7"><a href="#cb13-7"></a><span class="kw">struct</span> Frustum <span class="op">{</span></span>
+<span id="cb13-8"><a href="#cb13-8"></a>    Plane topFace<span class="op">,</span> bottomFace<span class="op">,</span> leftFace<span class="op">,</span> rightFace<span class="op">,</span> nearFace<span class="op">,</span> farFace<span class="op">;</span></span>
+<span id="cb13-9"><a href="#cb13-9"></a><span class="op">};</span>  </span>
+<span id="cb13-10"><a href="#cb13-10"></a><span class="co">/* Source/DataType/BBox.hpp */</span></span>
+<span id="cb13-11"><a href="#cb13-11"></a><span class="kw">struct</span> BBox <span class="op">{</span></span>
+<span id="cb13-12"><a href="#cb13-12"></a>    glm<span class="op">::</span>vec3 min<span class="op">,</span> max<span class="op">;</span></span>
+<span id="cb13-13"><a href="#cb13-13"></a><span class="op">};</span></span></code></pre></div>
+<p>The methods are implemented in their respective files, refer to see
+the details.</p>
+<h3 class="unnumbered" id="bbox-building">2. BBox Building</h3>
+<p>I add the BBox property for each MeshObject and NodeObject in
+SceneMgr. The MeshObject’s bounding box helps simplify the calculation
+of the NodeObject’s bounding box, though it introduces some small
+inaccuracies.</p>
+<p>The MeshObject’s BBox is calculated when parsing mesh object
+attributes from the scene graph. And the NodeObject’s bounding box is
+updated every frame after its transformation is applied (for example,
+after animations or movements driven by the system’s drivers). This
+update occurs right before frustum culling takes place.</p>
+<h3 class="unnumbered" id="frustum-culling">3. Frustum Culling</h3>
+<p>Frustum culling follows an algorithm similar to Flipcode’s article on
+frustum culling. The process works as follows:</p>
+<ul>
+<li><p>For a given camera, we have six frustum planes (top, bottom,
+left, right, near, and far).</p></li>
+<li><p>For each BBox, we check the 8 corner points of the bounding
+box.</p></li>
+<li><p>If any of these points are in front of all six planes (determined
+using a dot product with the plane’s normal), the point is inside the
+frustum.</p></li>
+<li><p>If a certain number of points (greater equal than n, which is 4
+in my project) are inside the frustum, the entire BBox is considered to
+be inside the frustum.</p></li>
+</ul>
+<p>Refers to Source/DataType/Frustum.cpp for details.</p>
+<section id="e.-animating-the-scene." class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>E. Animating the scene.</strong> </h2>
+</section>
+<h3 class="unnumbered" id="time">1. Time</h3>
+<p>I created an abstract Timer class to handle animations. The timer
+tracks parameters like maximum time, current time, and its state (paused
+or running).</p>
+<div class="sourceCode" id="cb14" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb14-1"><a href="#cb14-1"></a><span class="co">/* Source/Tools/Timer.hpp */</span></span>
+<span id="cb14-2"><a href="#cb14-2"></a><span class="kw">struct</span> Timer</span>
+<span id="cb14-3"><a href="#cb14-3"></a><span class="op">{</span></span>
+<span id="cb14-4"><a href="#cb14-4"></a>    <span class="dt">bool</span> paused<span class="op">;</span></span>
+<span id="cb14-5"><a href="#cb14-5"></a>    <span class="dt">float</span> t<span class="op">,</span> tmax<span class="op">;</span></span>
+<span id="cb14-6"><a href="#cb14-6"></a></span>
+<span id="cb14-7"><a href="#cb14-7"></a>    <span class="dt">void</span> reset<span class="op">();</span></span>
+<span id="cb14-8"><a href="#cb14-8"></a>    <span class="dt">void</span> pause_or_resume<span class="op">();</span></span>
+<span id="cb14-9"><a href="#cb14-9"></a>    <span class="dt">void</span> update<span class="op">(</span><span class="dt">float</span> dt<span class="op">);</span></span>
+<span id="cb14-10"><a href="#cb14-10"></a><span class="op">};</span></span></code></pre></div>
+<p>The maximum time is intended to hold the length of the scene’s
+longest animation. Every frame, the application’s update() function
+calls the <code
+class="sourceCode cpp">Timer<span class="op">::</span>update<span class="op">()</span></code>
+method to adjust the time. If the current time exceeds the maximum, the
+timer resets to zero, which helps avoid precision issues as the time
+becomes larger and larger.</p>
+<p>The animation timer is stored globally within the application.</p>
+<div class="sourceCode" id="cb15" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb15-1"><a href="#cb15-1"></a><span class="co">/* Source/Application/Wanderer/Wanderer.hpp */</span></span>
+<span id="cb15-2"><a href="#cb15-2"></a><span class="co">//--------------------------------------------------------------------</span></span>
+<span id="cb15-3"><a href="#cb15-3"></a><span class="co">// Resources that change when time passes or the user interacts:</span></span>
+<span id="cb15-4"><a href="#cb15-4"></a><span class="co">// ...</span></span>
+<span id="cb15-5"><a href="#cb15-5"></a>Timer animation_timer<span class="op">;</span></span>
+<span id="cb15-6"><a href="#cb15-6"></a><span class="co">// ...</span></span></code></pre></div>
+<h3 class="unnumbered" id="frames">2. Frames</h3>
+<p>Animation data is stored in DriverObject instances within SceneMgr,
+acting as a buffer to hold keyframe information from the s72 scene graph
+file.</p>
+<div class="sourceCode" id="cb16" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb16-1"><a href="#cb16-1"></a><span class="co">/* Source/Tools/SceneMgr.hpp */</span></span>
+<span id="cb16-2"><a href="#cb16-2"></a><span class="kw">struct</span> DriverObject</span>
+<span id="cb16-3"><a href="#cb16-3"></a><span class="op">{</span></span>
+<span id="cb16-4"><a href="#cb16-4"></a>    <span class="bu">std::</span>string<span class="op"> </span>name<span class="op">;</span></span>
+<span id="cb16-5"><a href="#cb16-5"></a>    <span class="bu">std::</span>string<span class="op"> </span>refObjectName<span class="op">;</span> <span class="co">// target object</span></span>
+<span id="cb16-6"><a href="#cb16-6"></a>    DriverChannleType channel<span class="op">;</span></span>
+<span id="cb16-7"><a href="#cb16-7"></a>    <span class="dt">uint32_t</span> channelDim<span class="op">;</span></span>
+<span id="cb16-8"><a href="#cb16-8"></a>    <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">float</span><span class="op">&gt;</span> times<span class="op">;</span></span>
+<span id="cb16-9"><a href="#cb16-9"></a>    <span class="bu">std::</span>vector<span class="op">&lt;</span><span class="dt">float</span><span class="op">&gt;</span> values<span class="op">;</span></span>
+<span id="cb16-10"><a href="#cb16-10"></a>    DriverInterpolation interpolation <span class="op">=</span> DriverInterpolation<span class="op">::</span>LINEAR<span class="op">;</span></span>
+<span id="cb16-11"><a href="#cb16-11"></a><span class="op">};</span></span></code></pre></div>
+<p>During each frame, in the <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>update<span class="op">()</span></code>
+function, the interpolated (or unmodified, depending on the driving
+mode) transformation data stored in the drivers (such as translation or
+rotation) replaces the original values in the corresponding NodeObject.
+Afterward, the model matrices for these nodes are recalculated. This
+process occurs before frustum culling and the construction of
+object_instances.</p>
+<div class="sourceCode" id="cb17" data-linenos="true"
+data-bgcolor="lightergray" data-fontsize="\footnotesize"><pre
+class="sourceCode numberSource cpp numberLines"><code class="sourceCode cpp"><span id="cb17-1"><a href="#cb17-1"></a><span class="co">/* Source/Application/Wanderer/Wanderer.cpp */</span></span>
+<span id="cb17-2"><a href="#cb17-2"></a><span class="co">/* Wanderer::update() */</span></span>
+<span id="cb17-3"><a href="#cb17-3"></a><span class="co">// ===============================================</span></span>
+<span id="cb17-4"><a href="#cb17-4"></a><span class="co">// apply drivers to nodes to animate the scene</span></span>
+<span id="cb17-5"><a href="#cb17-5"></a><span class="cf">if</span> <span class="op">(!</span>animation_timer<span class="op">.</span>paused<span class="op">)</span> </span>
+<span id="cb17-6"><a href="#cb17-6"></a><span class="op">{</span> </span>
+<span id="cb17-7"><a href="#cb17-7"></a>    rtg<span class="op">.</span>configuration<span class="op">.</span>sceneMgr<span class="op">.</span>update_nodes_from_animation_drivers<span class="op">(</span>animation_timer<span class="op">.</span>t<span class="op">);</span></span>
+<span id="cb17-8"><a href="#cb17-8"></a>    LoadMgr<span class="op">::</span>load_s72_node_matrices<span class="op">(</span>rtg<span class="op">.</span>configuration<span class="op">.</span>sceneMgr<span class="op">);</span></span>
+<span id="cb17-9"><a href="#cb17-9"></a>    <span class="co">// ...</span></span>
+<span id="cb17-10"><a href="#cb17-10"></a><span class="op">};</span></span></code></pre></div>
+<h3 class="unnumbered" id="animation-controls">3. Animation
+Controls</h3>
+<p>Once the viewer is running, the scene’s animation will loop
+continuously. Users are provided with two keys to control the animation:
+P for pause/resume, and R for resetting the animation (with the
+animation being paused). These controls are defined in <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>on_input<span class="op">()</span></code>
+and handled in the <code
+class="sourceCode cpp">Wanderer<span class="op">::</span>update<span class="op">()</span></code>
+function.</p>
+<section id="f.-handling-headless-mode." class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>F. Handling headless mode.</strong> </h2>
+</section>
+<p>Not implemented yet. Need more time to get clear about the pipeline
+structure.</p>
+<section id="g.-performance-improvements." class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>G. Performance improvements.</strong>
+</h2>
+</section>
+<p>I did not implement any major performance improvements in this
+project. However, I did conduct some tests and made minor optimizations
+to the CPU-side code. They are shared in the following section.</p>
+<section id="v.-performance-tests" class="unnumbered tcolorbox">
+<h1 class="unnumbered"><strong>V. Performance Tests</strong></h1>
+</section>
+<section id="a.-culling" class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>A. Culling</strong></h2>
+</section>
+<p>Frustum culling doesn’t improve performance when the camera view
+contains all scene objects, as no objects are excluded from rendering.
+Instead, frustum culling adds extra work to the CPU without providing
+any benefit in these cases. For example, I tested with a scene I found
+online—<a
+href="https://sketchfab.com/3d-models/mystical-forest-cartoon-7c61edc428a24b188633e526616a729c">cartoon
+forest</a>.</p>
+
+<div class="center">
+  <p><img src="./image/cull-6.png" width="600" alt="image" /></p>
+  <p><img src="./image/cull-4.png" width="600" alt="image" /></p>
+</div>
+
+<p>As shown in the figure, the red line (representing frustum culling
+being applied) demonstrates higher rendering times compared to the blue
+line (where no culling is performed).</p>
+<p>To further explore the benefits of culling, I downloaded several
+large scenes (with more than 100k vertices). Surprisingly, all frames
+rendered in approximately 19ms—except for sphereflake.s72. I suspected
+the scenes I downloaded might have been too simple, allowing the work to
+be parallelized quickly, though I can’t be sure.</p>
+<p>Ultimately, I returned to the sphereflake.s72 scene, which was the
+only one to significantly slow down my viewer. Without frustum culling,
+the rendering time per frame was around 250ms. However, when the camera
+was positioned to face only 1 or 2 spheres (and culling the rest), the
+rendering time dropped to 40ms per frame. This demonstrates the
+performance boost provided by culling when there are many objects
+outside the camera’s view.</p>
+
+
+<div class="center">
+  <p><img src="./image/cull-0.png" width="600" alt="image" /></p>
+  <p><img src="./image/cull-2.png" width="600" alt="image" /></p>
+  <p><img src="./image/cull-1.png" width="600" alt="image" /></p>
+</div>
+
+<section id="b.-bottlenecks" class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>B. Bottlenecks</strong></h2>
+</section>
+<section id="c.-performance-improvements" class="unnumbered tcolorbox">
+<h2 class="unnumbered"><strong>C. Performance Improvements</strong></h2>
+</section>
+<h3 class="unnumbered" id="bbox-calculation-optimization">1. BBox
+Calculation Optimization</h3>
+<p>In principle, a node’s ground-truth bounding box (BBox) should
+enclose all of its vertex data in world coordinates. However,
+recalculating the BBox by iterating over all the vertices every frame
+can be time-consuming. To optimize this, I implemented an approximation
+method.</p>
+<p>I precomputed the BBox for each mesh during the mesh loading stage.
+Then, for each frame, instead of recalculating the BBox from the
+vertices, I apply the node’s local-to-world transformation matrix to the
+precomputed mesh BBox. The node’s BBox is updated by enclosing the
+transformed corners of the mesh BBox.</p>
+<p>Using the sphereflake.s72 test case, I found that this approximation
+method is 3x faster than the exact calculation, with acceptable accuracy
+loss. Although I can’t say whether the accuracy loss is significant, the
+frustum culling results closely match my expectations. Therefore, I
+consider the method effective.</p>
+
+<div class="center">
+  <p><img src="./image/cull-3.png" width="600" alt="image" /></p>
+</div>
+
+<h3 class="unnumbered" id="node-matrix-look-up-table">2. Node Matrix
+Look Up Table</h3>
+<p>I observed that node matrices are frequently accessed and updated
+every frame. Traditionally, to calculate a node’s model matrix, the
+process traverses from the child up to its root each time. But I think
+it will lead to redundant calculations. For example, if you have a
+grandparent, parent, child1, and child2, the parent’s matrix will be
+computed twice when processing both child1 and child2. As the number of
+nodes increases, this overhead becomes more significant. To optimize
+this, I implemented a node matrix lookup table that is updated in a
+single pass, from root to leaves. This avoids repeated calculations for
+shared parent nodes. While I don’t have comparison data with the less
+efficient method (since this approach was implemented from the start), I
+believe it’s worth mentioning as an optimization, even if it’s a minor
+one.</p>
+<section id="vi.-feedback" class="unnumbered tcolorbox">
+<h1 class="unnumbered"><strong>VI. Feedback</strong></h1>
+</section>
+<p>This has been a great project that required a significant amount of
+my time, but I still haven’t fully completed it. I hope to catch up on
+the things I missed in the coming days. I’m grateful for all the
+teaching resources provided. nakluV is a comprehensive tutorial that
+covers many of the topics I care about, but it will take more time to
+fully digest everything.</p>
+</body>
+</html>
