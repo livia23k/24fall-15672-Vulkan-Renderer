@@ -2,6 +2,7 @@
 
 Frustum Frustum::createFrustumFromCamera(const Camera &camera)
 {
+    /* cr. adapeted from Learn OpenGL: https://learnopengl.com/Guest-Articles/2021/Scene/Frustum-Culling */
     Frustum frustum;
 
     const float halfVSide = camera.camera_attributes.far * tanf(camera.camera_attributes.vfov * 0.5f);

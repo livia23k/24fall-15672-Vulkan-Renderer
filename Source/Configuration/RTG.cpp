@@ -1029,7 +1029,7 @@ void RTG::run(Application &application)
 		timespot_after_record = std::chrono::high_resolution_clock::now();
 
 		float dt = float(std::chrono::duration_cast<std::chrono::microseconds>(timespot_after_record - timespot_before_record).count());
-		// std::cout << "[Render] Render time: " << dt << " microseconds" << std::endl;
+		std::cout << "[Render] Render time: " << dt << " microseconds" << std::endl;
 
 		if (render_performance_log.is_open())
 			render_performance_log << dt << std::endl;

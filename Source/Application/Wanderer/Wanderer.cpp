@@ -864,12 +864,12 @@ void Wanderer::update(float dt)
 
 	// ===============================================
 	// apply drivers to nodes to animate the scene
+	if (!animation_timer.paused) 
 	{ 
 		rtg.configuration.sceneMgr.update_nodes_from_animation_drivers(animation_timer.t);
     	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
-
 		
-		// 
+		// update the clip from world matrix after animation is applied
 		if (camera.current_camera_mode == Camera::Camera_Mode::SCENE)
 		{
 			CLIP_FROM_WORLD = camera.apply_scene_mode_camera(rtg.configuration.sceneMgr); // make senses when animation driver 
