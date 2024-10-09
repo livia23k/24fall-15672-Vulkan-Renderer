@@ -715,32 +715,42 @@ void Wanderer::update(float dt)
 		{
 			// keyboard & camera movement
 			if (camera.movements.up && !camera.movements.down) {
+				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_upward += camera.unit_sensitivity; }
 				camera.position += camera.sensitivity.kb_upward * camera.up;
 			} else if (camera.movements.down && !camera.movements.up) {
+				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_upward -= camera.unit_sensitivity; }
 				camera.position -= camera.sensitivity.kb_upward * camera.up;
 			} 
 
 			if (camera.movements.left && !camera.movements.right) {
+				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_rightward += camera.unit_sensitivity; }
 				camera.position -= camera.sensitivity.kb_rightward * camera.right;
 			} else if (camera.movements.right && !camera.movements.left) {
+				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_rightward -= camera.unit_sensitivity; }
 				camera.position += camera.sensitivity.kb_rightward * camera.right;
 			}
 
 			if (camera.movements.forward && !camera.movements.backward) {
+				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_forward += camera.unit_sensitivity; }
 				camera.position += camera.sensitivity.kb_forward * camera.front;
 			} else if (camera.movements.backward && !camera.movements.forward) {
+				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_forward -= camera.unit_sensitivity; }
 				camera.position -= camera.sensitivity.kb_forward * camera.front;
 			}
 
 			if (camera.postures.yaw_left && !camera.postures.yaw_right) {
+				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_yaw += camera.unit_sensitivity; }
 				camera.yaw -= camera.sensitivity.kb_yaw * camera.unit_angle;
 			} else if (camera.postures.yaw_right && !camera.postures.yaw_left) {
+				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_yaw -= camera.unit_sensitivity; }
 				camera.yaw += camera.sensitivity.kb_yaw * camera.unit_angle;
 			}
 
 			if (camera.postures.pitch_up && !camera.postures.pitch_down) {
+				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_pitch += camera.unit_sensitivity; }
 				camera.pitch += camera.sensitivity.kb_pitch * camera.unit_angle;
 			} else if (camera.postures.pitch_down && !camera.postures.pitch_up) {
+				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_pitch -= camera.unit_sensitivity; }
 				camera.pitch -= camera.sensitivity.kb_pitch * camera.unit_angle;
 			}
 
@@ -758,32 +768,42 @@ void Wanderer::update(float dt)
 		{
 			// keyboard & camera movement
 			if (debug_camera.movements.up && !debug_camera.movements.down) {
+				if (debug_camera.sensitivity.sensitivity_increase && !debug_camera.sensitivity.sensitivity_decrease) { debug_camera.sensitivity.kb_upward += debug_camera.unit_sensitivity; }
 				debug_camera.position += debug_camera.sensitivity.kb_upward * debug_camera.up;
 			} else if (debug_camera.movements.down && !debug_camera.movements.up) {
+				if (debug_camera.sensitivity.sensitivity_decrease && !debug_camera.sensitivity.sensitivity_increase) { debug_camera.sensitivity.kb_upward -= debug_camera.unit_sensitivity; }
 				debug_camera.position -= debug_camera.sensitivity.kb_upward * debug_camera.up;
 			} 
 
 			if (debug_camera.movements.left && !debug_camera.movements.right) {
+				if (debug_camera.sensitivity.sensitivity_increase && !debug_camera.sensitivity.sensitivity_decrease) { debug_camera.sensitivity.kb_rightward += debug_camera.unit_sensitivity; }
 				debug_camera.position -= debug_camera.sensitivity.kb_rightward * debug_camera.right;
 			} else if (debug_camera.movements.right && !debug_camera.movements.left) {
+				if (debug_camera.sensitivity.sensitivity_decrease && !debug_camera.sensitivity.sensitivity_increase) { debug_camera.sensitivity.kb_rightward -= debug_camera.unit_sensitivity; }
 				debug_camera.position += debug_camera.sensitivity.kb_rightward * debug_camera.right;
 			}
 
 			if (debug_camera.movements.forward && !debug_camera.movements.backward) {
+				if (debug_camera.sensitivity.sensitivity_increase && !debug_camera.sensitivity.sensitivity_decrease) { debug_camera.sensitivity.kb_forward += debug_camera.unit_sensitivity; }
 				debug_camera.position += debug_camera.sensitivity.kb_forward * debug_camera.front;
 			} else if (debug_camera.movements.backward && !debug_camera.movements.forward) {
+				if (debug_camera.sensitivity.sensitivity_decrease && !debug_camera.sensitivity.sensitivity_increase) { debug_camera.sensitivity.kb_forward -= debug_camera.unit_sensitivity; }
 				debug_camera.position -= debug_camera.sensitivity.kb_forward * debug_camera.front;
 			}
 
 			if (debug_camera.postures.yaw_left && !debug_camera.postures.yaw_right) {
+				if (debug_camera.sensitivity.sensitivity_increase && !debug_camera.sensitivity.sensitivity_decrease) { debug_camera.sensitivity.kb_yaw += debug_camera.unit_sensitivity; }
 				debug_camera.yaw -= debug_camera.sensitivity.kb_yaw * debug_camera.unit_angle;
 			} else if (debug_camera.postures.yaw_right && !debug_camera.postures.yaw_left) {
+				if (debug_camera.sensitivity.sensitivity_decrease && !debug_camera.sensitivity.sensitivity_increase) { debug_camera.sensitivity.kb_yaw -= debug_camera.unit_sensitivity; }
 				debug_camera.yaw += debug_camera.sensitivity.kb_yaw * debug_camera.unit_angle;
 			}
 
 			if (debug_camera.postures.pitch_up && !debug_camera.postures.pitch_down) {
+				if (debug_camera.sensitivity.sensitivity_increase && !debug_camera.sensitivity.sensitivity_decrease) { debug_camera.sensitivity.kb_pitch += debug_camera.unit_sensitivity; }
 				debug_camera.pitch += debug_camera.sensitivity.kb_pitch * debug_camera.unit_angle;
 			} else if (debug_camera.postures.pitch_down && !debug_camera.postures.pitch_up) {
+				if (debug_camera.sensitivity.sensitivity_decrease && !debug_camera.sensitivity.sensitivity_increase) { debug_camera.sensitivity.kb_pitch -= debug_camera.unit_sensitivity; }
 				debug_camera.pitch -= debug_camera.sensitivity.kb_pitch * debug_camera.unit_angle;
 			}
 
@@ -791,7 +811,6 @@ void Wanderer::update(float dt)
 
 			// mouse & rotation
 			// [TODO]
-
 		}
 
 		
@@ -1004,6 +1023,15 @@ void Wanderer::on_input(InputEvent const &event)
 			{
 				camera.postures.yaw_right = true;
 			}
+			// camera sensitivity
+			else if (event.key.key == GLFW_KEY_LEFT_BRACKET)
+			{
+				camera.sensitivity.sensitivity_decrease = true;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT_BRACKET)
+			{
+				camera.sensitivity.sensitivity_increase = true;
+			}
 		}
 
 		// DEBUG mode, camera control
@@ -1051,6 +1079,16 @@ void Wanderer::on_input(InputEvent const &event)
 			{
 				debug_camera.postures.yaw_right = true;
 			}
+			// camera sensitivity
+			else if (event.key.key == GLFW_KEY_LEFT_BRACKET)
+			{
+				debug_camera.sensitivity.sensitivity_decrease = true;
+				std::cout << "pressing [" << std::endl;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT_BRACKET)
+			{
+				debug_camera.sensitivity.sensitivity_increase = true;
+			}
 		}
 
 		// NON-DEBUG mode, set debug_camera info the same as the main camera settings
@@ -1063,15 +1101,16 @@ void Wanderer::on_input(InputEvent const &event)
 			}
 		}
 
+
 	}
 	else if (event.type == InputEvent::KeyUp)
 	{
-		// Camera Movement -----------------------------------------------------------------------------------------------------------------
-		    /* cr. learned from CMU 15666 Computer Game Programming code base
-           		https://github.com/15-466/15-466-f24-base2/blob/b7584e87b2498e4491e6438770f4b4a8d593bbde/PlayMode.cpp#L70 */
+		/* cr. learned from CMU 15666 Computer Game Programming code base
+			https://github.com/15-466/15-466-f24-base2/blob/b7584e87b2498e4491e6438770f4b4a8d593bbde/PlayMode.cpp#L70 */
 		
 		if (camera.current_camera_mode == Camera::USER)
 		{
+			// camera movement
 			if (event.key.key == GLFW_KEY_W)
 			{
 				camera.movements.forward = false;
@@ -1096,6 +1135,7 @@ void Wanderer::on_input(InputEvent const &event)
 			{
 				camera.movements.down = false;
 			}
+			// camera postures
 			else if (event.key.key == GLFW_KEY_UP)
 			{
 				camera.postures.pitch_up = false;
@@ -1111,6 +1151,15 @@ void Wanderer::on_input(InputEvent const &event)
 			else if (event.key.key == GLFW_KEY_RIGHT)
 			{
 				camera.postures.yaw_right = false;
+			}
+			// camera sensitivity
+			else if (event.key.key == GLFW_KEY_LEFT_BRACKET)
+			{
+				camera.sensitivity.sensitivity_decrease = false;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT_BRACKET)
+			{
+				camera.sensitivity.sensitivity_increase = false;
 			}
 		}
 
@@ -1157,6 +1206,16 @@ void Wanderer::on_input(InputEvent const &event)
 			else if (event.key.key == GLFW_KEY_RIGHT)
 			{
 				debug_camera.postures.yaw_right = false;
+			}
+			// camera sensitivity
+			else if (event.key.key == GLFW_KEY_LEFT_BRACKET)
+			{
+				debug_camera.sensitivity.sensitivity_decrease = false;
+				std::cout << "releasing [" << std::endl;
+			}
+			else if (event.key.key == GLFW_KEY_RIGHT_BRACKET)
+			{
+				debug_camera.sensitivity.sensitivity_increase = false;
 			}
 		}
 	}

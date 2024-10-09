@@ -34,10 +34,7 @@ Camera::Camera()
     sensitivity.mouse_pitch = 0.1f;
     
     unit_angle = 1.f;
-
-    // [TOFIX] (coordinates issue)
-    // camera initial posture 
-    // (will be overwritten by settings in the application initialization)
+    unit_sensitivity = 0.001f;
 
     position = glm::vec3{2.0f, -2.0f, 2.0f};
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};

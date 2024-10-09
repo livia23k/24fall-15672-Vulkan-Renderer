@@ -64,6 +64,8 @@ struct Camera
         float kb_pitch;
         float mouse_yaw;
         float mouse_pitch;
+        bool sensitivity_increase;
+        bool sensitivity_decrease;
     } sensitivity;
 
     /* cr. camera parameters learned from Learn OpenGL 
@@ -81,6 +83,7 @@ struct Camera
     float roll;
 
     float unit_angle;
+    float unit_sensitivity;
 
     // =============================================
     // Helper Functions
