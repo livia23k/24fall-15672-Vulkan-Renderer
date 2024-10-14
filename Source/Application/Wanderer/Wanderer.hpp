@@ -88,6 +88,7 @@ struct Wanderer : RTG::Application
 		VkDescriptorSetLayout set0_World = VK_NULL_HANDLE;
 		VkDescriptorSetLayout set1_Transforms = VK_NULL_HANDLE;
 		VkDescriptorSetLayout set2_TEXTURE = VK_NULL_HANDLE;
+		VkDescriptorSetLayout set3_ENVIRONMENT = VK_NULL_HANDLE;
 
 		// types for descriptors:
 		//  using Camera = LinesPipeline::Camera;
@@ -193,8 +194,8 @@ struct Wanderer : RTG::Application
 	Helpers::AllocatedBuffer env_cubemap_buffer;
 	Helpers::AllocatedImage env_cubemap;
 	VkImageView env_cubemap_view;
-	VkSampler env_cubemap_sampler;
-	VkDescriptorPool env_cubemap_descriptor_pool;
+	VkSampler env_cubemap_sampler = VK_NULL_HANDLE;
+	VkDescriptorPool env_cubemap_descriptor_pool = VK_NULL_HANDLE;
 	VkDescriptorSet env_cubemap_descriptor;
 
 	
@@ -252,6 +253,7 @@ struct Wanderer : RTG::Application
 
 	// textures
 	void setup_environment_cubemap(bool flip);
+	void create_environment_cubemap_descriptor();
 	void create_diy_textures();
 	void create_textures_descriptor();
 

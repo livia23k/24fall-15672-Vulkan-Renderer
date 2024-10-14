@@ -66,13 +66,31 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
             .pBindings = bindings.data()};
 
         VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set2_TEXTURE));
+        // VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT)); // TOCHECK
+    };
+
+    { // set3_ENVIRONMENT layout holds a single descriptor for a sampler2D used in the fragment shader
+        std::array<VkDescriptorSetLayoutBinding, 1> bindings{
+            VkDescriptorSetLayoutBinding{
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT}};
+
+        VkDescriptorSetLayoutCreateInfo create_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = uint32_t(bindings.size()),
+            .pBindings = bindings.data()};
+
+        VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT));
     };
 
     { // create pipeline layout:
-        std::array<VkDescriptorSetLayout, 3> layouts{
-            set0_World, // set0_Camera,
+        std::array<VkDescriptorSetLayout, 4> layouts{
+            set0_World,
             set1_Transforms,
             set2_TEXTURE,
+            set3_ENVIRONMENT
         };
 
         VkPipelineLayoutCreateInfo create_info{
@@ -132,6 +150,7 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
             .rasterizerDiscardEnable = VK_FALSE,          // enabling will leave no fragments for framebuffer to render
             .polygonMode = VK_POLYGON_MODE_FILL,          // fill or line or point
             .cullMode = VK_CULL_MODE_BACK_BIT,            // cull back
+            // .cullMode = VK_CULL_MODE_NONE,                // cull none
             .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE, // specifies the vertex order for faces to be considered front-facing
             .depthBiasEnable = VK_FALSE,                  // enabling will add depth bias to fragments
             .lineWidth = 1.0f};
@@ -221,6 +240,12 @@ void Wanderer::ObjectsPipeline::destroy(RTG &rtg)
         vkDestroyDescriptorSetLayout(rtg.device, set2_TEXTURE, nullptr);
         set2_TEXTURE = VK_NULL_HANDLE;
     }
+
+    if (set3_ENVIRONMENT != VK_NULL_HANDLE)
+    {
+        vkDestroyDescriptorSetLayout(rtg.device, set3_ENVIRONMENT, nullptr);
+        set3_ENVIRONMENT = VK_NULL_HANDLE;
+    } 
 
     if (layout != VK_NULL_HANDLE)
     {

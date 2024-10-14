@@ -97,6 +97,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 
 	// set up textures
 	setup_environment_cubemap(true);
+	create_environment_cubemap_descriptor();
 	create_diy_textures();
 	create_textures_descriptor();
 }
@@ -111,36 +112,73 @@ Wanderer::~Wanderer()
 	}
 
 	// remove static resources
-	if (texture_descriptor_pool)
-	{
-		vkDestroyDescriptorPool(rtg.device, texture_descriptor_pool, nullptr);
-		texture_descriptor_pool = VK_NULL_HANDLE;
 
-		// (this also frees the descriptor sets allocated from the pool)
-		texture_descriptors.clear();
-	}
-
-	if (texture_sampler)
+	// clean up textures
 	{
-		vkDestroySampler(rtg.device, texture_sampler, nullptr);
-		texture_sampler = VK_NULL_HANDLE;
-	}
+		if (texture_descriptor_pool)
+		{
+			vkDestroyDescriptorPool(rtg.device, texture_descriptor_pool, nullptr);
+			texture_descriptor_pool = VK_NULL_HANDLE;
 
-	for (VkImageView &view : texture_views)
-	{
-		vkDestroyImageView(rtg.device, view, nullptr);
-		view = VK_NULL_HANDLE;
-	}
-	texture_views.clear();
+			// (this also frees the descriptor sets allocated from the pool)
+			texture_descriptors.clear();
+		}
 
-	for (Helpers::AllocatedImage &image : textures)
+		if (texture_sampler)
+		{
+			vkDestroySampler(rtg.device, texture_sampler, nullptr);
+			texture_sampler = VK_NULL_HANDLE;
+		}
+
+		for (VkImageView &view : texture_views)
+		{
+			if (view)
+			{
+				vkDestroyImageView(rtg.device, view, nullptr);
+				view = VK_NULL_HANDLE;
+			}
+		}
+		texture_views.clear();
+
+		for (Helpers::AllocatedImage &image : textures)
+		{
+			if (image.handle)
+				{ rtg.helpers.destroy_image(std::move(image)); }
+		}
+		textures.clear();
+	};
+
+	// clean up environment texture
 	{
-		rtg.helpers.destroy_image(std::move(image));
-	}
-	textures.clear();
+		if (env_cubemap_descriptor_pool)
+		{
+			vkDestroyDescriptorPool(rtg.device, env_cubemap_descriptor_pool, nullptr);
+			env_cubemap_descriptor_pool = VK_NULL_HANDLE;
+
+			env_cubemap_descriptor = VK_NULL_HANDLE; // optionally,  it becomes invalid automatically after the pool is destroyed
+		}
+
+		if (env_cubemap_sampler)
+		{
+			vkDestroySampler(rtg.device, env_cubemap_sampler, nullptr);
+			env_cubemap_sampler = VK_NULL_HANDLE;
+		}
+
+		if (env_cubemap_view)
+		{
+			vkDestroyImageView(rtg.device, env_cubemap_view, nullptr);
+			env_cubemap_view = VK_NULL_HANDLE;
+		}
+
+		if (env_cubemap.handle)
+		{
+			rtg.helpers.destroy_image(std::move(env_cubemap));
+		}
+
+		rtg.helpers.destroy_buffer(std::move(env_cubemap_buffer));
+	};
 
 	rtg.helpers.destroy_buffer(std::move(object_vertices));
-	rtg.helpers.destroy_buffer(std::move(env_cubemap_buffer));
 
 	// remove swapchain-dependent resources
 	if (swapchain_depth_image.handle != VK_NULL_HANDLE)
@@ -630,9 +668,7 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 					vkCmdBindVertexBuffers(workspace.command_buffer, 0, uint32_t(vertex_buffers.size()), vertex_buffers.data(), offsets.data());
 				}
 
-				// Camera descriptor set is already bound from the lines pipeline
-
-				{ // bind Transforms descriptor set:
+				{ // bind set0 and set1 => World and Transforms:
 					std::array<VkDescriptorSet, 2> descriptor_sets{
 						workspace.World_descriptors,	 // set0: World descriptor set
 						workspace.Transform_descriptors, // set1: Transforms descriptor set
@@ -642,13 +678,29 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 						workspace.command_buffer,								  // command buffer
 						VK_PIPELINE_BIND_POINT_GRAPHICS,						  // pipeline bind point
 						objects_pipeline.layout,								  // pipeline layout
-						0,														  // first set
+						0,														  // started at set0
 						uint32_t(descriptor_sets.size()), descriptor_sets.data(), // descriptor sets count, ptr
 						0, nullptr												  // dynamic offsets count, ptr
 					);
 				}
 
-				// draw all vertices:
+
+				{ // bind set3 => Environment:
+					std::array<VkDescriptorSet, 1> descriptor_sets{
+						env_cubemap_descriptor	 // set3: Environment descriptor set
+					};
+
+					vkCmdBindDescriptorSets(
+						workspace.command_buffer,								  // command buffer
+						VK_PIPELINE_BIND_POINT_GRAPHICS,						  // pipeline bind point
+						objects_pipeline.layout,								  // pipeline layout
+						3,														  // set3
+						uint32_t(descriptor_sets.size()), descriptor_sets.data(), // descriptor sets count, ptr
+						0, nullptr												  // dynamic offsets count, ptr
+					);
+				}
+
+				// draw all vertices, bind set2 => Texture:
 				for (ObjectInstance const &inst : object_instances)
 				{
 					uint32_t index = uint32_t(&inst - &object_instances[0]);
@@ -658,13 +710,15 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 						workspace.command_buffer,			   // command_buffer
 						VK_PIPELINE_BIND_POINT_GRAPHICS,	   // pipeline bind point
 						objects_pipeline.layout,			   // pipeline layout
-						2,									   // second set
+						2,									   // set2
 						1, &texture_descriptors[inst.texture], // descriptor sets count, ptr
 						0, nullptr							   // dynamic offsets count, ptr
 					);
 
 					vkCmdDraw(workspace.command_buffer, inst.vertices.count, 1, inst.vertices.first, index);
 				}
+
+
 			}
 		}
 
@@ -1664,7 +1718,6 @@ void Wanderer::load_scene_objects_vertices()
 
 void Wanderer::create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&bytes_per_pixel)
 {
-
 	/* cr. Cube map tutorial by satellitnorden
 		https://satellitnorden.wordpress.com/2018/01/23/vulkan-adventures-cube-map-tutorial/ */
 
@@ -1779,7 +1832,6 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	// 	}
 	// }
 
-
 	ObjectVertices mesh_vertices;
 	mesh_vertices.first = uint32_t(tmp_object_vertices.size());
 
@@ -1847,58 +1899,63 @@ void Wanderer::setup_environment_cubemap(bool flip)
 	const int bytes_per_pixel = desired_channels * sizeof(float);
 	create_environment_cubemap(texture_data, face_w, face_h, bytes_per_pixel);
 
-	// rtg.helpers.transition_image_layout(env_cubemap, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, NUM_CUBE_FACES);
-
-	// // copy texture buffer to image
-	// rtg.helpers.copy_buffer_to_image(env_cubemap_buffer, env_cubemap, face_w, face_h, NUM_CUBE_FACES);
-
-	// rtg.helpers.transition_image_layout(env_cubemap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, NUM_CUBE_FACES);
-
-	// // create the sampler for the texture
-	// VkSamplerCreateInfo sampler_create_info{
-	// 	.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-	// 	.flags = 0,
-	// 	.magFilter = VK_FILTER_NEAREST,
-	// 	.minFilter = VK_FILTER_NEAREST,
-	// 	.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-	// 	.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-	// 	.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-	// 	.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-	// 	.mipLodBias = 0.f,
-	// 	.anisotropyEnable = VK_FALSE,
-	// 	.maxAnisotropy = 0.f,
-	// 	.compareEnable = VK_FALSE,
-	// 	.compareOp = VK_COMPARE_OP_ALWAYS,
-	// 	.minLod = 0.f,
-	// 	.maxLod = 0.f,
-	// 	.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK,
-	// 	.unnormalizedCoordinates = VK_FALSE};
-
-	// VK(vkCreateSampler(rtg.device, &sampler_create_info, nullptr, &env_cubemap_sampler));
-
-	// // create image view, which is the abstract of images
-	// VkImageViewCreateInfo image_view_create_info{
-	// 	.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-	// 	.image = env_cubemap.handle,
-	// 	.viewType = VK_IMAGE_VIEW_TYPE_CUBE,
-	// 	.format = VK_FORMAT_R8G8B8A8_UNORM,
-	// 	.components = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
-	// 	.subresourceRange{
-	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	// 		.baseMipLevel = 0,
-	// 		.levelCount = 1,
-	// 		.baseArrayLayer = 0,
-	// 		.layerCount = NUM_CUBE_FACES},
-	// };
-
-	// VK(vkCreateImageView(rtg.device, &image_view_create_info, nullptr, &env_cubemap_view));
-	
-
 	// clean
 	for (uint8_t i = 0; i < NUM_CUBE_FACES; ++ i)
 	{
 		delete texture_data[i];
 	}
+}
+
+void Wanderer::create_environment_cubemap_descriptor()
+{
+	// create the env texture descriptor pool =======================================================
+
+	std::array<VkDescriptorPoolSize, 1> pool_sizes{
+		VkDescriptorPoolSize{
+			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.descriptorCount = 1, // 1 descriptor per set, 1 set per texture
+		}};
+
+	VkDescriptorPoolCreateInfo desc_pool_create_info{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = 0,					// because CREATE_FREE_DESCRIPTOR_SET_BIT isn't included, can't free individual descriptors allocated from this pool
+		.maxSets = 1, 				// one set per texture
+		.poolSizeCount = uint32_t(pool_sizes.size()),
+		.pPoolSizes = pool_sizes.data()};
+
+	VK(vkCreateDescriptorPool(rtg.device, &desc_pool_create_info, nullptr, &env_cubemap_descriptor_pool));
+
+	// allocate and write the env texture descriptor sets ============================================
+
+	// allocate descriptor set -----------------------------------------------------------------
+	VkDescriptorSetAllocateInfo desc_set_alloc_info{
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		.descriptorPool = env_cubemap_descriptor_pool,
+		.descriptorSetCount = 1,
+		.pSetLayouts = &objects_pipeline.set3_ENVIRONMENT};
+
+	VK(vkAllocateDescriptorSets(rtg.device, &desc_set_alloc_info, &env_cubemap_descriptor));
+
+	// write descriptors for textures -----------------------------------------------------------
+	VkDescriptorImageInfo info;
+	VkWriteDescriptorSet write;
+
+	info = VkDescriptorImageInfo{
+		.sampler = env_cubemap_sampler,
+		.imageView = env_cubemap_view,
+		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+	};
+	write = VkWriteDescriptorSet{
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		.dstSet = env_cubemap_descriptor,
+		.dstBinding = 0,
+		.dstArrayElement = 0,
+		.descriptorCount = 1,
+		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		.pImageInfo = &info,
+	};
+
+	vkUpdateDescriptorSets(rtg.device, 1, &write, 0, nullptr);
 }
 
 
@@ -2007,10 +2064,8 @@ void Wanderer::create_diy_textures()
 
 	// // transfer data:
 	// rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
-}
 
-void Wanderer::create_textures_descriptor()
-{
+
 	// make image views for the textures ========================================================
 
 	texture_views.reserve(textures.size());
@@ -2059,7 +2114,10 @@ void Wanderer::create_textures_descriptor()
 		.unnormalizedCoordinates = VK_FALSE};
 
 	VK(vkCreateSampler(rtg.device, &sampler_create_info, nullptr, &texture_sampler));
+}
 
+void Wanderer::create_textures_descriptor()
+{
 	// create the texture descriptor pool =======================================================
 
 	uint32_t per_texture = uint32_t(textures.size()); // for easier-to-read counting
