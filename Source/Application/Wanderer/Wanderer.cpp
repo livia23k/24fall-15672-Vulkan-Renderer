@@ -12,6 +12,9 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <GLFW/glfw3.h>
 
+// #define STB_IMAGE_IMPLEMENTATION
+// #include "lib/stb_image.h"
+
 Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 {
 	// set up application prerequisites
@@ -93,6 +96,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	load_scene_objects_vertices();
 
 	// set up textures
+	setup_environment_cubemap(true);
 	create_diy_textures();
 	create_textures_descriptor();
 }
@@ -136,6 +140,7 @@ Wanderer::~Wanderer()
 	textures.clear();
 
 	rtg.helpers.destroy_buffer(std::move(object_vertices));
+	rtg.helpers.destroy_buffer(std::move(env_cubemap_buffer));
 
 	// remove swapchain-dependent resources
 	if (swapchain_depth_image.handle != VK_NULL_HANDLE)
@@ -1083,7 +1088,6 @@ void Wanderer::on_input(InputEvent const &event)
 			else if (event.key.key == GLFW_KEY_LEFT_BRACKET)
 			{
 				debug_camera.sensitivity.sensitivity_decrease = true;
-				std::cout << "pressing [" << std::endl;
 			}
 			else if (event.key.key == GLFW_KEY_RIGHT_BRACKET)
 			{
@@ -1211,7 +1215,6 @@ void Wanderer::on_input(InputEvent const &event)
 			else if (event.key.key == GLFW_KEY_LEFT_BRACKET)
 			{
 				debug_camera.sensitivity.sensitivity_decrease = false;
-				std::cout << "releasing [" << std::endl;
 			}
 			else if (event.key.key == GLFW_KEY_RIGHT_BRACKET)
 			{
@@ -1659,6 +1662,88 @@ void Wanderer::load_scene_objects_vertices()
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
 }
 
+void Wanderer::create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&bytes_per_pixel)
+{
+
+	/* cr. Cube map tutorial by satellitnorden
+		https://satellitnorden.wordpress.com/2018/01/23/vulkan-adventures-cube-map-tutorial/ */
+
+	const VkDeviceSize layer_size = face_w * face_h * bytes_per_pixel;	
+	const VkDeviceSize image_size = layer_size * NUM_CUBE_FACES;
+
+	this->env_cubemap_buffer =  rtg.helpers.create_buffer(
+		image_size,
+		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, // host visible memory, coherent (no special sync needed)
+		Helpers::Mapped																// put it somewhere in the CPU address space
+	);
+
+	/* cr. Rendering a Skybox with a Vulkan Cubemap by beaumanvienna
+		https://www.youtube.com/watch?v=G2X3Exgi3co */
+
+	uint64_t mem_address = reinterpret_cast<uint64_t>(this->env_cubemap_buffer.allocation.data());
+	for (uint32_t i = 0; i < NUM_CUBE_FACES; ++ i) {
+		std::memcpy(reinterpret_cast<void*>(mem_address), cubemap_data[i], layer_size);
+		mem_address += layer_size;
+	}
+
+	// create image
+	this->env_cubemap = rtg.helpers.create_cubemap_image(
+		VkExtent2D{.width = static_cast<unsigned int>(face_w), .height = static_cast<unsigned int>(face_h)},
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // with sample and upload
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, // should be device local
+		Helpers::Unmapped);
+	
+	rtg.helpers.transition_image_layout(env_cubemap, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, NUM_CUBE_FACES);
+
+	// copy texture buffer to image
+	rtg.helpers.copy_buffer_to_image(env_cubemap_buffer, env_cubemap, face_w, face_h, NUM_CUBE_FACES);
+
+	rtg.helpers.transition_image_layout(env_cubemap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, NUM_CUBE_FACES);
+
+	// create the sampler for the texture
+	VkSamplerCreateInfo sampler_create_info{
+		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+		.flags = 0,
+		.magFilter = VK_FILTER_NEAREST,
+		.minFilter = VK_FILTER_NEAREST,
+		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+		.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.mipLodBias = 0.f,
+		.anisotropyEnable = VK_FALSE,
+		.maxAnisotropy = 0.f,
+		.compareEnable = VK_FALSE,
+		.compareOp = VK_COMPARE_OP_ALWAYS,
+		.minLod = 0.f,
+		.maxLod = 0.f,
+		.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK,
+		.unnormalizedCoordinates = VK_FALSE};
+
+	VK(vkCreateSampler(rtg.device, &sampler_create_info, nullptr, &env_cubemap_sampler));
+
+	// create image view, which is the abstract of images
+	VkImageViewCreateInfo image_view_create_info{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.image = env_cubemap.handle,
+		.viewType = VK_IMAGE_VIEW_TYPE_CUBE,
+		.format = VK_FORMAT_R8G8B8A8_UNORM,
+		.components = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
+		.subresourceRange{
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = NUM_CUBE_FACES},
+	};
+
+	VK(vkCreateImageView(rtg.device, &image_view_create_info, nullptr, &env_cubemap_view));
+}
+
+
 void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::vector<ObjectsPipeline::Vertex> &tmp_object_vertices)
 {
 	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
@@ -1683,6 +1768,16 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	LoadMgr::read_s72_mesh_attribute_to_list(refMesh->tangentList, refMesh->attrTangent, srcFolder);
 	LoadMgr::read_s72_mesh_attribute_to_list(refMesh->texcoordList, refMesh->attrTexcoord, srcFolder);
 	assert(refMesh->positionList.size() == refMesh->normalList.size() && refMesh->normalList.size() == refMesh->tangentList.size() && refMesh->tangentList.size() == refMesh->texcoordList.size());
+
+
+	// TODO: delete
+	// if (meshObject->name == "Rounded-Cube")
+	// {
+	// 	for (auto &texcoord : refMesh->texcoordList)
+	// 	{
+	// 		std::cout << "[Texcoord] " << texcoord.x << ", " << texcoord.y << std::endl;
+	// 	}
+	// }
 
 
 	ObjectVertices mesh_vertices;
@@ -1727,9 +1822,91 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	scene_nodes_vertices.push_back(mesh_vertices);
 }
 
+void Wanderer::setup_environment_cubemap(bool flip)
+{
+	/* cr. Rendering a Skybox with a Vulkan Cubemap by beaumanvienna
+		https://www.youtube.com/watch?v=G2X3Exgi3co */
+
+	/*
+		load cubemap data from file
+	*/
+
+	const int desired_channels = 4;
+	int w, h, org_channels;
+	char *texture_data[6]; // NUM_CUBE_FACES
+	std::string environment_map_src = rtg.configuration.scene_graph_parent_folder + rtg.configuration.sceneMgr.environmentObject->radiance.src;
+
+	LoadMgr::load_cubemap_from_file(texture_data, environment_map_src.c_str(), w, h, org_channels, desired_channels, NUM_CUBE_FACES, flip);
+	
+	/*
+		store cubemap on GPU
+	*/
+
+    unsigned int face_w = static_cast<unsigned int>(w);
+    unsigned int face_h = static_cast<unsigned int>(h/6);
+	const int bytes_per_pixel = desired_channels * sizeof(float);
+	create_environment_cubemap(texture_data, face_w, face_h, bytes_per_pixel);
+
+	// rtg.helpers.transition_image_layout(env_cubemap, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, NUM_CUBE_FACES);
+
+	// // copy texture buffer to image
+	// rtg.helpers.copy_buffer_to_image(env_cubemap_buffer, env_cubemap, face_w, face_h, NUM_CUBE_FACES);
+
+	// rtg.helpers.transition_image_layout(env_cubemap, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, NUM_CUBE_FACES);
+
+	// // create the sampler for the texture
+	// VkSamplerCreateInfo sampler_create_info{
+	// 	.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+	// 	.flags = 0,
+	// 	.magFilter = VK_FILTER_NEAREST,
+	// 	.minFilter = VK_FILTER_NEAREST,
+	// 	.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
+	// 	.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+	// 	.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+	// 	.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+	// 	.mipLodBias = 0.f,
+	// 	.anisotropyEnable = VK_FALSE,
+	// 	.maxAnisotropy = 0.f,
+	// 	.compareEnable = VK_FALSE,
+	// 	.compareOp = VK_COMPARE_OP_ALWAYS,
+	// 	.minLod = 0.f,
+	// 	.maxLod = 0.f,
+	// 	.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK,
+	// 	.unnormalizedCoordinates = VK_FALSE};
+
+	// VK(vkCreateSampler(rtg.device, &sampler_create_info, nullptr, &env_cubemap_sampler));
+
+	// // create image view, which is the abstract of images
+	// VkImageViewCreateInfo image_view_create_info{
+	// 	.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+	// 	.image = env_cubemap.handle,
+	// 	.viewType = VK_IMAGE_VIEW_TYPE_CUBE,
+	// 	.format = VK_FORMAT_R8G8B8A8_UNORM,
+	// 	.components = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A},
+	// 	.subresourceRange{
+	// 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	// 		.baseMipLevel = 0,
+	// 		.levelCount = 1,
+	// 		.baseArrayLayer = 0,
+	// 		.layerCount = NUM_CUBE_FACES},
+	// };
+
+	// VK(vkCreateImageView(rtg.device, &image_view_create_info, nullptr, &env_cubemap_view));
+	
+
+	// clean
+	for (uint8_t i = 0; i < NUM_CUBE_FACES; ++ i)
+	{
+		delete texture_data[i];
+	}
+}
+
+
 void Wanderer::create_diy_textures()
 {
-	textures.reserve(3);
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+
+	textures.reserve(sceneMgr.materialObjectMap.size() + 1);
 
 	// create texture 0: checkerboard with a red square at the origin ============================
 
@@ -1744,7 +1921,7 @@ void Wanderer::create_diy_textures()
 		for (uint32_t x = 0; x < size; ++x)
 		{
 			float fx = (x + 0.5f) / float(size);
-			// highloght the origin
+			// highlight the origin
 			if (fx < 0.05f && fy < 0.05f)
 				data.emplace_back(0xff0000ff); // red
 			else if ((fx < 0.5f) == (fy < 0.5f))
@@ -1767,66 +1944,69 @@ void Wanderer::create_diy_textures()
 	// transfer data
 	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
 
-	// create texture 1: 'xor' texture ============================================================
 
-	// actually make the texture:
-	size = 256;
-	data.clear();
-	data.reserve(size * size);
+	// TODO: delete the following code
 
-	for (uint32_t y = 0; y < size; ++y)
-	{
-		for (uint32_t x = 0; x < size; ++x)
-		{
-			uint8_t r = uint8_t(x) ^ uint8_t(y);
-			uint8_t g = uint8_t(x + 128) ^ uint8_t(y);
-			uint8_t b = uint8_t(x) ^ uint8_t(y + 27);
-			uint8_t a = 0xff;
-			data.emplace_back(uint32_t(r) | (uint32_t(g) << 8) | (uint32_t(b) << 16) | (uint32_t(a) << 24));
-		}
-	}
-	assert(data.size() == size * size);
+	// // create texture 1: 'xor' texture ============================================================
 
-	// make a place for texture to live on the GPU
-	textures.emplace_back(rtg.helpers.create_image(
-		VkExtent2D{.width = size, .height = size}, // size of image
-		VK_FORMAT_R8G8B8A8_SRGB,				   // interpret image using SRGB-encoded 8-bit RGBA
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
-		Helpers::Unmapped));
+	// // actually make the texture:
+	// size = 256;
+	// data.clear();
+	// data.reserve(size * size);
 
-	// transfer data:
-	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
+	// for (uint32_t y = 0; y < size; ++y)
+	// {
+	// 	for (uint32_t x = 0; x < size; ++x)
+	// 	{
+	// 		uint8_t r = uint8_t(x) ^ uint8_t(y);
+	// 		uint8_t g = uint8_t(x + 128) ^ uint8_t(y);
+	// 		uint8_t b = uint8_t(x) ^ uint8_t(y + 27);
+	// 		uint8_t a = 0xff;
+	// 		data.emplace_back(uint32_t(r) | (uint32_t(g) << 8) | (uint32_t(b) << 16) | (uint32_t(a) << 24));
+	// 	}
+	// }
+	// assert(data.size() == size * size);
 
-	// texture 2: for object sea =================================================================
+	// // make a place for texture to live on the GPU
+	// textures.emplace_back(rtg.helpers.create_image(
+	// 	VkExtent2D{.width = size, .height = size}, // size of image
+	// 	VK_FORMAT_R8G8B8A8_SRGB,				   // interpret image using SRGB-encoded 8-bit RGBA
+	// 	VK_IMAGE_TILING_OPTIMAL,
+	// 	VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
+	// 	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
+	// 	Helpers::Unmapped));
 
-	// actually make the texture:
-	size = 256;
-	data.clear();
-	data.reserve(size * size);
+	// // transfer data:
+	// rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
 
-	for (uint32_t y = 0; y < size; ++y)
-	{
-		for (uint32_t x = 0; x < size; ++x)
-		{
-			uint32_t blue = floor(std::cos(x / 100.0) * size);
-			data.emplace_back((0x50 << 24) | (blue << 16) | (0x10 << 8) | (0x00));
-		}
-	}
-	assert(data.size() == size * size);
+	// // texture 2: for object sea =================================================================
 
-	// make a place for texture to live on the GPU
-	textures.emplace_back(rtg.helpers.create_image(
-		VkExtent2D{.width = size, .height = size}, // size of image
-		VK_FORMAT_R8G8B8A8_UNORM,				   // interpret image using SRGB-encoded 8-bit RGBA
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
-		Helpers::Unmapped));
+	// // actually make the texture:
+	// size = 256;
+	// data.clear();
+	// data.reserve(size * size);
 
-	// transfer data:
-	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
+	// for (uint32_t y = 0; y < size; ++y)
+	// {
+	// 	for (uint32_t x = 0; x < size; ++x)
+	// 	{
+	// 		uint32_t blue = floor(std::cos(x / 100.0) * size);
+	// 		data.emplace_back((0x50 << 24) | (blue << 16) | (0x10 << 8) | (0x00));
+	// 	}
+	// }
+	// assert(data.size() == size * size);
+
+	// // make a place for texture to live on the GPU
+	// textures.emplace_back(rtg.helpers.create_image(
+	// 	VkExtent2D{.width = size, .height = size}, // size of image
+	// 	VK_FORMAT_R8G8B8A8_UNORM,				   // interpret image using SRGB-encoded 8-bit RGBA
+	// 	VK_IMAGE_TILING_OPTIMAL,
+	// 	VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // will sample and upload
+	// 	VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,						  // should be device-local
+	// 	Helpers::Unmapped));
+
+	// // transfer data:
+	// rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
 }
 
 void Wanderer::create_textures_descriptor()
@@ -1842,7 +2022,6 @@ void Wanderer::create_textures_descriptor()
 			.image = image.handle,
 			.viewType = VK_IMAGE_VIEW_TYPE_2D,
 			.format = image.format,
-
 			.subresourceRange{
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 				.baseMipLevel = 0,

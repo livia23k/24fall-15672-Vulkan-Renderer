@@ -6,6 +6,12 @@
 #include "Source/DataType/PosNorTexVertex.hpp"
 #include "lib/sejp.hpp"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "lib/stb_image.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "lib/stb_image_write.h"
+
 // Scene Graph Loader functions =================================================================================
 
 void LoadMgr::load_scene_graph_info_from_s72(const std::string &path, SceneMgr &targetSceneMgr)
@@ -760,6 +766,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                     materialObject->normalmap = SceneMgr::Texture(); // replacing the std::nullopt
                     materialObject->normalmap->src = normalmapPropertyInfo.as_string().value();
+                    materialObject->normalmap->numChannels = 3; // normal vector in tangent space (x, y, z)
                     // std::cout << materialObject->normalmap->src << std::endl; // [PASS]
                 }
                 else
@@ -784,6 +791,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                     materialObject->displacementmap = SceneMgr::Texture(); // replacing the std::nullopt
                     materialObject->displacementmap->src = displacementmapPropertyInfo.as_string().value();
+                    materialObject->displacementmap->numChannels = 1; // height
                     // std::cout << materialObject->displacementmap->src << std::endl; // [PASS]
                 }
                 else
@@ -834,6 +842,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                                 SceneMgr::Texture albedo_tex;
                                 albedo_tex.src = albedoPropertyInfo.as_string().value();
+                                albedo_tex.numChannels = 3; // (r, g, b)
                                 pbrMaterial.albedo = albedo_tex;
 
                                 // if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.albedo))
@@ -880,6 +889,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                                 SceneMgr::Texture roughness_tex;
                                 roughness_tex.src = roughnessPropertyInfo.as_string().value();
+                                roughness_tex.numChannels = 1; // roughness
                                 pbrMaterial.roughness = roughness_tex;
 
                                 // if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.roughness))
@@ -926,6 +936,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                                 SceneMgr::Texture metalness_tex;
                                 metalness_tex.src = metalnessPropertyInfo.as_string().value();
+                                metalness_tex.numChannels = 1; // metalness
                                 pbrMaterial.metalness = metalness_tex;
 
                                 // if (std::holds_alternative<SceneMgr::Texture>(pbrMaterial.metalness))
@@ -998,6 +1009,7 @@ void LoadMgr::parse_material_object_info(OptionalPropertyMap &materialObjectInfo
 
                                 SceneMgr::Texture albedo_tex;
                                 albedo_tex.src = albedoPropertyInfo.as_string().value();
+                                albedo_tex.numChannels = 3; // (r, g, b)
                                 lambMaterial.albedo = albedo_tex;
 
                                 // if (std::holds_alternative<SceneMgr::Texture>(lambMaterial.albedo))
@@ -1095,16 +1107,21 @@ void LoadMgr::parse_environment_object_info(OptionalPropertyMap &environmentObje
                     if (!radiancePropertyInfo.as_string())
                         continue;
                     
-                    environmentObject->radiance.type = radiancePropertyInfo.as_string().value();
+                    if (radiancePropertyInfo.as_string().value() == "cube")
+                    {
+                        environmentObject->radiance.numChannels = 3; // (r, g, b)
+                    }
+                    // TODO: more environment type
+                    else 
+                    {
+                        environmentObject->radiance.numChannels = 0;
+                    }
+
                     // std::cout << "type " << environmentObject->radiance.type << std::endl; // [PASS]
                 }
                 else if (radiancePropertyName == "format")
                 {
-                    if (!radiancePropertyInfo.as_string())
-                        continue;
-
-                    environmentObject->radiance.format = radiancePropertyInfo.as_string().value();
-                    // std::cout << "format " << environmentObject->radiance.format << std::endl; // [PASS]
+                    continue;
                 }
                 else
                 {
@@ -1120,8 +1137,8 @@ void LoadMgr::parse_environment_object_info(OptionalPropertyMap &environmentObje
         }
     }
 
-    targetSceneMgr.environmentObjectMap[environmentObject->name] = environmentObject;
-    // std::cout << environmentObject->name << " added to environmentObjectMap." << std::endl;
+    targetSceneMgr.environmentObject = environmentObject;
+    // std::cout << environmentObject->name << " added to sceneMgr." << std::endl;
 }
 
 void LoadMgr::parse_light_object_info(OptionalPropertyMap &lightObjectInfo, SceneMgr &targetSceneMgr)
@@ -1736,4 +1753,53 @@ void LoadMgr::load_object_from_OBJ(const std::string &path, std::vector<MeshAttr
 
     // std::cout << "Loaded " << path << " with " << mesh_vertices.size() << " vertices." << std::endl;
     return;
+}
+
+void LoadMgr::save_cubemap_faces_as_images(char **dst, int face_w, int face_h, int desired_channels) 
+{
+    for (int i = 0; i < 6; ++ i) 
+    {
+        char filename[50];
+        snprintf(filename, sizeof(filename), "./Assets/Cubemap/Verification/face_%d.png", i);
+
+        int result = stbi_write_png(filename, face_w, face_h, desired_channels, dst[i], face_w * desired_channels);
+
+        if (result) {
+            std::cout << "Saved " << filename << " successfully." << std::endl;
+        } else {
+            std::cerr << "Failed to save " << filename << std::endl;
+        }
+    }
+}
+
+void LoadMgr::load_cubemap_from_file(char **dst, const char *src, int &w, int &h, int &org_channels, const int &desired_channels, const int &NUM_CUBE_FACES, bool flip)
+{
+    stbi_set_flip_vertically_on_load(flip); // if true, adapt .s72 (+y up) to vulkan coords (-y down)
+	unsigned char *cubemap_data = stbi_load(src, &w, &h, &org_channels, desired_channels); // format: RGBARGBA...
+
+	if (cubemap_data == nullptr)  {
+		throw std::runtime_error("falied to load environment cubemap data."); 
+	}
+    if (h % NUM_CUBE_FACES != 0) {
+        std::stringstream ss;
+        ss << "Invalid cubemap. The height of cubemap should be divisible by " << NUM_CUBE_FACES << ".";
+        throw std::runtime_error(ss.str());
+    }
+
+	// std::cout << "[Total texels]: src: " << src << "; channel: " << org_channels << "; size: " 
+    //     << w << " * " << h << std::endl; // [PASS]
+
+    int face_w = w;
+    int face_h = h / 6;
+    int bytes_per_face = face_w * face_h * (desired_channels * sizeof(float)); // w * h * bytes_per_pixel
+
+    for (int i = 0; i < 6; ++ i)
+    {
+        dst[i] = new char[bytes_per_face]; 
+        memcpy(dst[i], cubemap_data + i * bytes_per_face, bytes_per_face);
+    }
+
+    // save_cubemap_faces_as_images(dst, face_w, face_h, desired_channels); // [PASS]
+
+	free(cubemap_data);
 }

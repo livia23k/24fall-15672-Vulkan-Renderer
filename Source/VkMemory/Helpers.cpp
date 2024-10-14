@@ -96,7 +96,7 @@ Helpers::AllocatedBuffer Helpers::create_buffer(VkDeviceSize size, VkBufferUsage
 		.size = size,
 		.usage = usage,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by one queue family
-	};
+	}; 
 	VK(vkCreateBuffer(rtg.device, &create_info, nullptr, &buffer.handle));
 	buffer.size = size;
 
@@ -138,6 +138,41 @@ Helpers::AllocatedImage Helpers::create_image(VkExtent2D const &extent, VkFormat
 			.depth = 1},
 		.mipLevels = 1,
 		.arrayLayers = 1, // number of layers in image array
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.tiling = tiling,
+		.usage = usage,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by one queue family
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED};
+
+	VK(vkCreateImage(rtg.device, &create_info, nullptr, &image.handle));
+
+	VkMemoryRequirements req;
+	vkGetImageMemoryRequirements(rtg.device, image.handle, &req);
+
+	image.allocation = allocate(req, properties, map);
+
+	VK(vkBindImageMemory(rtg.device, image.handle, image.allocation.handle, image.allocation.offset));
+
+	return image;
+}
+
+Helpers::AllocatedImage Helpers::create_cubemap_image(VkExtent2D const &extent, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map)
+{
+	AllocatedImage image;
+	image.extent = extent;
+	image.format = format;
+
+	VkImageCreateInfo create_info{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, // [ADD]
+		.imageType = VK_IMAGE_TYPE_2D,
+		.format = format,
+		.extent{
+			.width = extent.width,
+			.height = extent.height,
+			.depth = 1},
+		.mipLevels = 1,
+		.arrayLayers = 6, // [CHANGE] number of layers in image array
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = tiling,
 		.usage = usage,
@@ -392,6 +427,137 @@ VkShaderModule Helpers::create_shader_module(uint32_t const *code, size_t bytes)
 	return shader_module;
 }
 
+void Helpers::transition_image_layout(Helpers::AllocatedImage &image, VkImageLayout old_layout, VkImageLayout new_layout, const uint32_t &layer_count) const
+{
+	/* 
+		record transition to command buffer
+	*/
+
+	VK(vkResetCommandBuffer(transition_command_buffer, 0));
+
+	VkCommandBufferBeginInfo begin_info{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT // record again every submit
+	};
+
+	VK(vkBeginCommandBuffer(transition_command_buffer, &begin_info));
+
+	/* cr. Rendering a Skybox with a Vulkan Cubemap by beaumanvienna
+		https://www.youtube.com/watch?v=G2X3Exgi3co */
+
+	VkImageMemoryBarrier barrier{
+		.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		// .srcAccessMask = , // assigned later
+		// .dstAccessMask = , // assigned later
+		.oldLayout = old_layout,
+		.newLayout = new_layout,
+		.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+		.image = image.handle,
+		.subresourceRange{
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0,
+			.levelCount = 1,
+			.baseArrayLayer = 0,
+			.layerCount = layer_count},
+	};
+
+	VkPipelineStageFlags srcStageMask = 0;
+	VkPipelineStageFlags dstStageMask = 0;
+
+	if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	{
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		srcStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+	}
+	else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+	{
+
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+		dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+	}
+	else
+	{
+		std::cerr << "[Helpers::transition_image_layout] unsupported layout transition!";
+	}
+
+	vkCmdPipelineBarrier(
+		transition_command_buffer,	// commandBuffer
+		srcStageMask, 				// srcStageMask
+		dstStageMask,	   			// dstStageMask
+		0,							// dependencyFlags
+		0, nullptr,					// memory barrier count, pointer
+		0, nullptr,					// buffer memory barrier count, pointer
+		1, &barrier					// image memory barrier count, pointer
+	);
+
+	VK(vkEndCommandBuffer(transition_command_buffer));
+
+	/* 
+		submit command buffer, run and finish command
+	*/
+
+	VkSubmitInfo submit_info{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &transition_command_buffer};
+	VK(vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+
+	VK(vkQueueWaitIdle(rtg.graphics_queue));
+}
+
+
+void Helpers::copy_buffer_to_image(AllocatedBuffer &buffer, AllocatedImage &image, const uint32_t &face_w, const uint32_t &face_h, const uint32_t &layer_count) const
+{
+	/* 
+		record transition to command buffer
+	*/
+
+	VK(vkResetCommandBuffer(transition_command_buffer, 0));
+
+	VkCommandBufferBeginInfo begin_info{
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT // record again every submit
+	};
+
+	VK(vkBeginCommandBuffer(transition_command_buffer, &begin_info));
+
+	VkBufferImageCopy region{
+		.bufferOffset = 0,
+		.bufferRowLength = 0,
+		.bufferImageHeight = 0,
+		.imageSubresource{
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.mipLevel = 0,
+			.baseArrayLayer = 0,
+			.layerCount = layer_count},
+		.imageOffset = {0, 0, 0},
+		.imageExtent = {face_w, face_h, 1},
+	};
+
+	vkCmdCopyBufferToImage(transition_command_buffer, buffer.handle, image.handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+
+	VK(vkEndCommandBuffer(transition_command_buffer));
+
+	/* 
+		submit command buffer, run and finish command
+	*/
+
+	VkSubmitInfo submit_info{
+		.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		.commandBufferCount = 1,
+		.pCommandBuffers = &transition_command_buffer};
+	VK(vkQueueSubmit(rtg.graphics_queue, 1, &submit_info, VK_NULL_HANDLE));
+
+	VK(vkQueueWaitIdle(rtg.graphics_queue));
+}
+
 //----------------------------
 
 Helpers::Helpers(RTG const &rtg_) : rtg(rtg_)
@@ -404,18 +570,35 @@ Helpers::~Helpers()
 
 void Helpers::create()
 {
-	VkCommandPoolCreateInfo create_info{// resources made with create and destroy are long-lived
-										.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-										.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-										.queueFamilyIndex = rtg.graphics_queue_family.value()};
-	VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &transfer_command_pool));
+	{
+		VkCommandPoolCreateInfo create_info{// resources made with create and destroy are long-lived
+											.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+											.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+											.queueFamilyIndex = rtg.graphics_queue_family.value()};
+		VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &transfer_command_pool));
 
-	VkCommandBufferAllocateInfo alloc_info{// resources made with alloc and free are short-lived, can be changed each frame
-										   .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-										   .commandPool = transfer_command_pool,
-										   .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-										   .commandBufferCount = 1};
-	VK(vkAllocateCommandBuffers(rtg.device, &alloc_info, &transfer_command_buffer));
+		VkCommandBufferAllocateInfo alloc_info{// resources made with alloc and free are short-lived, can be changed each frame
+											.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+											.commandPool = transfer_command_pool,
+											.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+											.commandBufferCount = 1};
+		VK(vkAllocateCommandBuffers(rtg.device, &alloc_info, &transfer_command_buffer));
+	};
+	
+	{
+		VkCommandPoolCreateInfo create_info{// resources made with create and destroy are long-lived
+											.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+											.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+											.queueFamilyIndex = rtg.graphics_queue_family.value()};
+		VK(vkCreateCommandPool(rtg.device, &create_info, nullptr, &transition_command_pool));
+
+		VkCommandBufferAllocateInfo alloc_info{// resources made with alloc and free are short-lived, can be changed each frame
+											.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+											.commandPool = transition_command_pool,
+											.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+											.commandBufferCount = 1};
+		VK(vkAllocateCommandBuffers(rtg.device, &alloc_info, &transition_command_buffer));
+	};
 
 	vkGetPhysicalDeviceMemoryProperties(rtg.physical_device, &memory_properties);
 
@@ -449,5 +632,17 @@ void Helpers::destroy()
 	{
 		vkDestroyCommandPool(rtg.device, transfer_command_pool, nullptr);
 		transfer_command_pool = VK_NULL_HANDLE;
+	}
+
+	if (transition_command_buffer != VK_NULL_HANDLE)
+	{
+		vkFreeCommandBuffers(rtg.device, transition_command_pool, 1, &transition_command_buffer);
+		transition_command_buffer = VK_NULL_HANDLE;
+	}
+
+	if (transition_command_pool != VK_NULL_HANDLE)
+	{
+		vkDestroyCommandPool(rtg.device, transition_command_pool, nullptr);
+		transition_command_pool = VK_NULL_HANDLE;
 	}
 }

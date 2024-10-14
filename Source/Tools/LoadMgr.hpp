@@ -50,5 +50,9 @@ struct LoadMgr {
     // load matrices
     static void load_s72_node_matrices(SceneMgr &targetSceneMgr);
 
+    // load materials
+    static void load_cubemap_from_file(char **dst, const char *src, int &w, int &h, int &orgChannel, const int &desiredChannel, const int &NUM_CUBE_FACES, bool flip);
+    static void save_cubemap_faces_as_images(char **dst, int face_w, int face_h, int desired_channels);
+
 
 };

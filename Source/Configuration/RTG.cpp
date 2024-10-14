@@ -261,6 +261,7 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this)
 
 	// select the `physical_device` -- the gpu that will be used to draw:
 	{
+		// std::cout << "[RTG] (Candidate Physical Device): ";
 		std::vector<std::string> physical_device_names; // for later error message
 		// pick a physical device
 		{
@@ -280,6 +281,7 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this)
 				vkGetPhysicalDeviceFeatures(pd, &features);
 
 				physical_device_names.emplace_back(properties.deviceName);
+				// std::cout << properties.deviceName << ", ";
 
 				if (!configuration.physical_device_name.empty())
 				{
@@ -311,6 +313,7 @@ RTG::RTG(Configuration const &configuration_) : helpers(*this)
 				}
 			}
 		};
+		// std::cout << "[End]" << std::endl;
 
 		if (physical_device == VK_NULL_HANDLE)
 		{

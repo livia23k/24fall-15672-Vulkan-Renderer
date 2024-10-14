@@ -11,6 +11,15 @@ SceneMgr::SceneMgr()
     materialObjectMap.clear();
 
     meshVerticesIndexMap.clear();
+
+    LambertianMaterial lambertian;
+    lambertian.albedo = glm::vec3(0.8f);
+    defaultMaterial = new MaterialObject();
+    defaultMaterial->name = "default"; // WARNING: make sure "default" is not the name of all material in .s72
+    defaultMaterial->type = MaterialType::LAMBERTIAN;
+    defaultMaterial->material = lambertian;
+
+    materialObjectMap[defaultMaterial->name] = defaultMaterial;
 }
 
 SceneMgr::~SceneMgr()
@@ -20,6 +29,8 @@ SceneMgr::~SceneMgr()
 
 void SceneMgr::clean_all()
 {
+    // delete defaultMaterial; // defaultMaterial is removed during the cleaning of materialObjectMap
+
     if (sceneObject)
     {
         delete sceneObject;
@@ -391,16 +402,14 @@ void SceneMgr::print_single_material_object(MaterialObject *materialObject)
     {
         std::cout << "  Normalmap: " << std::endl;
         std::cout << "    src: " << materialObject->normalmap->src << std::endl;
-        std::cout << "    type: " << materialObject->normalmap->type << std::endl;
-        std::cout << "    format: " << materialObject->normalmap->format << std::endl;
+        std::cout << "    numChannels: " << materialObject->normalmap->numChannels << std::endl;
     }
 
     if (materialObject->displacementmap != std::nullopt)
     {
         std::cout << "  Displacementmap: " << std::endl;
         std::cout << "    src: " << materialObject->displacementmap->src << std::endl;
-        std::cout << "    type: " << materialObject->displacementmap->type << std::endl;
-        std::cout << "    format: " << materialObject->displacementmap->format << std::endl;
+        std::cout << "    numChannels: " << materialObject->displacementmap->numChannels << std::endl;
     }
 
     std::cout << "  Material Type: ";
@@ -499,8 +508,7 @@ void SceneMgr::print_single_environment_object(EnvironmentObject* environmentObj
 
     std::cout << "  Radiance Texture: " << std::endl;
     std::cout << "    src: " << environmentObject->radiance.src << std::endl;
-    std::cout << "    type: " << environmentObject->radiance.type << std::endl;
-    std::cout << "    format: " << environmentObject->radiance.format << std::endl;
+    std::cout << "    numChannels: " << environmentObject->radiance.numChannels << std::endl;
 
     std::cout << std::endl;
 }
@@ -587,14 +595,6 @@ void SceneMgr::print_material_object_map()
     for (auto &pair : materialObjectMap)
     {
         print_single_material_object(pair.second);
-    }
-}
-
-void SceneMgr::print_environment_object_map()
-{
-    for (auto &pair : environmentObjectMap)
-    {
-        print_single_environment_object(pair.second);
     }
 }
 

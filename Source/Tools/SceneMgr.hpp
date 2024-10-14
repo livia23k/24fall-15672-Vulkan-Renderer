@@ -54,8 +54,9 @@ struct SceneMgr
     struct Texture
     {
         std::string src;
-        std::string type;
-        std::string format;
+        uint8_t numChannels;
+        // std::string type;
+        // std::string format;
     };
 
     struct IndiceStream
@@ -204,7 +205,8 @@ struct SceneMgr
 
     };
 
-    struct MaterialObject {
+    struct MaterialObject 
+    {
         std::string name;
         std::optional<Texture> normalmap; // std::nullopt
         std::optional<Texture> displacementmap; // std::nullopt
@@ -226,15 +228,19 @@ struct SceneMgr
         uint32_t shadow;
     };
 
+    // default object
+    MaterialObject *defaultMaterial;
+
     // object map
-    SceneObject* sceneObject;
+    SceneObject *sceneObject;
+    EnvironmentObject *environmentObject;
     std::unordered_map<std::string, NodeObject*> nodeObjectMap;
     std::unordered_map<std::string, MeshObject*> meshObjectMap;
     std::unordered_map<std::string, CameraObject*> cameraObjectMap;
     std::unordered_map<std::string, DriverObject*> driverObjectMap;
     std::unordered_map<std::string, MaterialObject*> materialObjectMap;
-    std::unordered_map<std::string, EnvironmentObject*> environmentObjectMap;
     std::unordered_map<std::string, LightObject*> lightObjectMap;
+
 
     // object - application buffer map
     std::unordered_map<std::string, uint32_t> meshVerticesIndexMap;

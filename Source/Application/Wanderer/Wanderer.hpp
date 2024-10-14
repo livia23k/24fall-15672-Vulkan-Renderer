@@ -6,8 +6,8 @@
 #include "Source/DataType/Mat4.hpp"
 #include "Source/DataType/Frustum.hpp"
 #include "Source/Tools/Timer.hpp"
-
 #include "Source/Configuration/RTG.hpp"
+
 
 #include <chrono>
 #include <array>
@@ -83,7 +83,7 @@ struct Wanderer : RTG::Application
 
 	struct ObjectsPipeline
 	{
-		// descriptot set layouts:
+		// descriptor set layouts:
 		// VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
 		VkDescriptorSetLayout set0_World = VK_NULL_HANDLE;
 		VkDescriptorSetLayout set1_Transforms = VK_NULL_HANDLE;
@@ -158,7 +158,7 @@ struct Wanderer : RTG::Application
 		VkDescriptorSet World_descriptors;	// references World
 
 		// locations for ObjectsPipeline::Transform data (streamed to GPU per-frame):
-		Helpers::AllocatedBuffer Transforms_src; // host coherent; mapped to cpu memory
+		Helpers::AllocatedBuffer Transforms_src; // host coherent; mapped to cpu memorys
 		Helpers::AllocatedBuffer Transforms;	 // device-local
 		VkDescriptorSet Transform_descriptors;	 // references Transfroms
 	};
@@ -180,11 +180,24 @@ struct Wanderer : RTG::Application
 	ObjectVertices sea_vertices;
 	std::vector<ObjectVertices> scene_nodes_vertices;
 
+
+	// general textures
 	std::vector<Helpers::AllocatedImage> textures;			   // holds handles of actual image data
 	std::vector<VkImageView> texture_views;					   // references to portions of of whole textures
 	VkSampler texture_sampler = VK_NULL_HANDLE;				   // how to sample from textures (wrapping, interpolation, etc.)
 	VkDescriptorPool texture_descriptor_pool = VK_NULL_HANDLE; // pool from which texture descriptors are allocated
 	std::vector<VkDescriptorSet> texture_descriptors;		   // descriptor for each texture, allocated from texture_descriptor_pool
+
+
+	// cubemap related resource
+	Helpers::AllocatedBuffer env_cubemap_buffer;
+	Helpers::AllocatedImage env_cubemap;
+	VkImageView env_cubemap_view;
+	VkSampler env_cubemap_sampler;
+	VkDescriptorPool env_cubemap_descriptor_pool;
+	VkDescriptorSet env_cubemap_descriptor;
+
+	
 	//--------------------------------------------------------------------
 	// Resources that change when the swapchain is resized:
 
@@ -238,12 +251,22 @@ struct Wanderer : RTG::Application
 	void load_scene_objects_vertices();
 
 	// textures
+	void setup_environment_cubemap(bool flip);
 	void create_diy_textures();
 	void create_textures_descriptor();
 
 	// object instances
 	void construct_scene_graph_vertices_with_culling(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD);
 	
+
+	//--------------------------------------------------------------------
+	// GPU resources related:
+
+	// textures
+	const uint32_t NUM_CUBE_FACES = 6;
+	void create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&bytes_per_pixel);
+
+
 	//--------------------------------------------------------------------
 	// Load resources Helper:
 

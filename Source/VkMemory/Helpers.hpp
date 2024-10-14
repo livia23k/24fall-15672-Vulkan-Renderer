@@ -66,6 +66,7 @@ struct Helpers
 		// NOTE: could define default constructor, move constructor, move assignment, destructor for a bit more paranoia
 	};
 	AllocatedImage create_image(VkExtent2D const &extent, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map = Unmapped);
+	AllocatedImage create_cubemap_image(VkExtent2D const &extent, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, MapFlag map = Unmapped);
 	void destroy_image(AllocatedImage &&allocated_image);
 
 	//-----------------------
@@ -96,6 +97,23 @@ struct Helpers
 	{
 		return create_shader_module(arr, 4 * N);
 	}
+
+
+	/* 
+		image related
+	*/
+
+	// for image layout changing:
+	void transition_image_layout(Helpers::AllocatedImage &image, VkImageLayout old_layout, VkImageLayout new_layout, const uint32_t &layer_count) const;
+
+	VkCommandPool transition_command_pool = VK_NULL_HANDLE;
+	VkCommandBuffer transition_command_buffer = VK_NULL_HANDLE;
+
+	// buffer -> image
+	void copy_buffer_to_image(AllocatedBuffer &buffer, AllocatedImage &image, const uint32_t &face_w, const uint32_t &face_h, const uint32_t &layer_count) const;
+	
+
+
 
 	//-----------------------
 	// internals:
