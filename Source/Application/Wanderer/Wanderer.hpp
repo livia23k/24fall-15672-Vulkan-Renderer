@@ -83,6 +83,9 @@ struct Wanderer : RTG::Application
 
 	struct ObjectsPipeline
 	{
+		// helper info:
+		bool has_env_cubemap;
+
 		// descriptor set layouts:
 		// VkDescriptorSetLayout set0_Camera = VK_NULL_HANDLE;
 		VkDescriptorSetLayout set0_World = VK_NULL_HANDLE;
@@ -122,7 +125,11 @@ struct Wanderer : RTG::Application
 		};
 		static_assert(sizeof(Transform) == (16 * 4) * 3, "Transform is the expected size.");
 
-		// push constants (none)
+		// push constants
+		struct Push
+		{
+			SceneMgr::MaterialType material_type;
+		};
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 
@@ -230,6 +237,7 @@ struct Wanderer : RTG::Application
 		ObjectVertices vertices;
 		ObjectsPipeline::Transform transform;
 		uint32_t texture = 0;
+		SceneMgr::MaterialType material_type;
 	};
 	std::vector<ObjectInstance> object_instances;
 

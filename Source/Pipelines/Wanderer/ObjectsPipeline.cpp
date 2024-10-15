@@ -12,11 +12,29 @@ static uint32_t frag_code[] =
 #include "spv/Source/Shader/Wanderer/objects.frag.inl"
     ;
 
+static uint32_t vert_env_code[] =
+#include "spv/Source/Shader/Wanderer/objects-env.vert.inl"
+    ;
+
+static uint32_t frag_env_code[] =
+#include "spv/Source/Shader/Wanderer/objects-env.frag.inl"
+    ;
+
 void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint32_t subpass)
 {
+    VkShaderModule vert_module;
+    VkShaderModule frag_module;
 
-    VkShaderModule vert_module = rtg.helpers.create_shader_module(vert_code);
-    VkShaderModule frag_module = rtg.helpers.create_shader_module(frag_code);
+    if (this->has_env_cubemap)
+    {
+        vert_module = rtg.helpers.create_shader_module(vert_env_code);
+        frag_module = rtg.helpers.create_shader_module(frag_env_code);
+    }
+    else
+    {
+        vert_module = rtg.helpers.create_shader_module(vert_code);
+        frag_module = rtg.helpers.create_shader_module(frag_code);
+    }
 
     // create transforms descriptor set layout binding:
 
@@ -52,7 +70,7 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
         VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set1_Transforms));
     };
 
-    { // set2_TEXTURE layout holds a single descriptor for a sampler2D used in the fragment shader
+    { // set2_TEXTURE and set3_ENVIRONMENT layout holds a single descriptor for a sampler2D used in the fragment shader
         std::array<VkDescriptorSetLayoutBinding, 1> bindings{
             VkDescriptorSetLayoutBinding{
                 .binding = 0,
@@ -66,39 +84,47 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
             .pBindings = bindings.data()};
 
         VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set2_TEXTURE));
-        // VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT)); // TOCHECK
-    };
 
-    { // set3_ENVIRONMENT layout holds a single descriptor for a sampler2D used in the fragment shader
-        std::array<VkDescriptorSetLayoutBinding, 1> bindings{
-            VkDescriptorSetLayoutBinding{
-                .binding = 0,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT}};
-
-        VkDescriptorSetLayoutCreateInfo create_info{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .bindingCount = uint32_t(bindings.size()),
-            .pBindings = bindings.data()};
-
-        VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT));
+        if (this->has_env_cubemap) VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT));
     };
 
     { // create pipeline layout:
-        std::array<VkDescriptorSetLayout, 4> layouts{
-            set0_World,
-            set1_Transforms,
-            set2_TEXTURE,
-            set3_ENVIRONMENT
+
+        std::array<VkDescriptorSetLayout, 4> layouts;
+        uint32_t layout_count = 0;
+
+        if (this->has_env_cubemap) {
+            layouts = {
+                set0_World,
+                set1_Transforms,
+                set2_TEXTURE,
+                set3_ENVIRONMENT
+            };
+            layout_count = 4;
+        }
+        else
+        {
+            layouts = {
+                set0_World,
+                set1_Transforms,
+                set2_TEXTURE
+            };
+            layout_count = 3;
+        }
+        
+        VkPushConstantRange range{
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+            .offset = 0,
+            .size = sizeof(Push)
         };
 
         VkPipelineLayoutCreateInfo create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount = uint32_t(layouts.size()),
+            .setLayoutCount = layout_count,
             .pSetLayouts = layouts.data(),
-            .pushConstantRangeCount = 0,
-            .pPushConstantRanges = nullptr};
+            .pushConstantRangeCount = 1,
+            .pPushConstantRanges = &range
+        };
 
         VK(vkCreatePipelineLayout(rtg.device, &create_info, nullptr, &layout));
     };

@@ -68,6 +68,8 @@ main_objs.push(maek.CPP('Source/Pipelines/Wanderer/LinesPipeline.cpp', undefined
 const objects_shaders = [
 	maek.GLSLC('Source/Shader/Wanderer/objects.vert'),
 	maek.GLSLC('Source/Shader/Wanderer/objects.frag'),
+	maek.GLSLC('Source/Shader/Wanderer/objects-env.vert'),
+	maek.GLSLC('Source/Shader/Wanderer/objects-env.frag'),
 ];
 main_objs.push(maek.CPP('Source/Pipelines/Wanderer/ObjectsPipeline.cpp', undefined, { depends: [...objects_shaders] }));
 

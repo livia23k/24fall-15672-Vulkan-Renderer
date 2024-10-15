@@ -36,7 +36,7 @@ Camera::Camera()
     unit_angle = 1.f;
     unit_sensitivity = 0.001f;
 
-    position = glm::vec3{2.0f, -2.0f, 2.0f};
+    position = glm::vec3{0.0f, 0.0f, 5.0f};
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};
 
     up = glm::vec3{0.0f, -1.0f, 0.0f};

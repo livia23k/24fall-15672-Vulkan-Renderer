@@ -17,6 +17,11 @@
 
 Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 {
+	// load scene graph 
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, sceneMgr);
+	this->objects_pipeline.has_env_cubemap = sceneMgr.environmentObject != nullptr;
+
 	// set up application prerequisites
 	init_depth_format();
 	create_render_pass();
@@ -25,9 +30,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_description_pool();
 	setup_workspaces();
 
-	// load scene graph related info
-	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
-	LoadMgr::load_scene_graph_info_from_s72(rtg.configuration.scene_graph_path, sceneMgr);
+	// load scene node matrices
 	LoadMgr::load_s72_node_matrices(sceneMgr);
 
 	// update animation time
@@ -78,7 +81,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		glm::mat4 root_matrix = sceneMgr.nodeMatrixMap.find(rootNode->name)->second;
 
 		glm::vec3 root_translation = glm::vec3(root_matrix[3]);
-		camera.position = root_translation + glm::vec3(0.0f, 0.0f, 2.0f);
+		camera.position = root_translation + glm::vec3(0.0f, 0.0f, 5.0f);
 		camera.target_position = glm::vec3(0.f, 0.f, 0.f);
 		camera.front = glm::normalize(camera.target_position - camera.position); 
 		camera.update_camera_eular_angles_from_vectors();
@@ -96,8 +99,15 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	load_scene_objects_vertices();
 
 	// set up textures
-	setup_environment_cubemap(true);
-	create_environment_cubemap_descriptor();
+
+	// environment texture
+	std::cout << "has_env_cube: " << (this->objects_pipeline.has_env_cubemap == false ? "false" : "true") << std::endl;
+	if (this->objects_pipeline.has_env_cubemap)
+	{
+		setup_environment_cubemap(false);
+		create_environment_cubemap_descriptor();
+	}
+	// model textures
 	create_diy_textures();
 	create_textures_descriptor();
 }
@@ -684,8 +694,8 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 					);
 				}
 
-
-				{ // bind set3 => Environment:
+				// bind set3 => Environment:
+				if (objects_pipeline.has_env_cubemap) { 
 					std::array<VkDescriptorSet, 1> descriptor_sets{
 						env_cubemap_descriptor	 // set3: Environment descriptor set
 					};
@@ -705,6 +715,13 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 				{
 					uint32_t index = uint32_t(&inst - &object_instances[0]);
 
+					{ // push constant:
+						ObjectsPipeline::Push push{
+							.material_type = object_instances[index].material_type};
+						vkCmdPushConstants(workspace.command_buffer, objects_pipeline.layout,
+										VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push), &push);
+					};
+
 					// bind texture descriptor set:
 					vkCmdBindDescriptorSets(
 						workspace.command_buffer,			   // command_buffer
@@ -717,8 +734,6 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 
 					vkCmdDraw(workspace.command_buffer, inst.vertices.count, 1, inst.vertices.first, index);
 				}
-
-
 			}
 		}
 
@@ -2219,7 +2234,6 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 
 			SceneMgr::MeshObject *refMesh = nodeMeshIt->second;
 			
-
 			// frustum culling
 			if (rtg.configuration.culling_mode == RTG::Configuration::Culling_Mode::FRUSTUM)
 			{
@@ -2258,6 +2272,12 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 				}
 			}
 
+			auto meshMaterialIt = sceneMgr.materialObjectMap.find(refMesh->refMaterialName);
+			SceneMgr::MaterialType material_type = SceneMgr::MaterialType::LAMBERTIAN; // default material
+			if (meshMaterialIt != sceneMgr.materialObjectMap.end()) {
+				material_type = meshMaterialIt->second->type;
+				}
+
 			object_instances.emplace_back(ObjectInstance{
 				.vertices = scene_nodes_vertices[findVertexIdxResult->second],
 				.transform{
@@ -2267,6 +2287,7 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 					// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
 				},
 				.texture = 0,
+				.material_type = material_type,
 			});
 		}
 		// else
