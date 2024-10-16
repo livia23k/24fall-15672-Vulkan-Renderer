@@ -81,7 +81,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		glm::mat4 root_matrix = sceneMgr.nodeMatrixMap.find(rootNode->name)->second;
 
 		glm::vec3 root_translation = glm::vec3(root_matrix[3]);
-		camera.position = root_translation + glm::vec3(0.0f, 0.0f, 5.0f);
+		camera.position = root_translation + glm::vec3(0.0f, 0.0f, -5.0f);
 		camera.target_position = glm::vec3(0.f, 0.f, 0.f);
 		camera.front = glm::normalize(camera.target_position - camera.position); 
 		camera.update_camera_eular_angles_from_vectors();
@@ -716,10 +716,18 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 					uint32_t index = uint32_t(&inst - &object_instances[0]);
 
 					{ // push constant:
+
+						Camera &camera = rtg.configuration.camera;
+
 						ObjectsPipeline::Push push{
-							.material_type = object_instances[index].material_type};
+							.material_type = object_instances[index].material_type,
+							.camera_position = {
+								.x = camera.position.x,
+								.y = camera.position.y,
+								.z = camera.position.z},
+							};
 						vkCmdPushConstants(workspace.command_buffer, objects_pipeline.layout,
-										VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(push), &push);
+										VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectsPipeline::Push), &push);
 					};
 
 					// bind texture descriptor set:
@@ -791,25 +799,31 @@ void Wanderer::update(float dt)
 			if (camera.movements.up && !camera.movements.down) {
 				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_upward += camera.unit_sensitivity; }
 				camera.position += camera.sensitivity.kb_upward * camera.up;
+				// camera.position -= camera.sensitivity.kb_upward * glm::vec3(0.f, 1.f, 0.f);
 			} else if (camera.movements.down && !camera.movements.up) {
 				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_upward -= camera.unit_sensitivity; }
 				camera.position -= camera.sensitivity.kb_upward * camera.up;
+				// camera.position += camera.sensitivity.kb_upward * glm::vec3(0.f, 1.f, 0.f);
 			} 
 
 			if (camera.movements.left && !camera.movements.right) {
 				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_rightward += camera.unit_sensitivity; }
 				camera.position -= camera.sensitivity.kb_rightward * camera.right;
+				// camera.position -= camera.sensitivity.kb_rightward * glm::vec3(1.f, 0.f, 0.f);
 			} else if (camera.movements.right && !camera.movements.left) {
 				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_rightward -= camera.unit_sensitivity; }
 				camera.position += camera.sensitivity.kb_rightward * camera.right;
+				// camera.position += camera.sensitivity.kb_rightward * glm::vec3(1.f, 0.f, 0.f);
 			}
 
 			if (camera.movements.forward && !camera.movements.backward) {
 				if (camera.sensitivity.sensitivity_increase && !camera.sensitivity.sensitivity_decrease) { camera.sensitivity.kb_forward += camera.unit_sensitivity; }
 				camera.position += camera.sensitivity.kb_forward * camera.front;
+				// camera.position += camera.sensitivity.kb_forward * glm::vec3(0.f, 0.f, 1.f);
 			} else if (camera.movements.backward && !camera.movements.forward) {
 				if (camera.sensitivity.sensitivity_decrease && !camera.sensitivity.sensitivity_increase) { camera.sensitivity.kb_forward -= camera.unit_sensitivity; }
 				camera.position -= camera.sensitivity.kb_forward * camera.front;
+				// camera.position -= camera.sensitivity.kb_forward * glm::vec3(0.f, 0.f, 1.f);
 			}
 
 			if (camera.postures.yaw_left && !camera.postures.yaw_right) {
@@ -1731,12 +1745,12 @@ void Wanderer::load_scene_objects_vertices()
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
 }
 
-void Wanderer::create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&bytes_per_pixel)
+void Wanderer::create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&desired_channels)
 {
 	/* cr. Cube map tutorial by satellitnorden
 		https://satellitnorden.wordpress.com/2018/01/23/vulkan-adventures-cube-map-tutorial/ */
 
-	const VkDeviceSize layer_size = face_w * face_h * bytes_per_pixel;	
+	const VkDeviceSize layer_size = face_w * face_h * desired_channels;	
 	const VkDeviceSize image_size = layer_size * NUM_CUBE_FACES;
 
 	this->env_cubemap_buffer =  rtg.helpers.create_buffer(
@@ -1778,9 +1792,9 @@ void Wanderer::create_environment_cubemap(char **cubemap_data, const uint32_t &f
 		.magFilter = VK_FILTER_NEAREST,
 		.minFilter = VK_FILTER_NEAREST,
 		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-		.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		.mipLodBias = 0.f,
 		.anisotropyEnable = VK_FALSE,
 		.maxAnisotropy = 0.f,
@@ -1899,20 +1913,19 @@ void Wanderer::setup_environment_cubemap(bool flip)
 	*/
 
 	const int desired_channels = 4;
-	int w, h, org_channels;
+	int full_w, full_h, org_channels;
 	char *texture_data[6]; // NUM_CUBE_FACES
 	std::string environment_map_src = rtg.configuration.scene_graph_parent_folder + rtg.configuration.sceneMgr.environmentObject->radiance.src;
 
-	LoadMgr::load_cubemap_from_file(texture_data, environment_map_src.c_str(), w, h, org_channels, desired_channels, NUM_CUBE_FACES, flip);
+	LoadMgr::load_cubemap_from_file(texture_data, environment_map_src.c_str(), full_w, full_h, org_channels, desired_channels, NUM_CUBE_FACES, flip);
 	
 	/*
 		store cubemap on GPU
 	*/
 
-    unsigned int face_w = static_cast<unsigned int>(w);
-    unsigned int face_h = static_cast<unsigned int>(h/6);
-	const int bytes_per_pixel = desired_channels * sizeof(float);
-	create_environment_cubemap(texture_data, face_w, face_h, bytes_per_pixel);
+    unsigned int face_w = static_cast<unsigned int>(full_w);
+    unsigned int face_h = static_cast<unsigned int>(full_h/6);
+	create_environment_cubemap(texture_data, face_w, face_h, desired_channels);
 
 	// clean
 	for (uint8_t i = 0; i < NUM_CUBE_FACES; ++ i)
@@ -2115,9 +2128,9 @@ void Wanderer::create_diy_textures()
 		.magFilter = VK_FILTER_NEAREST,
 		.minFilter = VK_FILTER_NEAREST,
 		.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST,
-		.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, // how to handle texture coordinates outside of [0, 1]
-		.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, // how to handle texture coordinates outside of [0, 1]
+		.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+		.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 		.mipLodBias = 0.0f,
 		.anisotropyEnable = VK_FALSE,
 		.maxAnisotropy = 0.0f, // doesn't matter if anisotropy is disabled

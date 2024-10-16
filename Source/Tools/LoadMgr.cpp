@@ -1772,6 +1772,109 @@ void LoadMgr::save_cubemap_faces_as_images(char **dst, int face_w, int face_h, i
     }
 }
 
+void rotate_cubemap_face_by_90_cw(char *face, const int &w, const int &h, const int &channels)
+{
+    int face_size = w * h * channels;
+    std::vector<char> tmp_face(face_size);
+
+    for (int y = 0; y < h; ++ y)
+    {
+        for (int x = 0; x < w; ++ x)
+        {
+            int src_idx_x = x;
+            int src_idx_y = y;
+            int src_idx = (src_idx_y * w + src_idx_x) * channels;
+            
+            int dst_idx_x = w - y;
+            int dst_idx_y = x;
+            int dst_idx = (dst_idx_y * w + dst_idx_x) * channels;
+
+            for (int c = 0; c < channels; ++ c) 
+                tmp_face[dst_idx + c] = face[src_idx + c];
+        }
+    }
+
+    memcpy(face, tmp_face.data(), face_size);
+}
+
+
+void rotate_cubemap_face_by_90_ccw(char *face, const int &w, const int &h, const int &channels)
+{
+    int face_size = w * h * channels;
+    std::vector<char> tmp_face(face_size);
+
+    for (int y = 0; y < h; ++ y)
+    {
+        for (int x = 0; x < w; ++ x)
+        {
+            int src_idx_x = x;
+            int src_idx_y = y;
+            int src_idx = (src_idx_y * w + src_idx_x) * channels;
+            
+            int dst_idx_x = y;
+            int dst_idx_y = h - x;
+            int dst_idx = (dst_idx_y * w + dst_idx_x) * channels;
+
+            for (int c = 0; c < channels; ++ c) 
+                tmp_face[dst_idx + c] = face[src_idx + c];
+        }
+    }
+
+    memcpy(face, tmp_face.data(), face_size);
+}
+
+
+void horizontal_flip_cubemap_face(char *face, const int &w, const int &h, const int &channels)
+{
+    int face_size = w * h * channels;
+    std::vector<char> tmp_face(face_size);
+
+    for (int y = 0; y < h; ++ y)
+    {
+        for (int x = 0; x < w; ++ x)
+        {
+            int src_idx_x = x;
+            int src_idx_y = y;
+            int src_idx = (src_idx_y * w + src_idx_x) * channels;
+            
+            int dst_idx_x = w - x;
+            int dst_idx_y = y;
+            int dst_idx = (dst_idx_y * w + dst_idx_x) * channels;
+
+            for (int c = 0; c < channels; ++ c) 
+                tmp_face[dst_idx + c] = face[src_idx + c];
+        }
+    }
+
+    memcpy(face, tmp_face.data(), face_size);
+}
+
+void vertical_flip_cubemap_face(char *face, const int &w, const int &h, const int &channels)
+{
+    int face_size = w * h * channels;
+    std::vector<char> tmp_face(face_size);
+
+    for (int y = 0; y < h; ++ y)
+    {
+        for (int x = 0; x < w; ++ x)
+        {
+            int src_idx_x = x;
+            int src_idx_y = y;
+            int src_idx = (src_idx_y * w + src_idx_x) * channels;
+            
+            int dst_idx_x = x;
+            int dst_idx_y = h - y;
+            int dst_idx = (dst_idx_y * w + dst_idx_x) * channels;
+
+            for (int c = 0; c < channels; ++ c) 
+                tmp_face[dst_idx + c] = face[src_idx + c];
+        }
+    }
+
+    memcpy(face, tmp_face.data(), face_size);
+}
+
+
 void LoadMgr::load_cubemap_from_file(char **dst, const char *src, int &w, int &h, int &org_channels, const int &desired_channels, const int &NUM_CUBE_FACES, bool flip)
 {
     stbi_set_flip_vertically_on_load(flip); // if true, adapt .s72 (+y up) to vulkan coords (-y down)
@@ -1791,7 +1894,7 @@ void LoadMgr::load_cubemap_from_file(char **dst, const char *src, int &w, int &h
 
     int face_w = w;
     int face_h = h / 6;
-    int bytes_per_face = face_w * face_h * (desired_channels * sizeof(float)); // w * h * bytes_per_pixel
+    int bytes_per_face = face_w * face_h * (desired_channels); // w * h * bytes_per_pixel
 
     for (int i = 0; i < 6; ++ i)
     {
@@ -1799,6 +1902,27 @@ void LoadMgr::load_cubemap_from_file(char **dst, const char *src, int &w, int &h
         memcpy(dst[i], cubemap_data + i * bytes_per_face, bytes_per_face);
     }
 
+    // Adapt to vulkan coords:
+
+    // // [try 1]
+
+    // 1. change sequence
+    //     index:            0   1   2   3   4   5
+    //     orgin sequence:  +X, -X, +Y, -Y, +Z, -Z
+    //     new sequence:    +X, -X, -Z, +Z, +Y, -Y
+    std::swap(dst[5], dst[3]);
+    std::swap(dst[3], dst[4]);
+    std::swap(dst[4], dst[2]);
+
+    // 2. rotate the faces to match
+    rotate_cubemap_face_by_90_ccw(dst[0], face_w, face_h, desired_channels);    // +X, rorate 90 ccw
+    rotate_cubemap_face_by_90_cw(dst[1], face_w, face_h, desired_channels);     // -X, rorate 90 cw
+    rotate_cubemap_face_by_90_cw(dst[2], face_w, face_h, desired_channels);     // -Z rotate 180
+    rotate_cubemap_face_by_90_cw(dst[2], face_w, face_h, desired_channels);
+    rotate_cubemap_face_by_90_cw(dst[5], face_w, face_h, desired_channels);     // -Y rotate 180
+    rotate_cubemap_face_by_90_cw(dst[5], face_w, face_h, desired_channels);
+
+    // verification
     // save_cubemap_faces_as_images(dst, face_w, face_h, desired_channels); // [PASS]
 
 	free(cubemap_data);

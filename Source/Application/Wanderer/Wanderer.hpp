@@ -129,6 +129,16 @@ struct Wanderer : RTG::Application
 		struct Push
 		{
 			SceneMgr::MaterialType material_type;
+
+			struct { float x, y, z; } camera_position;
+
+			// bool has_albedo_src;
+			// bool has_roughness_src;
+			// bool has_metalness_src;
+			
+			// struct { float x, y, z; } constant_albedo;
+			// float constant_roughness;
+			// float constant_metalness;
 		};
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
@@ -274,7 +284,7 @@ struct Wanderer : RTG::Application
 
 	// textures
 	const uint32_t NUM_CUBE_FACES = 6;
-	void create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&bytes_per_pixel);
+	void create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&desired_channels);
 
 
 	//--------------------------------------------------------------------

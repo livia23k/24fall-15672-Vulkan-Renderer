@@ -3,8 +3,8 @@
 #define PI radians(180.0)
 
 layout(push_constant) uniform Push {
-    bool has_env_cubemap;
     int material_type;
+    vec3 camera_front;
 } pushData;
 
 layout(set = 0, binding = 0, std140) uniform World {
