@@ -51,7 +51,7 @@ void main() {
     if (pushData.material_type == 3) 
     {
         vec3 albedo = texture(TEXTURE, inTexCoord).rgb / PI;
-        vec4 env = texture(ENVIRONMENT, n_vulkan); // sample texture in texture coordinates (+z up)
+        vec4 env = texture(ENVIRONMENT, n_vulkan);
         vec3 radiance = convert_rgbe_to_radiance(env);
         outColor = vec4(radiance, 1.0);
     }
