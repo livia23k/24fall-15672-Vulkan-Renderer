@@ -70,7 +70,36 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
         VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set1_Transforms));
     };
 
-    { // set2_TEXTURE and set3_ENVIRONMENT layout holds a single descriptor for a sampler2D used in the fragment shader
+    { // set2_TEXTURE layout holds three bindings for sampler2Ds used in the fragment shader (albedo, roughness, metalness)
+        std::array<VkDescriptorSetLayoutBinding, 3> bindings{
+            VkDescriptorSetLayoutBinding{
+                .binding = 0,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1, // 1 descriptor per binding
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT},
+            VkDescriptorSetLayoutBinding{
+                .binding = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT},
+            VkDescriptorSetLayoutBinding{
+                .binding = 2,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT},
+        };
+
+        VkDescriptorSetLayoutCreateInfo create_info{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = uint32_t(bindings.size()),
+            .pBindings = bindings.data()};
+
+        VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set2_TEXTURE));
+    };
+
+    // set3_ENVIRONMENT layout holds a single descriptor for a sampler2D used in the fragment shader
+    if (this->has_env_cubemap) 
+    { 
         std::array<VkDescriptorSetLayoutBinding, 1> bindings{
             VkDescriptorSetLayoutBinding{
                 .binding = 0,
@@ -83,9 +112,7 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
             .bindingCount = uint32_t(bindings.size()),
             .pBindings = bindings.data()};
 
-        VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set2_TEXTURE));
-
-        if (this->has_env_cubemap) VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT));
+        VK(vkCreateDescriptorSetLayout(rtg.device, &create_info, nullptr, &set3_ENVIRONMENT));
     };
 
     { // create pipeline layout:
@@ -115,7 +142,7 @@ void Wanderer::ObjectsPipeline::create(RTG &rtg, VkRenderPass render_pass, uint3
         VkPushConstantRange range{
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .offset = 0,
-            .size = sizeof(Push)
+            .size = sizeof(Wanderer::ObjectsPipeline::Push)
         };
 
         VkPipelineLayoutCreateInfo create_info{

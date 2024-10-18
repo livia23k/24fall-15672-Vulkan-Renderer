@@ -9,8 +9,13 @@ SceneMgr::SceneMgr()
     cameraObjectMap.clear();
     driverObjectMap.clear();
     materialObjectMap.clear();
+    lightObjectMap.clear();
 
     meshVerticesIndexMap.clear();
+    textureIndexMap.clear();
+    materialTextureIndexMap.clear();
+    materialPropertiesMap.clear();
+    nodeMatrixMap.clear();
 
     LambertianMaterial lambertian;
     lambertian.albedo = glm::vec3(0.8f);
@@ -66,6 +71,23 @@ void SceneMgr::clean_all()
         delete pair.second;
     }
     materialObjectMap.clear();
+
+    for (auto &pair : lightObjectMap)
+    {
+        delete pair.second;
+    }
+    lightObjectMap.clear();
+
+    for (auto &pair : materialPropertiesMap)
+    {
+        delete pair.second;
+    }
+    materialPropertiesMap.clear();
+
+    meshVerticesIndexMap.clear();
+    textureIndexMap.clear();
+    materialTextureIndexMap.clear();
+    nodeMatrixMap.clear();
 }
 
 

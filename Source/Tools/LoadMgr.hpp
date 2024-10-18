@@ -5,6 +5,8 @@
 #include "Source/DataType/PosNorTexVertex.hpp"
 #include "Source/DataType/MeshAttribute.hpp"
 #include "lib/sejp.hpp"
+#include "Source/VkMemory/Helpers.hpp"
+
 #include <vulkan/utility/vk_format_utils.h>
 
 #include <string>
@@ -51,8 +53,13 @@ struct LoadMgr {
     static void load_s72_node_matrices(SceneMgr &targetSceneMgr);
 
     // load materials
-    static void load_cubemap_from_file(char **dst, const char *src, int &w, int &h, int &orgChannel, const int &desiredChannel, const int &NUM_CUBE_FACES, bool flip);
-    static void save_cubemap_faces_as_images(char **dst, int face_w, int face_h, int desired_channels);
+    static void load_texture_from_file(unsigned char *&dst, const char *src,  int &w, int &h, const int &desired_channels);
+    static void load_cubemap_from_file(unsigned char **dst, const char *src, int &w, int &h, int &orgChannel, const int &desiredChannel, const int &NUM_CUBE_FACES, bool flip);
+    static void save_cubemap_faces_as_images(unsigned char **dst, int face_w, int face_h, int desired_channels);
+    static void rotate_cubemap_face_by_90_cw(unsigned char *face, const int &w, const int &h, const int &channels);
+    static void rotate_cubemap_face_by_90_ccw(unsigned char *face, const int &w, const int &h, const int &channels);
+    static void horizontal_flip_cubemap_face(unsigned char *face, const int &w, const int &h, const int &channels);
+    static void vertical_flip_cubemap_face(unsigned char *face, const int &w, const int &h, const int &channels);
 
 
 };

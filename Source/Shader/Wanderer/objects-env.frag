@@ -5,6 +5,14 @@
 layout(push_constant) uniform Push {
     int material_type;
     vec3 camera_position;
+
+    bool has_albedo_src;
+    bool has_roughness_src;
+    bool has_metalness_src;
+
+    vec3 constant_albedo;
+    float constant_roughness;
+    float constant_metalness;
 } pushData;
 
 layout(set = 0, binding = 0, std140) uniform World {
@@ -14,7 +22,9 @@ layout(set = 0, binding = 0, std140) uniform World {
     vec3 SUN_ENERGY; //energy supplied by sun to a surface patch with normal = SUN_DIRECTION
 };
 
-layout(set = 2, binding = 0) uniform sampler2D TEXTURE;
+layout(set = 2, binding = 0) uniform sampler2D TEXTURE_ALBEDO;
+layout(set = 2, binding = 1) uniform sampler2D TEXTURE_ROUGHNESS;
+layout(set = 2, binding = 2) uniform sampler2D TEXTURE_METALNESS;
 layout (set = 3, binding = 0) uniform samplerCube ENVIRONMENT;
 
 layout(location = 0) in vec3 inPosition;
@@ -43,6 +53,7 @@ void main() {
 
     vec3 n_vulkan = normalize(inNormal);
     // vec3 n_s72 = vec3(n_vulkan.x, n_vulkan.z, -n_vulkan.y); 
+    
 
     /* 
         ENVIRONMENT Material
@@ -50,7 +61,6 @@ void main() {
 
     if (pushData.material_type == 3) 
     {
-        vec3 albedo = texture(TEXTURE, inTexCoord).rgb / PI;
         vec4 env = texture(ENVIRONMENT, n_vulkan);
         vec3 radiance = convert_rgbe_to_radiance(env);
         outColor = vec4(radiance, 1.0);
@@ -75,10 +85,15 @@ void main() {
 
     else // default
     {
-        vec3 albedo = texture(TEXTURE, inTexCoord).rgb / PI;
+        vec3 albedo = pushData.has_albedo_src ? texture(TEXTURE_ALBEDO, inTexCoord).rgb / PI : pushData.constant_albedo;
+        float roughness = pushData.has_roughness_src ? texture(TEXTURE_ALBEDO, inTexCoord).r : pushData.constant_roughness;
+        float metalness = pushData.has_metalness_src ? texture(TEXTURE_ALBEDO, inTexCoord).r : pushData.constant_metalness;
 
         // hemisphere sky + directional sun:
         vec3 e = SKY_ENERGY * (0.5 * dot(n_vulkan, SKY_DIRECTION) + 0.5) + SUN_ENERGY * max(0.0, dot(n_vulkan, SUN_DIRECTION));
         outColor = vec4(e * albedo, 1.0);
+        outColor = vec4(albedo, 1.0); // TOCHECK: texture not correct
+        // outColor = vec4(vec3(roughness), 1.0); // TOCHECK: texture not correct
+        // outColor = vec4(vec3(metalness), 1.0); // TOCHECK: texture not correct
     }
 }

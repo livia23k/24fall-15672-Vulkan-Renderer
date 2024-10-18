@@ -228,6 +228,25 @@ struct SceneMgr
         uint32_t shadow;
     };
 
+    struct MaterialProperties
+    {
+        uint32_t id;
+        
+        MaterialType material_type;
+
+		bool has_albedo_src;
+		bool has_roughness_src;
+		bool has_metalness_src;
+		
+		uint32_t albedo_texture_id;
+		uint32_t roughness_texture_id;
+		uint32_t metalness_texture_id;
+
+		glm::vec3 constant_albedo;
+		float constant_roughness;
+		float constant_metalness;
+    };
+
     // default object
     MaterialObject *defaultMaterial;
 
@@ -241,9 +260,13 @@ struct SceneMgr
     std::unordered_map<std::string, MaterialObject*> materialObjectMap;
     std::unordered_map<std::string, LightObject*> lightObjectMap;
 
+    // material maps
+    std::unordered_map<std::string, MaterialProperties*> materialPropertiesMap;
 
     // object - application buffer map
     std::unordered_map<std::string, uint32_t> meshVerticesIndexMap;
+    std::unordered_map<std::string, uint32_t> textureIndexMap;
+    std::unordered_map<std::string, std::array<uint32_t, 3>> materialTextureIndexMap; // mesh: [albedo, roughness, meterial]
     std::unordered_map<std::string, glm::mat4> nodeMatrixMap;
 
     // status variables

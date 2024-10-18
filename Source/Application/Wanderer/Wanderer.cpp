@@ -33,12 +33,36 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	// load scene node matrices
 	LoadMgr::load_s72_node_matrices(sceneMgr);
 
+	/*
+		update texture related info
+	*/
+
+	// textures.clear();
+
+	// environment texture
+	if (this->objects_pipeline.has_env_cubemap)
+	{
+		setup_environment_cubemap(false);
+		create_environment_cubemap_descriptor();
+	}
+
+	// objects textures
+	create_diy_textures();
+	upload_s72_material_textures();
+	pack_s72_material_properties();
+	std::cout << "[TEST] 1" << std::endl;
+	create_material_descriptor();
+	std::cout << "[TEST] 2" << std::endl;
+	// create_texture_descriptor_for_all();  // TOCHECK
+
 	// update animation time
 	animation_timer.tmax = sceneMgr.get_animation_duration();
 
-	// update scene camera info in sceneMgr
-	sceneMgr.sceneCameraCount = sceneMgr.cameraObjectMap.size();
+	/* 
+		update camera related info
+	*/
 
+	sceneMgr.sceneCameraCount = sceneMgr.cameraObjectMap.size();
 	// 	if given scene camera
 	Camera &camera = rtg.configuration.camera;
 	if (sceneMgr.sceneCameraCount > 0)
@@ -93,23 +117,15 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
 	}
 
-	// load vertices resources
+
+
+	/* 
+		load vertices resources
+	*/
+
 	load_lines_vertices();
 	// load_objects_vertices();
 	load_scene_objects_vertices();
-
-	// set up textures
-
-	// environment texture
-	std::cout << "has_env_cube: " << (this->objects_pipeline.has_env_cubemap == false ? "false" : "true") << std::endl;
-	if (this->objects_pipeline.has_env_cubemap)
-	{
-		setup_environment_cubemap(false);
-		create_environment_cubemap_descriptor();
-	}
-	// model textures
-	create_diy_textures();
-	create_textures_descriptor();
 }
 
 Wanderer::~Wanderer()
@@ -125,13 +141,13 @@ Wanderer::~Wanderer()
 
 	// clean up textures
 	{
-		if (texture_descriptor_pool)
+		if (material_descriptor_pool)
 		{
-			vkDestroyDescriptorPool(rtg.device, texture_descriptor_pool, nullptr);
-			texture_descriptor_pool = VK_NULL_HANDLE;
+			vkDestroyDescriptorPool(rtg.device, material_descriptor_pool, nullptr);
+			material_descriptor_pool = VK_NULL_HANDLE;
 
 			// (this also frees the descriptor sets allocated from the pool)
-			texture_descriptors.clear();
+			material_descriptor_sets.clear();
 		}
 
 		if (texture_sampler)
@@ -715,30 +731,45 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 				{
 					uint32_t index = uint32_t(&inst - &object_instances[0]);
 
-					{ // push constant:
+					auto findMateiralPropertiesResult = rtg.configuration.sceneMgr.materialPropertiesMap.find(inst.material_name);
+					if (findMateiralPropertiesResult == rtg.configuration.sceneMgr.materialPropertiesMap.end())
+						std::runtime_error("[Wanderer] (render) Push constant construction: material properties not found.");
+					SceneMgr::MaterialProperties *materialProperties = findMateiralPropertiesResult->second;
 
+					{ // push constant:
 						Camera &camera = rtg.configuration.camera;
 
 						ObjectsPipeline::Push push{
-							.material_type = object_instances[index].material_type,
+							.material_type = materialProperties->material_type,
 							.camera_position = {
 								.x = camera.position.x,
 								.y = camera.position.y,
 								.z = camera.position.z},
-							};
+							.has_albedo_src = materialProperties->has_albedo_src,
+							.has_roughness_src = materialProperties->has_roughness_src,
+							.has_metalness_src = materialProperties->has_metalness_src,
+							.constant_albedo = {
+								.x = materialProperties->constant_albedo.x,
+								.y = materialProperties->constant_albedo.y,
+								.z = materialProperties->constant_albedo.z},
+							.constant_roughness = materialProperties->constant_roughness,
+							.constant_metalness = materialProperties->constant_metalness,
+						};
+
 						vkCmdPushConstants(workspace.command_buffer, objects_pipeline.layout,
 										VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectsPipeline::Push), &push);
 					};
 
-					// bind texture descriptor set:
-					vkCmdBindDescriptorSets(
-						workspace.command_buffer,			   // command_buffer
-						VK_PIPELINE_BIND_POINT_GRAPHICS,	   // pipeline bind point
-						objects_pipeline.layout,			   // pipeline layout
-						2,									   // set2
-						1, &texture_descriptors[inst.texture], // descriptor sets count, ptr
-						0, nullptr							   // dynamic offsets count, ptr
-					);
+					{// bind set2 => Texture:
+						vkCmdBindDescriptorSets(
+							workspace.command_buffer,			   // command_buffer
+							VK_PIPELINE_BIND_POINT_GRAPHICS,	   // pipeline bind point
+							objects_pipeline.layout,			   // pipeline layout
+							2,									   // set2
+							1, &material_descriptor_sets[materialProperties->id], 	   // descriptor sets count, ptr
+							0, nullptr							   // dynamic offsets count, ptr
+						);
+					};
 
 					vkCmdDraw(workspace.command_buffer, inst.vertices.count, 1, inst.vertices.first, index);
 				}
@@ -1745,7 +1776,7 @@ void Wanderer::load_scene_objects_vertices()
 	rtg.helpers.transfer_to_buffer(tmp_object_vertices.data(), bytes, object_vertices);
 }
 
-void Wanderer::create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&desired_channels)
+void Wanderer::create_environment_cubemap(unsigned char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&desired_channels)
 {
 	/* cr. Cube map tutorial by satellitnorden
 		https://satellitnorden.wordpress.com/2018/01/23/vulkan-adventures-cube-map-tutorial/ */
@@ -1914,7 +1945,7 @@ void Wanderer::setup_environment_cubemap(bool flip)
 
 	const int desired_channels = 4;
 	int full_w, full_h, org_channels;
-	char *texture_data[6]; // NUM_CUBE_FACES
+	unsigned char *texture_data[6]; // NUM_CUBE_FACES
 	std::string environment_map_src = rtg.configuration.scene_graph_parent_folder + rtg.configuration.sceneMgr.environmentObject->radiance.src;
 
 	LoadMgr::load_cubemap_from_file(texture_data, environment_map_src.c_str(), full_w, full_h, org_channels, desired_channels, NUM_CUBE_FACES, flip);
@@ -1989,9 +2020,9 @@ void Wanderer::create_environment_cubemap_descriptor()
 
 void Wanderer::create_diy_textures()
 {
-	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+	// NOTE: must emplace at leat 1 diy texture to textures (wanna use the texture id "0" to detect if texture idx of material is correct)
 
-	textures.reserve(sceneMgr.materialObjectMap.size() + 1);
+	textures.reserve(textures.size()+ 1);
 
 	// create texture 0: checkerboard with a red square at the origin ============================
 
@@ -2030,7 +2061,7 @@ void Wanderer::create_diy_textures()
 	rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
 
 
-	// TODO: delete the following code
+	// NOTE: uncomment the following code if wanna use
 
 	// // create texture 1: 'xor' texture ============================================================
 
@@ -2093,8 +2124,281 @@ void Wanderer::create_diy_textures()
 	// // transfer data:
 	// rtg.helpers.transfer_to_image(data.data(), sizeof(data[0]) * data.size(), textures.back());
 
+}
 
-	// make image views for the textures ========================================================
+void Wanderer::upload_single_texture_from_src(std::string src)
+{
+	int w, h;
+	const int desired_channels = 4; // expand to 4 channels, make the texture compatible with the VK_FORMAT_R8G8B8A8_UNORM format
+	unsigned char *texture_data = nullptr;
+
+	LoadMgr::load_texture_from_file(texture_data, src.c_str(), w, h, desired_channels);
+
+	textures.emplace_back(rtg.helpers.create_image(
+		VkExtent2D{.width = static_cast<unsigned int>(w), .height = static_cast<unsigned int>(h)},
+		VK_FORMAT_R8G8B8A8_UNORM,
+		VK_IMAGE_TILING_OPTIMAL,
+		VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+		Helpers::Unmapped));
+
+	rtg.helpers.transfer_to_image(texture_data, w * h * desired_channels, textures.back()); // TOCHECK: size
+	free(texture_data);
+}
+
+void Wanderer::upload_s72_material_textures()
+{
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+
+    if (sceneMgr.materialObjectMap.empty())
+        return;
+
+    size_t material_cnt = sceneMgr.materialObjectMap.size();
+
+    // clean up
+
+    sceneMgr.materialTextureIndexMap.clear();
+    sceneMgr.materialTextureIndexMap.reserve(material_cnt);
+
+    // iteration
+
+    using MaterialObject = SceneMgr::MaterialObject;
+    using MaterialType = SceneMgr::MaterialType;
+    using PBRMaterial = SceneMgr::PBRMaterial;
+    using LambertianMaterial = SceneMgr::LambertianMaterial;
+    using Texture = SceneMgr::Texture;
+
+    for (auto & materialItr : sceneMgr.materialObjectMap)
+    {
+        MaterialObject *material = materialItr.second;
+
+        if (material->type == MaterialType::PBR)
+        {
+			sceneMgr.materialTextureIndexMap[material->name] = {0, 0, 0};
+
+            PBRMaterial pbrMaterial = std::get<PBRMaterial>(material->material);
+
+            if (std::holds_alternative<Texture>(pbrMaterial.albedo))
+            {
+                Texture texture_info = std::get<Texture>(pbrMaterial.albedo);
+				
+				auto textureIndexIt = sceneMgr.textureIndexMap.find(texture_info.src);
+				if (textureIndexIt != sceneMgr.textureIndexMap.end())
+				{
+					sceneMgr.materialTextureIndexMap[material->name][0] = textureIndexIt->second;
+				}
+				else
+				{
+					sceneMgr.textureIndexMap[texture_info.src] = textures.size();
+					sceneMgr.materialTextureIndexMap[material->name][0] = textures.size();
+					std::string src = rtg.configuration.scene_graph_parent_folder + texture_info.src;
+					upload_single_texture_from_src(src);
+				}
+
+				std::cout << "[PBR Material] Loaded: " << material->name << ", albedo : " << texture_info.src  << " idx: " << sceneMgr.materialTextureIndexMap[material->name][0] << std::endl; // [PASS]
+            }
+
+            if (std::holds_alternative<Texture>(pbrMaterial.roughness))
+            {
+                Texture texture_info = std::get<Texture>(pbrMaterial.roughness);
+				
+				auto textureIndexIt = sceneMgr.textureIndexMap.find(texture_info.src);
+				if (textureIndexIt != sceneMgr.textureIndexMap.end())
+				{
+					sceneMgr.materialTextureIndexMap[material->name][1] = textureIndexIt->second;
+				}
+				else
+				{
+					sceneMgr.textureIndexMap[texture_info.src] = textures.size();
+					sceneMgr.materialTextureIndexMap[material->name][1] = textures.size();
+					std::string src = rtg.configuration.scene_graph_parent_folder + texture_info.src;				
+					upload_single_texture_from_src(src);
+				}
+
+				std::cout << "[PBR Material] Loaded: " << material->name << ", roughness : " << texture_info.src  << " idx: " << sceneMgr.materialTextureIndexMap[material->name][1] << std::endl; // [PASS]
+            }
+
+			if (std::holds_alternative<Texture>(pbrMaterial.metalness))
+            {
+                Texture texture_info = std::get<Texture>(pbrMaterial.metalness);
+
+				auto textureIndexIt = sceneMgr.textureIndexMap.find(texture_info.src);
+				if (textureIndexIt != sceneMgr.textureIndexMap.end())
+				{
+					sceneMgr.materialTextureIndexMap[material->name][2] = textureIndexIt->second;
+				}
+				else
+				{
+					sceneMgr.textureIndexMap[texture_info.src] = textures.size();
+					sceneMgr.materialTextureIndexMap[material->name][2] = textures.size();
+					std::string src = rtg.configuration.scene_graph_parent_folder + texture_info.src;				
+					upload_single_texture_from_src(src);
+				}
+
+				std::cout << "[PBR Material] Loaded: " << material->name << ", metalness : " << texture_info.src  << " idx: " << sceneMgr.materialTextureIndexMap[material->name][2] << std::endl; // [PASS]
+			}
+        }
+		else if (material->type == MaterialType::LAMBERTIAN)
+		{
+			sceneMgr.materialTextureIndexMap[material->name] = {0, 0, 0};
+
+            LambertianMaterial lambertianMaterial = std::get<LambertianMaterial>(material->material);
+
+            if (std::holds_alternative<Texture>(lambertianMaterial.albedo))
+            {
+                Texture texture_info = std::get<Texture>(lambertianMaterial.albedo);
+				
+				auto textureIndexIt = sceneMgr.textureIndexMap.find(texture_info.src);
+				if (textureIndexIt != sceneMgr.textureIndexMap.end())
+				{
+					sceneMgr.materialTextureIndexMap[material->name][0] = textureIndexIt->second;
+				}
+				else
+				{
+					sceneMgr.textureIndexMap[texture_info.src] = textures.size();
+					sceneMgr.materialTextureIndexMap[material->name][0] = textures.size();
+					std::string src = rtg.configuration.scene_graph_parent_folder + texture_info.src;				
+					upload_single_texture_from_src(src);
+				}
+
+				std::cout << "[LAMBERTIAN Material] Loaded: " << material->name << ", albedo : " << texture_info.src  << " idx: " << sceneMgr.materialTextureIndexMap[material->name][0] << std::endl; // [PASS]
+            }
+		}
+		else if (material->type == MaterialType::MIRROR)
+		{
+			std::cout << "[MIRROR Material] Loaded." << std::endl;
+		}
+		else
+		{
+			std::cout << "[ENVIRONMENT Material] Loaded." << std::endl;
+		}
+    }
+}
+
+void Wanderer::pack_s72_material_properties()
+{
+	using MaterialType = SceneMgr::MaterialType;
+	using PBRMaterial = SceneMgr::PBRMaterial;
+	using LambertianMaterial = SceneMgr::LambertianMaterial;
+	using Texture = SceneMgr::Texture;
+
+	SceneMgr &sceneMgr = rtg.configuration.sceneMgr;
+
+	uint32_t index = 0;
+
+	for (auto &materialIt : sceneMgr.materialObjectMap)
+	{
+		SceneMgr::MaterialObject *material = materialIt.second;
+		SceneMgr::MaterialProperties *newMaterialProperties = new SceneMgr::MaterialProperties();
+
+		newMaterialProperties->material_type = material->type;
+
+		/*
+			PBR Material
+		*/ 
+		if (material->type == MaterialType::PBR)
+		{
+			newMaterialProperties->material_type = MaterialType::PBR;
+			auto materialTextureItr = sceneMgr.materialTextureIndexMap.find(material->name);
+			std::cout << "(PBR)" << std::endl;
+
+			PBRMaterial pbrMaterial = std::get<PBRMaterial>(material->material);
+
+			std::cout << "    Albedo: ";
+			if (std::holds_alternative<glm::vec3>(pbrMaterial.albedo))
+			{
+				newMaterialProperties->constant_albedo = std::get<glm::vec3>(pbrMaterial.albedo);
+				std::cout << "(vec3) " << newMaterialProperties->constant_albedo.x << ", " << newMaterialProperties->constant_albedo.y << ", " << newMaterialProperties->constant_albedo.z << std::endl;
+			}
+			else if (std::holds_alternative<Texture>(pbrMaterial.albedo))
+			{
+				newMaterialProperties->has_albedo_src = true;
+				newMaterialProperties->albedo_texture_id = materialTextureItr->second[0];
+				std::cout << "(texture idx) " << newMaterialProperties->albedo_texture_id << std::endl;
+			}
+
+			std::cout << "    Roughness: ";
+			if (std::holds_alternative<float>(pbrMaterial.roughness))
+			{
+				newMaterialProperties->constant_roughness = std::get<float>(pbrMaterial.roughness);
+				std::cout << "(float) " << newMaterialProperties->constant_roughness << std::endl;
+			}
+			else if (std::holds_alternative<Texture>(pbrMaterial.roughness))
+			{
+				newMaterialProperties->has_roughness_src = true;
+				newMaterialProperties->roughness_texture_id = materialTextureItr->second[1];
+				std::cout << "(texture idx) " << newMaterialProperties->roughness_texture_id << std::endl;
+			}
+
+			std::cout << "    Metalness: ";
+			if (std::holds_alternative<float>(pbrMaterial.metalness))
+			{
+				newMaterialProperties->constant_metalness = std::get<float>(pbrMaterial.metalness);
+				std::cout << "(float) " << newMaterialProperties->constant_metalness << std::endl;
+			}
+			else if (std::holds_alternative<Texture>(pbrMaterial.metalness))
+			{
+				newMaterialProperties->has_metalness_src = true;
+				newMaterialProperties->metalness_texture_id = materialTextureItr->second[0];
+				std::cout << "(texture idx) " << newMaterialProperties->metalness_texture_id << std::endl;
+			}
+
+			std::cout << std::endl;
+		}
+
+		/*
+			Lambertian Material
+		*/ 
+		else if (material->type == MaterialType::LAMBERTIAN)
+		{
+			newMaterialProperties->material_type = MaterialType::LAMBERTIAN;
+			auto materialTextureItr = sceneMgr.materialTextureIndexMap.find(material->name);
+
+			LambertianMaterial lambMaterial = std::get<LambertianMaterial>(material->material);
+			std::cout << "(LAMBERTIAN)" << std::endl;
+
+			std::cout << "    Albedo: ";
+			if (std::holds_alternative<glm::vec3>(lambMaterial.albedo))
+			{
+				newMaterialProperties->constant_albedo = std::get<glm::vec3>(lambMaterial.albedo);
+				std::cout << "(vec3) " << newMaterialProperties->constant_albedo.x << ", " << newMaterialProperties->constant_albedo.y << ", " << newMaterialProperties->constant_albedo.z << std::endl;
+			}
+			else if (std::holds_alternative<Texture>(lambMaterial.albedo))
+			{
+				newMaterialProperties->has_albedo_src = true;
+				newMaterialProperties->albedo_texture_id = materialTextureItr->second[0];
+				std::cout << "(texture idx) " << newMaterialProperties->albedo_texture_id << std::endl;
+			}
+
+			std::cout << std::endl;
+		}
+
+		/*
+			Mirror Material
+		*/ 
+		else if (material->type == MaterialType::MIRROR)
+		{
+			newMaterialProperties->material_type = MaterialType::MIRROR;
+			std::cout << "(MIRROR)" << std::endl;
+		}
+
+		/*
+			Environment Material
+		*/ 
+		else if (material->type == MaterialType::ENVIRONMENT)
+		{
+			newMaterialProperties->material_type = MaterialType::ENVIRONMENT;
+			std::cout << "(ENVIRONMENT)" << std::endl;
+		}
+
+		newMaterialProperties->id = index ++;
+		sceneMgr.materialPropertiesMap[material->name] = newMaterialProperties;
+	}
+}
+
+void Wanderer::create_material_descriptor()
+{
+	// make image views for each texture ========================================================
 
 	texture_views.reserve(textures.size());
 	for (Helpers::AllocatedImage const &image : textures)
@@ -2120,7 +2424,7 @@ void Wanderer::create_diy_textures()
 	}
 	assert(texture_views.size() == textures.size());
 
-	// make a sampler for the textures ==========================================================
+	// make a sampler for each texture ==========================================================
 
 	VkSamplerCreateInfo sampler_create_info{
 		.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -2142,69 +2446,97 @@ void Wanderer::create_diy_textures()
 		.unnormalizedCoordinates = VK_FALSE};
 
 	VK(vkCreateSampler(rtg.device, &sampler_create_info, nullptr, &texture_sampler));
-}
 
-void Wanderer::create_textures_descriptor()
-{
-	// create the texture descriptor pool =======================================================
+	// create the texture descriptor pool ======================================================= // TOCHECK
 
-	uint32_t per_texture = uint32_t(textures.size()); // for easier-to-read counting
+	// uint32_t texture_cnt = uint32_t(textures.size()); // for easier-to-read counting
+	uint32_t material_cnt = rtg.configuration.sceneMgr.materialPropertiesMap.size();
 
 	std::array<VkDescriptorPoolSize, 1> pool_sizes{
 		VkDescriptorPoolSize{
 			.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount = 1 * 1 * per_texture, // 1 descriptor per set, 1 set per texture
+			.descriptorCount = 3 * material_cnt, // 3 descriptors (1 descriptor per binding) per set, 1 set per material
 		}};
 
 	VkDescriptorPoolCreateInfo desc_pool_create_info{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		.flags = 0,					// because CREATE_FREE_DESCRIPTOR_SET_BIT isn't included, can't free individual descriptors allocated from this pool
-		.maxSets = 1 * per_texture, // one set per texture
+		.maxSets = 1 * material_cnt, // one set per material
 		.poolSizeCount = uint32_t(pool_sizes.size()),
 		.pPoolSizes = pool_sizes.data()};
 
-	VK(vkCreateDescriptorPool(rtg.device, &desc_pool_create_info, nullptr, &texture_descriptor_pool));
+	VK(vkCreateDescriptorPool(rtg.device, &desc_pool_create_info, nullptr, &material_descriptor_pool));
 
 	// allocate and write the texture descriptor sets ============================================
 
 	// allocate descriptor sets (different sets are using the same alloc_info) -------------------
 	VkDescriptorSetAllocateInfo desc_set_alloc_info{
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool = texture_descriptor_pool,
+		.descriptorPool = material_descriptor_pool,
 		.descriptorSetCount = 1,
 		.pSetLayouts = &objects_pipeline.set2_TEXTURE};
-	texture_descriptors.assign(textures.size(), VK_NULL_HANDLE);
 
-	for (VkDescriptorSet &descriptor_set : texture_descriptors)
+	material_descriptor_sets.assign(material_cnt, VK_NULL_HANDLE);
+	for (VkDescriptorSet &descriptor_set : material_descriptor_sets)
 	{
 		VK(vkAllocateDescriptorSets(rtg.device, &desc_set_alloc_info, &descriptor_set));
 	}
 
 	// write descriptors for textures -----------------------------------------------------------
-	std::vector<VkDescriptorImageInfo> infos(textures.size());
-	std::vector<VkWriteDescriptorSet> writes(textures.size());
-
-	for (Helpers::AllocatedImage const &image : textures)
+	for (auto materialPropertiesIt : rtg.configuration.sceneMgr.materialPropertiesMap)
 	{
-		size_t i = &image - &textures[0];
+		SceneMgr::MaterialProperties *materialProperties = materialPropertiesIt.second;
 
-		infos[i] = VkDescriptorImageInfo{
+		std::vector<VkDescriptorImageInfo> infos(3);
+		std::vector<VkWriteDescriptorSet> writes(3);
+
+		infos[0] = VkDescriptorImageInfo{
 			.sampler = texture_sampler,
-			.imageView = texture_views[i],
+			.imageView = texture_views[materialProperties->albedo_texture_id],
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		};
-		writes[i] = VkWriteDescriptorSet{
+		writes[0] = VkWriteDescriptorSet{
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet = texture_descriptors[i],
+			.dstSet = material_descriptor_sets[materialProperties->id],
 			.dstBinding = 0,
 			.dstArrayElement = 0,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.pImageInfo = &infos[i],
+			.pImageInfo = &infos[0],
 		};
-	}
 
-	vkUpdateDescriptorSets(rtg.device, uint32_t(writes.size()), writes.data(), 0, nullptr);
+		infos[1] = VkDescriptorImageInfo{
+			.sampler = texture_sampler,
+			.imageView = texture_views[materialProperties->roughness_texture_id],
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		};
+		writes[1] = VkWriteDescriptorSet{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = material_descriptor_sets[materialProperties->id],
+			.dstBinding = 1,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo = &infos[1],
+		};
+
+		infos[2] = VkDescriptorImageInfo{
+			.sampler = texture_sampler,
+			.imageView = texture_views[materialProperties->metalness_texture_id],
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+		};
+		writes[2] = VkWriteDescriptorSet{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstSet = material_descriptor_sets[materialProperties->id],
+			.dstBinding = 2,
+			.dstArrayElement = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImageInfo = &infos[2],
+		};
+
+		vkUpdateDescriptorSets(rtg.device, uint32_t(writes.size()), writes.data(), 0, nullptr);
+	}
 }
 
 void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD)
@@ -2285,11 +2617,12 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 				}
 			}
 
-			auto meshMaterialIt = sceneMgr.materialObjectMap.find(refMesh->refMaterialName);
-			SceneMgr::MaterialType material_type = SceneMgr::MaterialType::LAMBERTIAN; // default material
-			if (meshMaterialIt != sceneMgr.materialObjectMap.end()) {
-				material_type = meshMaterialIt->second->type;
-				}
+			auto findMaterialResult = sceneMgr.materialObjectMap.find(refMesh->refMaterialName);
+			if (findMaterialResult == sceneMgr.materialObjectMap.end()) {
+				std::runtime_error("[Wanderer] (construct_scene_graph_vertices_with_culling) Material not found.");
+			}
+
+			SceneMgr::MaterialObject *refMaterial = findMaterialResult->second;
 
 			object_instances.emplace_back(ObjectInstance{
 				.vertices = scene_nodes_vertices[findVertexIdxResult->second],
@@ -2299,8 +2632,7 @@ void Wanderer::construct_scene_graph_vertices_with_culling(std::vector<ObjectIns
 					.WORLD_FROM_LOCAL_NORMAL = WORLD_FROM_LOCAL_NORMAL
 					// NOTE: the upper left 3x3 of WORLD_FROM_LOCAL_NORMAL should be the inverse transpose of the upper left 3x3
 				},
-				.texture = 0,
-				.material_type = material_type,
+				.material_name = refMaterial->name,
 			});
 		}
 		// else

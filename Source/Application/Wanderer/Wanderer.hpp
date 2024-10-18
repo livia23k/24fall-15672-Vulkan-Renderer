@@ -132,13 +132,13 @@ struct Wanderer : RTG::Application
 
 			struct { float x, y, z; } camera_position;
 
-			// bool has_albedo_src;
-			// bool has_roughness_src;
-			// bool has_metalness_src;
+			bool has_albedo_src;
+			bool has_roughness_src;
+			bool has_metalness_src;
 			
-			// struct { float x, y, z; } constant_albedo;
-			// float constant_roughness;
-			// float constant_metalness;
+			struct { float x, y, z; } constant_albedo;
+			float constant_roughness;
+			float constant_metalness;
 		};
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
@@ -200,12 +200,11 @@ struct Wanderer : RTG::Application
 
 
 	// general textures
-	std::vector<Helpers::AllocatedImage> textures;			   // holds handles of actual image data
-	std::vector<VkImageView> texture_views;					   // references to portions of of whole textures
-	VkSampler texture_sampler = VK_NULL_HANDLE;				   // how to sample from textures (wrapping, interpolation, etc.)
-	VkDescriptorPool texture_descriptor_pool = VK_NULL_HANDLE; // pool from which texture descriptors are allocated
-	std::vector<VkDescriptorSet> texture_descriptors;		   // descriptor for each texture, allocated from texture_descriptor_pool
-
+	std::vector<Helpers::AllocatedImage> textures;			   	// holds handles of actual image data
+	std::vector<VkImageView> texture_views;					   	// references to portions of of whole textures
+	VkSampler texture_sampler = VK_NULL_HANDLE;				   	// how to sample from textures (wrapping, interpolation, etc.)
+	VkDescriptorPool material_descriptor_pool = VK_NULL_HANDLE; // pool from which texture descriptors are allocated
+	std::vector<VkDescriptorSet> material_descriptor_sets;   	// descriptors for each material, allocated from texture_descriptor_pool
 
 	// cubemap related resource
 	Helpers::AllocatedBuffer env_cubemap_buffer;
@@ -246,8 +245,7 @@ struct Wanderer : RTG::Application
 	{
 		ObjectVertices vertices;
 		ObjectsPipeline::Transform transform;
-		uint32_t texture = 0;
-		SceneMgr::MaterialType material_type;
+		std::string material_name;
 	};
 	std::vector<ObjectInstance> object_instances;
 
@@ -273,7 +271,10 @@ struct Wanderer : RTG::Application
 	void setup_environment_cubemap(bool flip);
 	void create_environment_cubemap_descriptor();
 	void create_diy_textures();
-	void create_textures_descriptor();
+	void upload_single_texture_from_src(std::string src);
+	void upload_s72_material_textures();
+	void pack_s72_material_properties();
+	void create_material_descriptor();
 
 	// object instances
 	void construct_scene_graph_vertices_with_culling(std::vector<ObjectInstance> &object_instances, SceneMgr &sceneMgr, const mat4 &CLIP_FROM_WORLD);
@@ -284,7 +285,7 @@ struct Wanderer : RTG::Application
 
 	// textures
 	const uint32_t NUM_CUBE_FACES = 6;
-	void create_environment_cubemap(char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&desired_channels);
+	void create_environment_cubemap(unsigned char **cubemap_data, const uint32_t &face_w, const uint32_t &face_h, const int&desired_channels);
 
 
 	//--------------------------------------------------------------------
