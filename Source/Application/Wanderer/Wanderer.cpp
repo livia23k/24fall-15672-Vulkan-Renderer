@@ -50,10 +50,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	create_diy_textures();
 	upload_s72_material_textures();
 	pack_s72_material_properties();
-	std::cout << "[TEST] 1" << std::endl;
 	create_material_descriptor();
-	std::cout << "[TEST] 2" << std::endl;
-	// create_texture_descriptor_for_all();  // TOCHECK
 
 	// update animation time
 	animation_timer.tmax = sceneMgr.get_animation_duration();
@@ -116,8 +113,6 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		rtg.configuration.debug_camera.current_camera_mode = Camera::Camera_Mode::DEBUG;
 		rtg.configuration.debug_camera.update_info_from_another_camera(rtg.configuration.camera);
 	}
-
-
 
 	/* 
 		load vertices resources
@@ -738,20 +733,22 @@ void Wanderer::render(RTG &rtg_, RTG::RenderParams const &render_params)
 
 					{ // push constant:
 						Camera &camera = rtg.configuration.camera;
+						int32_t packed_has_src_flags = 0x0;
+						packed_has_src_flags |= materialProperties->has_albedo_src ? 0x1 : 0x0;
+						packed_has_src_flags |= materialProperties->has_roughness_src ? 0x10 : 0x0;
+						packed_has_src_flags |= materialProperties->has_metalness_src ? 0x100 : 0x0;
 
 						ObjectsPipeline::Push push{
-							.material_type = materialProperties->material_type,
 							.camera_position = {
 								.x = camera.position.x,
 								.y = camera.position.y,
 								.z = camera.position.z},
-							.has_albedo_src = materialProperties->has_albedo_src,
-							.has_roughness_src = materialProperties->has_roughness_src,
-							.has_metalness_src = materialProperties->has_metalness_src,
 							.constant_albedo = {
 								.x = materialProperties->constant_albedo.x,
 								.y = materialProperties->constant_albedo.y,
 								.z = materialProperties->constant_albedo.z},
+							.material_type = materialProperties->material_type,
+							.packed_has_src_flags = packed_has_src_flags,
 							.constant_roughness = materialProperties->constant_roughness,
 							.constant_metalness = materialProperties->constant_metalness,
 						};

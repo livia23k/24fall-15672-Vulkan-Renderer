@@ -3,14 +3,10 @@
 #define PI radians(180.0)
 
 layout(push_constant) uniform Push {
+    vec4 camera_position;      // x, y, z, padding
+    vec4 constant_albedo;      // x, y, z, padding
     int material_type;
-    vec3 camera_position;
-
-    bool has_albedo_src;
-    bool has_roughness_src;
-    bool has_metalness_src;
-
-    vec3 constant_albedo;
+    int packed_has_src_flags;  //  0x1 albedo, 0x10 roughness, 0x100 metalness
     float constant_roughness;
     float constant_metalness;
 } pushData;
@@ -72,7 +68,7 @@ void main() {
 
     else if (pushData.material_type == 2) // TOCHECK
     {
-        vec3 view_dir = normalize(pushData.camera_position - inPosition);
+        vec3 view_dir = normalize(pushData.camera_position.xyz - inPosition);
         vec3 reflect_dir = reflect(-view_dir, n_vulkan);
         vec4 env = texture(ENVIRONMENT, reflect_dir);
         vec3 radiance = convert_rgbe_to_radiance(env);
@@ -85,9 +81,9 @@ void main() {
 
     else // default
     {
-        vec3 albedo = pushData.has_albedo_src ? texture(TEXTURE_ALBEDO, inTexCoord).rgb / PI : pushData.constant_albedo;
-        float roughness = pushData.has_roughness_src ? texture(TEXTURE_ALBEDO, inTexCoord).r : pushData.constant_roughness;
-        float metalness = pushData.has_metalness_src ? texture(TEXTURE_ALBEDO, inTexCoord).r : pushData.constant_metalness;
+        vec3 albedo = bool(pushData.packed_has_src_flags & 0x1) ? texture(TEXTURE_ALBEDO, inTexCoord).rgb / PI : pushData.constant_albedo.xyz;
+        float roughness = bool(pushData.packed_has_src_flags & 0x10) ? texture(TEXTURE_ALBEDO, inTexCoord).r : pushData.constant_roughness;
+        float metalness = bool(pushData.packed_has_src_flags & 0x100) ? texture(TEXTURE_ALBEDO, inTexCoord).r : pushData.constant_metalness;
 
         // hemisphere sky + directional sun:
         vec3 e = SKY_ENERGY * (0.5 * dot(n_vulkan, SKY_DIRECTION) + 0.5) + SUN_ENERGY * max(0.0, dot(n_vulkan, SUN_DIRECTION));

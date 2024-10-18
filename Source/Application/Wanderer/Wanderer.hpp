@@ -125,21 +125,18 @@ struct Wanderer : RTG::Application
 		};
 		static_assert(sizeof(Transform) == (16 * 4) * 3, "Transform is the expected size.");
 
-		// push constants
+		// push constants 
+		// 	NOTE: re-arranged to avoid std140 padding issue
 		struct Push
 		{
+			struct { float x, y, z, padding_; } camera_position;
+			struct { float x, y, z, padding_; } constant_albedo;
 			SceneMgr::MaterialType material_type;
-
-			struct { float x, y, z; } camera_position;
-
-			bool has_albedo_src;
-			bool has_roughness_src;
-			bool has_metalness_src;
-			
-			struct { float x, y, z; } constant_albedo;
+			int32_t packed_has_src_flags; // 0x1 albedo, 0x10 roughness, 0x100 metalness
 			float constant_roughness;
 			float constant_metalness;
 		};
+		static_assert(sizeof(Push) == 4 * 4 * 2 + 4 * 4, "Push is the expected size.");
 
 		VkPipelineLayout layout = VK_NULL_HANDLE;
 
