@@ -36,12 +36,12 @@ Camera::Camera()
     unit_angle = 1.f;
     unit_sensitivity = 0.001f;
 
-    position = glm::vec3{0.0f, 0.0f, -5.0f};
+    position = glm::vec3{0.0f, -5.0f, 0.0f}; // s72 coord
     target_position = glm::vec3{0.0f, 0.0f, 0.0f};
 
-    up = glm::vec3{0.0f, -1.0f, 0.0f};
+    up = glm::vec3{0.0f, 0.0f, 1.0f};
     right = glm::vec3{1.0f, 0.f, 0.f};
-    front = glm::vec3{0.0f, 0.0f, -1.0f};
+    front = glm::vec3{0.0f, 1.0f, 0.0f};
 
     roll = 0.f;
     update_camera_eular_angles_from_vectors();
@@ -68,10 +68,10 @@ void Camera::reset_camera_control_status()
 
 void Camera::update_camera_eular_angles_from_vectors()
 {
-    yaw = glm::degrees(atan2(front.x, front.z)); // looking forward along +z, rotating around y
-    pitch = glm::degrees(atan2(-front.y, sqrt(front.x * front.x + front.z * front.z))); // looking forward along +z, rotating around +x
+    yaw = glm::degrees(atan2(front.x, front.y)); // looking forward along +y, rotating around +x
+    pitch = glm::degrees(atan2(front.z, sqrt(front.x * front.x + front.y * front.y))); // looking forward along +z, rotating around +x
 
-    update_camera_vectors_from_eular_angles();
+    // update_camera_vectors_from_eular_angles();
 }
 
 void Camera::update_camera_vectors_from_eular_angles()
@@ -98,12 +98,12 @@ void Camera::update_camera_vectors_from_eular_angles()
     const float cp = cos(pitchRad);
 
     front.x = sy * cp;  // +X right
-    front.y = -sp;      // -Y up
-    front.z = cy * cp;  // +Z forward
+    front.y = cy * cp ; // +Y forward
+    front.z = sp;       // +Z forward
 
     front = glm::normalize(front);
 
-    up = glm::vec3(0.0f, -1.0f, 0.0f);
+    // up remains world_up {0.0f, 0.0f, 1.0f}
     right = glm::normalize(glm::cross(front, up));
 }
 
@@ -128,8 +128,7 @@ void Camera::update_info_from_another_camera(const Camera &updateFrom)
 void Camera::update_camera_from_local_to_world(glm::mat4 &localToWorld)
 {
     front = -glm::normalize(glm::vec3(localToWorld[2][0], localToWorld[2][1], localToWorld[2][2])); // make camera look toward -Z
-    up = glm::vec3{0.0f, -1.0f, 0.0f};
-    // right = glm::normalize(glm::vec3(localToWorld[0][0], localToWorld[0][1], localToWorld[0][2]));
+    // up remains world_up {0.0f, 0.0f, 1.0f}
     right = glm::normalize(glm::cross(front, up));
     position = glm::vec3(localToWorld[3][0], localToWorld[3][1], localToWorld[3][2]);
 
@@ -139,42 +138,46 @@ void Camera::update_camera_from_local_to_world(glm::mat4 &localToWorld)
 }
 
 
-mat4 Camera::calculate_clip_from_world(Camera_Attributes &camera_attributes, const glm::mat4& local_to_world)
+mat4 Camera::calculate_camera_clip_from_world(Camera &camera)
 {
-    glm::mat4 camera_perspective = glm::perspective (
-        camera_attributes.vfov,
-        camera_attributes.aspect,
-        camera_attributes.near,
-        camera_attributes.far
-    );
+    glm::vec3 target_direction = camera.position + camera.front;
 
-    glm::mat4 world_to_local = glm::inverse(local_to_world);
-    glm::mat4 flip_y_matrix = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f));    // vulkan -Y up
-    glm::mat4 clip_from_world = camera_perspective * flip_y_matrix * world_to_local;
-    return TypeHelper::convert_glm_mat4_to_mat4(clip_from_world);
+    mat4 CLIP_FROM_WORLD = perspective(                     // NOTE: matrix calculation match with Vulkan
+                        camera.camera_attributes.vfov,	    // fov in radians
+                        camera.camera_attributes.aspect,    // aspect
+                        camera.camera_attributes.near,	    // near
+                        camera.camera_attributes.far	    // far
+                        ) *
+                    look_at(
+                        camera.position[0], camera.position[1], camera.position[2], 	// eye
+                        target_direction[0], target_direction[1], target_direction[2],  // target
+                        camera.up[0], camera.up[1], camera.up[2]					   	// up
+                    );
+
+    return CLIP_FROM_WORLD;
 }
 
 
-mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
+mat4 Camera::apply_scene_mode_camera(Camera &scene_camera, SceneMgr &sceneMgr)
 {
     assert(sceneMgr.currentSceneCameraItr != sceneMgr.cameraObjectMap.end());
 
     mat4 CLIP_FROM_WORLD;
 
-    SceneMgr::CameraObject *camera = sceneMgr.currentSceneCameraItr->second;
+    SceneMgr::CameraObject *current_scene_camera_object = sceneMgr.currentSceneCameraItr->second;
 
-    if (std::holds_alternative<SceneMgr::PerspectiveParameters>(camera->projectionParameters))
+    if (std::holds_alternative<SceneMgr::PerspectiveParameters>(current_scene_camera_object->projectionParameters))
     {
         current_camera_mode = Camera::SCENE;
 
-        // update camera parameters (partial)
-        const SceneMgr::PerspectiveParameters &perspective_info = std::get<SceneMgr::PerspectiveParameters>(camera->projectionParameters);
+        // update current_scene_camera_object parameters (partial)
+        const SceneMgr::PerspectiveParameters &perspective_info = std::get<SceneMgr::PerspectiveParameters>(current_scene_camera_object->projectionParameters);
         camera_attributes.aspect = perspective_info.aspect;
         camera_attributes.vfov = perspective_info.vfov;
         camera_attributes.near = perspective_info.nearZ;
         camera_attributes.far = perspective_info.farZ;
 
-        auto findCameraNodeResult = sceneMgr.nodeObjectMap.find(camera->name); // [WARNING] the camera CAMERA and NODE Object should always have the same name!
+        auto findCameraNodeResult = sceneMgr.nodeObjectMap.find(current_scene_camera_object->name); // [WARNING] the camera CAMERA and NODE Object should always have the same name!
         if (findCameraNodeResult != sceneMgr.nodeObjectMap.end())
         {
             SceneMgr::NodeObject *cameraNode = findCameraNodeResult->second;
@@ -183,17 +186,15 @@ mat4 Camera::apply_scene_mode_camera(SceneMgr &sceneMgr)
             auto findCameraMatrixResult = sceneMgr.nodeMatrixMap.find(cameraNode->name); 
             if (findCameraMatrixResult != sceneMgr.nodeMatrixMap.end())
             {
-                // update CLIP_FROM_WORLD matrix based on current scene camera
+                // update CLIP_FROM_WORLD matrix based on current_scene_camera_object
                 /* Thanks to Leon Li for helping me to correct my understanding of the CLIP_FROM_WORLD calculation formula (= perspective * WORLD_TO_LOCAL) for SCENE mode. */
-                LOCAL_TO_WORLD = findCameraMatrixResult->second;                                        // camera local to world
-                CLIP_FROM_WORLD = calculate_clip_from_world(camera_attributes, LOCAL_TO_WORLD);         // camera world to clip
-
-                // update the main camera info (vectors, eular angles, control status)
-                update_camera_from_local_to_world(LOCAL_TO_WORLD);
+                LOCAL_TO_WORLD = findCameraMatrixResult->second;
+                scene_camera.update_camera_from_local_to_world(LOCAL_TO_WORLD); // update current_scene_camera_object parameters (vectors, eular angles, control status)
+                CLIP_FROM_WORLD = calculate_camera_clip_from_world(scene_camera);
             }
             else
             {
-                throw std::runtime_error("Scene camera named \"" + camera->name + "\" matrix not found. Application exits.");
+                throw std::runtime_error("Scene camera named \"" + current_scene_camera_object->name + "\" matrix not found. Application exits.");
             }
         }
     }

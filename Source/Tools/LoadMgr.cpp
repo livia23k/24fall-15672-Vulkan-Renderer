@@ -1464,7 +1464,7 @@ template void LoadMgr::read_s72_mesh_attribute_to_list<glm::vec4>(std::vector<gl
 
 // load matrices -----------------------------------------------------------------------------------------------------------------
 
-void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
+void LoadMgr::update_s72_node_matrices(SceneMgr &targetSceneMgr)
 {
     using NodeObject = SceneMgr::NodeObject;
 
@@ -1483,6 +1483,12 @@ void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
         glm::mat4 modelMatrix;
     };
 
+    // glm::mat4 zUpToYDownMatrix = glm::mat4(0.0f); // convert Z Up s72 coords to Vulkan -Y Up coords
+    // zUpToYDownMatrix[0][0] = 1.0f;
+    // zUpToYDownMatrix[1][2] = 1.0f;
+    // zUpToYDownMatrix[2][1] = -1.0f; // col-major
+    // zUpToYDownMatrix[3][3] = 1.0f;
+
 	std::queue<NodeMatrix> nodeMatrixQueue;
 	for (std::string & nodeName : targetSceneMgr.sceneObject->rootName)
 	{
@@ -1490,15 +1496,10 @@ void LoadMgr::load_s72_node_matrices(SceneMgr &targetSceneMgr)
 		if (findNodeResult == targetSceneMgr.nodeObjectMap.end())
 			continue;
 
-        glm::mat4 zUpToYDownMatrix = glm::mat4(1.0f); // convert Z Up s72 coords to Vulkan -Y Up coords
-        zUpToYDownMatrix[1][1] = 0.0f;
-        zUpToYDownMatrix[1][2] = 1.0f;
-        zUpToYDownMatrix[2][1] = -1.0f;
-        zUpToYDownMatrix[2][2] = 0.0f;
 
         NodeMatrix nodeMatrix;
         nodeMatrix.nodeObject = findNodeResult->second;
-        nodeMatrix.modelMatrix = zUpToYDownMatrix * SceneMgr::calculate_model_matrix(
+        nodeMatrix.modelMatrix = SceneMgr::calculate_model_matrix(
                                     nodeMatrix.nodeObject->translation, 
                                     nodeMatrix.nodeObject->rotation, 
                                     nodeMatrix.nodeObject->scale);
@@ -1589,25 +1590,25 @@ void LoadMgr::load_cubemap_from_file(unsigned char **dst, const char *src, int &
         memcpy(dst[i], cubemap_data + i * bytes_per_face, bytes_per_face);
     }
 
-    // Adapt to vulkan coords:
+    // // Adapt to vulkan coords:
 
-    // // [try 1]
+    // // // [try 1]
 
-    // 1. change sequence
-    //     index:            0   1   2   3   4   5
-    //     orgin sequence:  +X, -X, +Y, -Y, +Z, -Z
-    //     new sequence:    +X, -X, -Z, +Z, +Y, -Y
-    std::swap(dst[5], dst[3]);
-    std::swap(dst[3], dst[4]);
-    std::swap(dst[4], dst[2]);
+    // // 1. change sequence
+    // //     index:            0   1   2   3   4   5
+    // //     orgin sequence:  +X, -X, +Y, -Y, +Z, -Z
+    // //     new sequence:    +X, -X, -Z, +Z, +Y, -Y
+    // std::swap(dst[5], dst[3]);
+    // std::swap(dst[3], dst[4]);
+    // std::swap(dst[4], dst[2]);
 
-    // 2. rotate the faces to match
-    rotate_cubemap_face_by_90_ccw(dst[0], face_w, face_h, desired_channels);    // +X, rorate 90 ccw
-    rotate_cubemap_face_by_90_cw(dst[1], face_w, face_h, desired_channels);     // -X, rorate 90 cw
-    rotate_cubemap_face_by_90_cw(dst[2], face_w, face_h, desired_channels);     // -Z rotate 180
-    rotate_cubemap_face_by_90_cw(dst[2], face_w, face_h, desired_channels);
-    rotate_cubemap_face_by_90_cw(dst[5], face_w, face_h, desired_channels);     // -Y rotate 180
-    rotate_cubemap_face_by_90_cw(dst[5], face_w, face_h, desired_channels);
+    // // 2. rotate the faces to match
+    // rotate_cubemap_face_by_90_ccw(dst[0], face_w, face_h, desired_channels);    // +X, rorate 90 ccw
+    // rotate_cubemap_face_by_90_cw(dst[1], face_w, face_h, desired_channels);     // -X, rorate 90 cw
+    // rotate_cubemap_face_by_90_cw(dst[2], face_w, face_h, desired_channels);     // -Z rotate 180
+    // rotate_cubemap_face_by_90_cw(dst[2], face_w, face_h, desired_channels);
+    // rotate_cubemap_face_by_90_cw(dst[5], face_w, face_h, desired_channels);     // -Y rotate 180
+    // rotate_cubemap_face_by_90_cw(dst[5], face_w, face_h, desired_channels);
 
     // verification
     // save_cubemap_faces_as_images(dst, face_w, face_h, desired_channels); // [PASS]

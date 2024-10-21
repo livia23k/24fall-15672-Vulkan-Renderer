@@ -31,7 +31,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 	setup_workspaces();
 
 	// load scene node matrices
-	LoadMgr::load_s72_node_matrices(sceneMgr);
+	LoadMgr::update_s72_node_matrices(sceneMgr);
 
 	/*
 		update texture related info
@@ -80,7 +80,7 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 			camera.current_camera_mode = Camera::Camera_Mode::SCENE;
 			sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
 		}
-		CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(sceneMgr);
+		CLIP_FROM_WORLD = rtg.configuration.camera.apply_scene_mode_camera(camera, sceneMgr);
 
 		// (user camera) initialize using the main camera setting
 		rtg.configuration.user_camera.current_camera_mode = Camera::Camera_Mode::USER;
@@ -99,14 +99,12 @@ Wanderer::Wanderer(RTG &rtg_) : rtg(rtg_)
 		// make the camera initially looking toward a root node
 		std::string &rootNodeName = sceneMgr.sceneObject->rootName[0];
 		SceneMgr::NodeObject *rootNode = sceneMgr.nodeObjectMap.find(rootNodeName)->second;
-		glm::mat4 root_matrix = sceneMgr.nodeMatrixMap.find(rootNode->name)->second;
 
-		glm::vec3 root_translation = glm::vec3(root_matrix[3]);
-		camera.position = root_translation + glm::vec3(0.0f, 0.0f, -5.0f);
-		camera.target_position = glm::vec3(0.f, 0.f, 0.f);
-		camera.front = glm::normalize(camera.target_position - camera.position); 
+		camera.position = rootNode->translation + glm::vec3(0.0f, -5.0f, 0.0f); // .s72 coord
+		camera.target_position = rootNode->translation;
+		camera.front = glm::normalize(camera.target_position - camera.position);
 		camera.update_camera_eular_angles_from_vectors();
-
+		
 		// (user camera) skip; no need to set because no user camera setting backup is needed
 
 		// (debug camera) initialize using the main camera setting
@@ -937,7 +935,7 @@ void Wanderer::update(float dt)
 
 			glm::vec3 target_direction = camera.position + camera.front;
 
-			CLIP_FROM_WORLD = perspective(
+			CLIP_FROM_WORLD = perspective(						// NOTE: matrix calculation match with Vulkan
 							  camera.camera_attributes.vfov,	// fov in radians
 							  camera.camera_attributes.aspect,  // aspect
 							  camera.camera_attributes.near,	// near
@@ -963,7 +961,7 @@ void Wanderer::update(float dt)
 
 			glm::vec3 target_direction = debug_camera.position + debug_camera.front;
 
-			CLIP_FROM_WORLD = perspective(
+			CLIP_FROM_WORLD = perspective(							  // NOTE: matrix calculation match with Vulkan
 							  debug_camera.camera_attributes.vfov,	  // fov in radians
 							  debug_camera.camera_attributes.aspect,  // aspect
 							  debug_camera.camera_attributes.near,	  // near
@@ -1002,12 +1000,12 @@ void Wanderer::update(float dt)
 	if (!animation_timer.paused) 
 	{ 
 		rtg.configuration.sceneMgr.update_nodes_from_animation_drivers(animation_timer.t);
-    	LoadMgr::load_s72_node_matrices(rtg.configuration.sceneMgr);
+    	LoadMgr::update_s72_node_matrices(rtg.configuration.sceneMgr);
 		
 		// update the clip from world matrix after animation is applied
 		if (camera.current_camera_mode == Camera::Camera_Mode::SCENE)
 		{
-			CLIP_FROM_WORLD = camera.apply_scene_mode_camera(rtg.configuration.sceneMgr); // make senses when animation driver 
+			CLIP_FROM_WORLD = camera.apply_scene_mode_camera(camera, rtg.configuration.sceneMgr); // make senses when animation driver 
 		}
 	};
 
@@ -1032,7 +1030,7 @@ void Wanderer::on_input(InputEvent const &event)
 	{
 		// Camera Mode ---------------------------------------------------------------------------------------------------------------------
 
-		if (event.key.key == GLFW_KEY_1) // change to camera mode: SCENE
+		if (event.key.key == GLFW_KEY_1 && camera.current_camera_mode != Camera::Camera_Mode::SCENE) // change to camera mode: SCENE
 		{
 			if (sceneMgr.sceneCameraCount == 0) {
 				std::cout << "[Camera] (Mode) SCENE mode: no camera available." << std::endl;
@@ -1045,18 +1043,18 @@ void Wanderer::on_input(InputEvent const &event)
 
 			// change camera mode
 			camera.current_camera_mode = Camera::Camera_Mode::SCENE;
-			this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr); 
+			this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(camera, sceneMgr); 
 
 			std::cout << "[Camera] (Mode) switched to SCENE mode, camera: " << sceneMgr.currentSceneCameraItr->second->name << std::endl;
 		}
-		else if (event.key.key == GLFW_KEY_2) // change to camera mode: USER
+		else if (event.key.key == GLFW_KEY_2 && camera.current_camera_mode != Camera::Camera_Mode::USER) // change to camera mode: USER
 		{
 			camera.current_camera_mode = Camera::Camera_Mode::USER;
 			camera.update_info_from_another_camera(user_camera); // recover user camera setting
 
 			std::cout << "[Camera] (Mode) switched to USER mode." << std::endl;
 		}
-		else if (event.key.key == GLFW_KEY_3) // change to camera mode: DEBUG
+		else if (event.key.key == GLFW_KEY_3 && camera.current_camera_mode != Camera::Camera_Mode::DEBUG) // change to camera mode: DEBUG
 		{
 			// if changed from USER camera, save user camera setting
 			if (camera.current_camera_mode == Camera::Camera_Mode::USER) 
@@ -1076,7 +1074,7 @@ void Wanderer::on_input(InputEvent const &event)
 				if (sceneMgr.currentSceneCameraItr == sceneMgr.cameraObjectMap.end())
 					sceneMgr.currentSceneCameraItr = sceneMgr.cameraObjectMap.begin();
 				
-				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(sceneMgr);
+				this->CLIP_FROM_WORLD = camera.apply_scene_mode_camera(camera, sceneMgr);
 
 				std::cout << "[Camera] (Mode) SCENE mode: switched to " << sceneMgr.currentSceneCameraItr->second->name << " perspective." << std::endl;
 			}
@@ -1906,6 +1904,20 @@ void Wanderer::load_mesh_object_vertices(SceneMgr::MeshObject *meshObject, std::
 	for (uint32_t i = 0; i < vertexCount; ++i)
 	{
 		ObjectsPipeline::Vertex node_vertex;
+		// node_vertex.Position.x = refMesh->positionList[i].x;
+		// node_vertex.Position.y = -refMesh->positionList[i].z;
+		// node_vertex.Position.z = refMesh->positionList[i].y;
+
+		// node_vertex.Normal.x = refMesh->normalList[i].x;
+		// node_vertex.Normal.y = -refMesh->normalList[i].z;
+		// node_vertex.Normal.z = refMesh->normalList[i].y;
+
+		// node_vertex.Tangent.x = refMesh->tangentList[i].x;
+		// node_vertex.Tangent.y = -refMesh->tangentList[i].z;
+		// node_vertex.Tangent.z = refMesh->tangentList[i].y;
+		// node_vertex.Tangent.w = refMesh->tangentList[i].w;
+
+
 		node_vertex.Position.x = refMesh->positionList[i].x;
 		node_vertex.Position.y = refMesh->positionList[i].y;
 		node_vertex.Position.z = refMesh->positionList[i].z;

@@ -50,7 +50,7 @@ struct LoadMgr {
     static void read_s72_mesh_attribute_to_list(std::vector<T> &targetList, SceneMgr::AttributeStream &attrStream, std::string srcFolder);
 
     // load matrices
-    static void load_s72_node_matrices(SceneMgr &targetSceneMgr);
+    static void update_s72_node_matrices(SceneMgr &targetSceneMgr);
 
     // load materials
     static void load_texture_from_file(unsigned char *&dst, const char *src,  int &w, int &h, const int &desired_channels);
